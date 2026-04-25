@@ -1,0 +1,48 @@
+version: "3"
+
+vars:
+  FILE: '{{default "./build.plano" .FILE}}'
+  EXAMPLE: '{{default "builddsl" .EXAMPLE}}'
+  FORMAT: '{{default "json" .FORMAT}}'
+  OUT: '{{default "-" .OUT}}'
+
+tasks:
+  test:
+    desc: Run the Go test suite
+    cmds:
+      - go test ./...
+
+  lint:
+    desc: Run golangci-lint
+    cmds:
+      - /Users/daiyuang/.go/bin/golangci-lint run
+
+  fmt:
+    desc: Format all Go sources
+    cmds:
+      - gofmt -w ast/*.go cmd/plano/*.go compiler/*.go diag/*.go examples/builddsl/*.go frontend/plano/*.go internal/lexer/*.go internal/parser/*.go schema/*.go
+
+  parse:
+    desc: Parse a plano file and print the AST
+    cmds:
+      - go run ./cmd/plano parse --format {{.FORMAT}} {{.FILE}}
+
+  compile:
+    desc: Compile a plano file and print the typed document
+    cmds:
+      - go run ./cmd/plano compile --example {{.EXAMPLE}} --format {{.FORMAT}} {{if ne .OUT "-"}}--out {{.OUT}} {{end}}{{.FILE}}
+
+  lower:
+    desc: Lower a plano file with the example DSL
+    cmds:
+      - go run ./cmd/plano lower --example {{.EXAMPLE}} --format {{.FORMAT}} {{if ne .OUT "-"}}--out {{.OUT}} {{end}}{{.FILE}}
+
+  validate:
+    desc: Validate a plano file
+    cmds:
+      - go run ./cmd/plano validate --example {{.EXAMPLE}} {{.FILE}}
+
+  diag:
+    desc: Print diagnostics for a plano file
+    cmds:
+      - go run ./cmd/plano diag --example {{.EXAMPLE}} --format {{default "text" .FORMAT}} {{.FILE}}
