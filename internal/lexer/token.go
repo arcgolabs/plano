@@ -1,4 +1,3 @@
-//nolint:cyclop,gocyclo,funlen // Token names are intentionally listed exhaustively for stable diagnostics.
 package lexer
 
 import "go/token"
@@ -55,99 +54,58 @@ const (
 	OrOr
 )
 
+var kindNames = [...]string{
+	Illegal:  "illegal",
+	EOF:      "eof",
+	Ident:    "ident",
+	String:   "string",
+	Int:      "int",
+	Float:    "float",
+	Duration: "duration",
+	Size:     "size",
+	KwImport: "import",
+	KwConst:  "const",
+	KwLet:    "let",
+	KwFn:     "fn",
+	KwReturn: "return",
+	KwIf:     "if",
+	KwElse:   "else",
+	KwFor:    "for",
+	KwIn:     "in",
+	KwTrue:   "true",
+	KwFalse:  "false",
+	KwNull:   "null",
+	LBrace:   "{",
+	RBrace:   "}",
+	LParen:   "(",
+	RParen:   ")",
+	LBracket: "[",
+	RBracket: "]",
+	Comma:    ",",
+	Dot:      ".",
+	Colon:    ":",
+	Assign:   "=",
+	Eq:       "==",
+	NotEq:    "!=",
+	GT:       ">",
+	GTE:      ">=",
+	LT:       "<",
+	LTE:      "<=",
+	Plus:     "+",
+	Minus:    "-",
+	Star:     "*",
+	Slash:    "/",
+	Percent:  "%",
+	Bang:     "!",
+	AndAnd:   "&&",
+	OrOr:     "||",
+}
+
 func (k Kind) String() string {
-	switch k {
-	case Illegal:
-		return "illegal"
-	case EOF:
-		return "eof"
-	case Ident:
-		return "ident"
-	case String:
-		return "string"
-	case Int:
-		return "int"
-	case Float:
-		return "float"
-	case Duration:
-		return "duration"
-	case Size:
-		return "size"
-	case KwImport:
-		return "import"
-	case KwConst:
-		return "const"
-	case KwLet:
-		return "let"
-	case KwFn:
-		return "fn"
-	case KwReturn:
-		return "return"
-	case KwIf:
-		return "if"
-	case KwElse:
-		return "else"
-	case KwFor:
-		return "for"
-	case KwIn:
-		return "in"
-	case KwTrue:
-		return "true"
-	case KwFalse:
-		return "false"
-	case KwNull:
-		return "null"
-	case LBrace:
-		return "{"
-	case RBrace:
-		return "}"
-	case LParen:
-		return "("
-	case RParen:
-		return ")"
-	case LBracket:
-		return "["
-	case RBracket:
-		return "]"
-	case Comma:
-		return ","
-	case Dot:
-		return "."
-	case Colon:
-		return ":"
-	case Assign:
-		return "="
-	case Eq:
-		return "=="
-	case NotEq:
-		return "!="
-	case GT:
-		return ">"
-	case GTE:
-		return ">="
-	case LT:
-		return "<"
-	case LTE:
-		return "<="
-	case Plus:
-		return "+"
-	case Minus:
-		return "-"
-	case Star:
-		return "*"
-	case Slash:
-		return "/"
-	case Percent:
-		return "%"
-	case Bang:
-		return "!"
-	case AndAnd:
-		return "&&"
-	case OrOr:
-		return "||"
-	default:
-		return "unknown"
+	if int(k) < len(kindNames) && kindNames[k] != "" {
+		return kindNames[k]
 	}
+	return "unknown"
 }
 
 type Token struct {

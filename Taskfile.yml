@@ -5,6 +5,9 @@ vars:
   EXAMPLE: '{{default "builddsl" .EXAMPLE}}'
   FORMAT: '{{default "json" .FORMAT}}'
   OUT: '{{default "-" .OUT}}'
+  BUILDDSL_SAMPLE: ./examples/builddsl/sample.plano
+  PIPELINEDSL_SAMPLE: ./examples/pipelinedsl/sample.plano
+  SERVICEDSL_SAMPLE: ./examples/servicedsl/sample.plano
 
 tasks:
   test:
@@ -20,12 +23,32 @@ tasks:
   fmt:
     desc: Format all Go sources
     cmds:
-      - gofmt -w ast/*.go cmd/plano/*.go compiler/*.go diag/*.go examples/builddsl/*.go frontend/plano/*.go internal/lexer/*.go internal/parser/*.go schema/*.go
+      - gofmt -w ast/*.go cmd/plano/*.go compiler/*.go diag/*.go examples/builddsl/*.go examples/pipelinedsl/*.go examples/servicedsl/*.go frontend/plano/*.go internal/lexer/*.go internal/parser/*.go schema/*.go
+
+  examples:
+    desc: List bundled example DSLs
+    cmds:
+      - go run ./cmd/plano examples --format {{default "text" .FORMAT}}
 
   parse:
     desc: Parse a plano file and print the AST
     cmds:
       - go run ./cmd/plano parse --format {{.FORMAT}} {{.FILE}}
+
+  bind:
+    desc: Bind declarations in a plano file
+    cmds:
+      - go run ./cmd/plano bind --example {{.EXAMPLE}} --format {{.FORMAT}} {{if ne .OUT "-"}}--out {{.OUT}} {{end}}{{.FILE}}
+
+  check:
+    desc: Typecheck a plano file
+    cmds:
+      - go run ./cmd/plano check --example {{.EXAMPLE}} --format {{.FORMAT}} {{if ne .OUT "-"}}--out {{.OUT}} {{end}}{{.FILE}}
+
+  hir:
+    desc: Compile a plano file and print typed HIR
+    cmds:
+      - go run ./cmd/plano hir --example {{.EXAMPLE}} --format {{.FORMAT}} {{if ne .OUT "-"}}--out {{.OUT}} {{end}}{{.FILE}}
 
   compile:
     desc: Compile a plano file and print the typed document
@@ -46,3 +69,18 @@ tasks:
     desc: Print diagnostics for a plano file
     cmds:
       - go run ./cmd/plano diag --example {{.EXAMPLE}} --format {{default "text" .FORMAT}} {{.FILE}}
+
+  example:builddsl:
+    desc: Lower the bundled builddsl sample
+    cmds:
+      - go run ./cmd/plano lower --example builddsl --format {{.FORMAT}} {{.BUILDDSL_SAMPLE}}
+
+  example:pipelinedsl:
+    desc: Lower the bundled pipelinedsl sample
+    cmds:
+      - go run ./cmd/plano lower --example pipelinedsl --format {{.FORMAT}} {{.PIPELINEDSL_SAMPLE}}
+
+  example:servicedsl:
+    desc: Lower the bundled servicedsl sample
+    cmds:
+      - go run ./cmd/plano lower --example servicedsl --format {{.FORMAT}} {{.SERVICEDSL_SAMPLE}}

@@ -1,6 +1,4 @@
 // Package schema defines host-registered forms, fields, and scalar types for plano.
-//
-//nolint:cyclop,gocognit,gocyclo // Type checking is centralized here to keep host schema rules together.
 package schema
 
 import (
@@ -8,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/arcgolabs/collectionx/mapping"
 )
 
 type LabelKind int
@@ -106,6 +106,8 @@ type Ref struct {
 	Name string
 }
 
+type Null struct{}
+
 type Duration struct {
 	Raw   string
 	Value time.Duration
@@ -137,11 +139,14 @@ type FormSpec struct {
 }
 
 type FunctionSpec struct {
-	Name    string
-	MinArgs int
-	MaxArgs int
-	Eval    func(args []any) (any, error)
-	Docs    string
+	Name         string
+	MinArgs      int
+	MaxArgs      int
+	ParamTypes   []Type
+	VariadicType Type
+	Result       Type
+	Eval         func(args []any) (any, error)
+	Docs         string
 }
 
 func ParseDuration(raw string) (Duration, error) {
@@ -184,36 +189,11 @@ func CheckAssignable(t Type, value any) error {
 	case BuiltinType:
 		return checkBuiltin(want, value)
 	case ListType:
-		items, ok := value.([]any)
-		if !ok {
-			return fmt.Errorf("expected %s, got %T", want.String(), value)
-		}
-		for _, item := range items {
-			if err := CheckAssignable(want.Elem, item); err != nil {
-				return err
-			}
-		}
-		return nil
+		return checkListAssignable(want, value)
 	case MapType:
-		items, ok := value.(map[string]any)
-		if !ok {
-			return fmt.Errorf("expected %s, got %T", want.String(), value)
-		}
-		for _, item := range items {
-			if err := CheckAssignable(want.Elem, item); err != nil {
-				return err
-			}
-		}
-		return nil
+		return checkMapAssignable(want, value)
 	case RefType:
-		ref, ok := value.(Ref)
-		if !ok {
-			return fmt.Errorf("expected %s, got %T", want.String(), value)
-		}
-		if ref.Kind != want.Kind {
-			return fmt.Errorf("expected %s, got ref<%s>", want.String(), ref.Kind)
-		}
-		return nil
+		return checkRefAssignable(want, value)
 	case NamedType:
 		return nil
 	default:
@@ -222,33 +202,97 @@ func CheckAssignable(t Type, value any) error {
 }
 
 func checkBuiltin(want BuiltinType, value any) error {
-	switch want {
-	case TypeAny:
+	if want == TypeAny {
 		return nil
-	case TypeString, TypePath:
+	}
+	if isStringBuiltin(want) {
 		if _, ok := value.(string); ok {
 			return nil
 		}
-	case TypeInt:
-		if _, ok := value.(int64); ok {
-			return nil
-		}
-	case TypeFloat:
-		if _, ok := value.(float64); ok {
-			return nil
-		}
-	case TypeBool:
-		if _, ok := value.(bool); ok {
-			return nil
-		}
-	case TypeDuration:
-		if _, ok := value.(Duration); ok {
-			return nil
-		}
-	case TypeSize:
-		if _, ok := value.(Size); ok {
-			return nil
-		}
+		return fmt.Errorf("expected %s, got %T", want.String(), value)
+	}
+	if matchesBuiltinValue(want, value) {
+		return nil
 	}
 	return fmt.Errorf("expected %s, got %T", want.String(), value)
+}
+
+func checkListAssignable(want ListType, value any) error {
+	items, ok := value.([]any)
+	if !ok {
+		return fmt.Errorf("expected %s, got %T", want.String(), value)
+	}
+	for _, item := range items {
+		if err := CheckAssignable(want.Elem, item); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func checkMapAssignable(want MapType, value any) error {
+	switch items := value.(type) {
+	case *mapping.OrderedMap[string, any]:
+		return checkMapValues(want.Elem, items.Values())
+	case map[string]any:
+		return checkBuiltinMapValues(want.Elem, items)
+	default:
+		return fmt.Errorf("expected %s, got %T", want.String(), value)
+	}
+}
+
+func checkMapValues(elem Type, items []any) error {
+	for _, item := range items {
+		if err := CheckAssignable(elem, item); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func checkBuiltinMapValues(elem Type, items map[string]any) error {
+	values := make([]any, 0, len(items))
+	for _, item := range items {
+		values = append(values, item)
+	}
+	return checkMapValues(elem, values)
+}
+
+func checkRefAssignable(want RefType, value any) error {
+	ref, ok := value.(Ref)
+	if !ok {
+		return fmt.Errorf("expected %s, got %T", want.String(), value)
+	}
+	if ref.Kind != want.Kind {
+		return fmt.Errorf("expected %s, got ref<%s>", want.String(), ref.Kind)
+	}
+	return nil
+}
+
+func isStringBuiltin(want BuiltinType) bool {
+	return want == TypeString || want == TypePath
+}
+
+func matchesBuiltinValue(want BuiltinType, value any) bool {
+	switch want {
+	case TypeString, TypePath, TypeAny:
+		return false
+	case TypeInt:
+		_, ok := value.(int64)
+		return ok
+	case TypeFloat:
+		_, ok := value.(float64)
+		return ok
+	case TypeBool:
+		_, ok := value.(bool)
+		return ok
+	case TypeDuration:
+		_, ok := value.(Duration)
+		return ok
+	case TypeSize:
+		_, ok := value.(Size)
+		return ok
+	default:
+		return false
+	}
 }

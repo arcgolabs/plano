@@ -1,0 +1,33 @@
+fn image(name: string): string {
+  return name + ":latest"
+}
+
+pipeline {
+  name = "release"
+}
+
+stage lint {
+  image = image("golangci")
+  run {
+    shell("golangci-lint run ./...")
+  }
+}
+
+stage test {
+  needs = [lint]
+  image = "golang:1.26"
+
+  for pkg in ["./...", "./cmd/..."] {
+    run {
+      exec("go", "test", pkg)
+    }
+  }
+}
+
+stage build {
+  needs = [test]
+  image = "golang:1.26"
+  run {
+    exec("go", "build", "./cmd/plano")
+  }
+}

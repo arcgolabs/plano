@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -25,6 +24,29 @@ const target: string = "dist/demo"
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if !strings.Contains(stdout.String(), `"Statements"`) {
+		t.Fatalf("stdout = %s", stdout.String())
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %s", stderr.String())
+	}
+}
+
+func TestExamplesCommand(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	cmd := newRootCmd()
+	cmd.SetOut(&stdout)
+	cmd.SetErr(&stderr)
+	cmd.SetArgs([]string{"examples", "--format", "json"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(stdout.String(), `"name": "builddsl"`) {
+		t.Fatalf("stdout = %s", stdout.String())
+	}
+	if !strings.Contains(stdout.String(), `"sample": "examples/builddsl/sample.plano"`) {
 		t.Fatalf("stdout = %s", stdout.String())
 	}
 	if stderr.Len() != 0 {
@@ -270,14 +292,4 @@ func TestLowerRequiresExample(t *testing.T) {
 	if !strings.Contains(err.Error(), "requires --example") {
 		t.Fatalf("err = %v", err)
 	}
-}
-
-func writeTempPlano(t *testing.T, content string) string {
-	t.Helper()
-	dir := t.TempDir()
-	file := filepath.Join(dir, "build.plano")
-	if err := os.WriteFile(file, []byte(strings.TrimSpace(content)), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	return file
 }

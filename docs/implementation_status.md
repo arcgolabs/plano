@@ -21,6 +21,10 @@ This document describes the current implementation in this repository relative t
 - Diagnostics model
 - Cobra-based CLI:
   - `plano parse`
+  - `plano examples`
+  - `plano bind --example builddsl`
+  - `plano check --example builddsl`
+  - `plano hir --example builddsl`
   - `plano compile --example builddsl`
   - `plano lower --example builddsl`
   - `plano validate --example builddsl`
@@ -32,6 +36,10 @@ This document describes the current implementation in this repository relative t
   - `task test`
   - `task lint`
   - `task parse`
+  - `task examples`
+  - `task bind`
+  - `task check`
+  - `task hir`
   - `task compile`
   - `task lower`
   - `task validate`
@@ -42,7 +50,11 @@ This document describes the current implementation in this repository relative t
   - body mode
   - label mode
   - function signatures
+  - function result and argument types
 - Compiler support for:
+  - explicit bind phase for constants, functions, and declared symbols
+  - explicit check phase for expression types, field assignment types, returns, and call signatures
+  - explicit typed HIR output for lowering
   - top-level imports
   - glob imports using `**`
   - top-level constants with lazy resolution
@@ -56,10 +68,14 @@ This document describes the current implementation in this repository relative t
   - `let`, `if`, and `for` execution inside script bodies
   - user-defined function execution with typed parameters and returns
   - typed document output
-- Example host lowering package:
+- Example host lowering packages:
   - `examples/builddsl.Register(...)`
   - `examples/builddsl.Lower(...)`
-  - `task`, `go.test`, and `go.binary` forms
+  - `examples/pipelinedsl.Register(...)`
+  - `examples/pipelinedsl.Lower(...)`
+  - `examples/servicedsl.Register(...)`
+  - `examples/servicedsl.Lower(...)`
+  - `task`, `go.test`, `go.binary`, `pipeline`, `stage`, `stack`, and `service` forms
 - Builtin compile-time functions:
   - `env`
   - `join_path`
@@ -101,11 +117,35 @@ Parser API:
 file, diags := plano.ParseFile(fset, "build.plano", src)
 ```
 
+Binding API:
+
+```go
+c := compiler.New(compiler.Options{})
+binding, diags := c.BindSource(ctx, "build.plano", src)
+```
+
+Check API:
+
+```go
+c := compiler.New(compiler.Options{})
+checks, diags := c.CheckSource(ctx, "build.plano", src)
+```
+
 Compiler API:
 
 ```go
 c := compiler.New(compiler.Options{})
 doc, diags := c.CompileSource(ctx, "build.plano", src)
+```
+
+Detailed compiler API:
+
+```go
+c := compiler.New(compiler.Options{})
+result := c.CompileSourceDetailed(ctx, "build.plano", src)
+_ = result.Binding
+_ = result.Checks
+_ = result.HIR
 ```
 
 Build lowering API:
@@ -114,13 +154,18 @@ Build lowering API:
 c := compiler.New(compiler.Options{})
 _ = builddsl.Register(c) // import from github.com/arcgolabs/plano/examples/builddsl
 doc, diags := c.CompileSource(ctx, "build.plano", src)
-project, err := builddsl.Lower(doc)
+result := c.CompileSourceDetailed(ctx, "build.plano", src)
+project, err := builddsl.Lower(result.HIR)
 ```
 
 CLI:
 
 ```bash
+go run ./cmd/plano examples
 go run ./cmd/plano parse ./build.plano
+go run ./cmd/plano bind --example builddsl ./build.plano
+go run ./cmd/plano check --example builddsl ./build.plano
+go run ./cmd/plano hir --example builddsl ./build.plano
 go run ./cmd/plano compile --example builddsl ./build.plano
 go run ./cmd/plano lower --example builddsl ./build.plano
 go run ./cmd/plano validate --example builddsl ./build.plano
@@ -138,9 +183,12 @@ Current automated tests cover:
 - import loading
 - glob import expansion
 - schema-based field validation
+- static typechecking for expressions, returns, fields, and registered call signatures
 - script-body execution and user-defined functions
 - action validation for call statements
-- example builddsl lowering and ordered task output
+- typed HIR generation
+- example builddsl, pipelinedsl, and servicedsl lowering
+- bundled sample `.plano` scripts for each example DSL
 
 Run with:
 

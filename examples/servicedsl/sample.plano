@@ -1,0 +1,30 @@
+stack {
+  name = "demo"
+}
+
+service db {
+  image = "postgres:16"
+  port = 5432
+  env = {
+    POSTGRES_DB = "demo",
+  }
+}
+
+service api {
+  image = "ghcr.io/acme/api:latest"
+  port = 8080
+  depends_on = [db]
+  env = {
+    LOG_LEVEL = env("LOG_LEVEL", "info"),
+    DATABASE_URL = "postgres://db:5432/demo",
+  }
+}
+
+service worker {
+  image = "ghcr.io/acme/worker:latest"
+  port = 9090
+  depends_on = [api]
+  env = {
+    QUEUE = "default",
+  }
+}

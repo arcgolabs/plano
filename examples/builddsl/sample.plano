@@ -1,0 +1,25 @@
+fn output(name: string): path {
+  return join_path("dist", name)
+}
+
+workspace {
+  name = "demo"
+  default = build
+}
+
+task prepare {
+  run {
+    exec("mkdir", "-p", "dist")
+  }
+}
+
+go.test test {
+  deps = [prepare]
+  packages = ["./...", "./cmd/..."]
+}
+
+go.binary build {
+  deps = [prepare, test]
+  main = "./cmd/plano"
+  out = output("plano")
+}

@@ -4,21 +4,25 @@ package compiler
 import (
 	"errors"
 	"fmt"
+
+	"github.com/arcgolabs/plano/schema"
 )
 
 type ActionSpec struct {
-	Name     string
-	MinArgs  int
-	MaxArgs  int
-	Validate func(args []any) error
-	Docs     string
+	Name         string
+	MinArgs      int
+	MaxArgs      int
+	ArgTypes     []schema.Type
+	VariadicType schema.Type
+	Validate     func(args []any) error
+	Docs         string
 }
 
 func (c *Compiler) RegisterAction(spec ActionSpec) error {
 	if spec.Name == "" {
 		return errors.New("action name cannot be empty")
 	}
-	c.actions[spec.Name] = spec
+	c.actions.Set(spec.Name, spec)
 	return nil
 }
 

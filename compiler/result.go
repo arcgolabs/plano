@@ -2,17 +2,15 @@ package compiler
 
 import (
 	"context"
-	"go/token"
-	"os"
-	"path/filepath"
-
 	"github.com/arcgolabs/plano/diag"
-	planofrontend "github.com/arcgolabs/plano/frontend/plano"
-	"github.com/samber/oops"
+	"go/token"
 )
 
 type Result struct {
 	Document    *Document
+	Binding     *Binding
+	Checks      *CheckInfo
+	HIR         *HIR
 	FileSet     *token.FileSet
 	Diagnostics diag.Diagnostics
 }
@@ -28,46 +26,37 @@ func (c *Compiler) CompileFile(ctx context.Context, filename string) (*Document,
 }
 
 func (c *Compiler) CompileSourceDetailed(ctx context.Context, filename string, src []byte) Result {
-	_ = ctx
-	fset := token.NewFileSet()
-	root, diags := planofrontend.ParseFile(fset, filename, src)
-	units := []parsedUnit{{Name: filepath.Clean(filename), File: root}}
-	imported, importDiags := c.loadImports(fset, units[0], map[string]bool{filepath.Clean(filename): true}, map[string]bool{})
-	diags.Append(importDiags)
-	units = append(imported, units...)
-	doc, more := c.compileUnits(fset, units)
-	diags.Append(more)
+	input := c.prepareSource(filename, src)
+	index := c.bindUnits(input.units)
+	input.diagnostics.Append(index.diagnostics)
+	checks, checkDiags := c.checkUnits(input.units, index)
+	input.diagnostics.Append(checkDiags)
+	doc, hir, more := c.compileUnits(input.fileSet, input.units, index, checks)
+	input.diagnostics.Append(more)
 	return Result{
 		Document:    doc,
-		FileSet:     fset,
-		Diagnostics: diags,
+		Binding:     index.binding,
+		Checks:      checks,
+		HIR:         hir,
+		FileSet:     input.fileSet,
+		Diagnostics: input.diagnostics,
 	}
 }
 
 func (c *Compiler) CompileFileDetailed(ctx context.Context, filename string) Result {
-	_ = ctx
-	fset := token.NewFileSet()
-	clean := filepath.Clean(filename)
-	src, err := os.ReadFile(clean)
-	if err != nil {
-		var diags diag.Diagnostics
-		diags.AddError(token.NoPos, token.NoPos, oops.Wrapf(err, "read source file %q", clean).Error())
-		return Result{
-			Document:    nil,
-			FileSet:     fset,
-			Diagnostics: diags,
-		}
-	}
-	root, diags := planofrontend.ParseFile(fset, clean, src)
-	units := []parsedUnit{{Name: clean, File: root}}
-	imported, importDiags := c.loadImports(fset, units[0], map[string]bool{clean: true}, map[string]bool{})
-	diags.Append(importDiags)
-	units = append(imported, units...)
-	doc, more := c.compileUnits(fset, units)
-	diags.Append(more)
+	input := c.prepareFile(filename)
+	index := c.bindUnits(input.units)
+	input.diagnostics.Append(index.diagnostics)
+	checks, checkDiags := c.checkUnits(input.units, index)
+	input.diagnostics.Append(checkDiags)
+	doc, hir, more := c.compileUnits(input.fileSet, input.units, index, checks)
+	input.diagnostics.Append(more)
 	return Result{
 		Document:    doc,
-		FileSet:     fset,
-		Diagnostics: diags,
+		Binding:     index.binding,
+		Checks:      checks,
+		HIR:         hir,
+		FileSet:     input.fileSet,
+		Diagnostics: input.diagnostics,
 	}
 }

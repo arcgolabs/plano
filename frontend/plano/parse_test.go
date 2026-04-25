@@ -1,11 +1,11 @@
-//nolint:testpackage,cyclop,gocognit,gocyclo // Parser tests stay in-package for concise AST assertions.
-package plano
+package plano_test
 
 import (
 	"go/token"
 	"testing"
 
 	"github.com/arcgolabs/plano/ast"
+	"github.com/arcgolabs/plano/frontend/plano"
 )
 
 func TestParseFile(t *testing.T) {
@@ -26,26 +26,45 @@ task build {
 }
 `)
 
-	file, diags := ParseFile(token.NewFileSet(), "build.plano", src)
+	file, diags := plano.ParseFile(token.NewFileSet(), "build.plano", src)
 	if diags.HasError() {
 		t.Fatalf("unexpected diagnostics: %v", diags)
 	}
-	if got := len(file.Statements); got != 3 {
-		t.Fatalf("expected 3 statements, got %d", got)
-	}
+	assertStatementCount(t, file, 3)
+	assertConstDecl(t, file.Statements[0], "target")
+	assertWorkspaceForm(t, file.Statements[1])
+	assertTaskForm(t, file.Statements[2])
+}
 
-	constDecl, ok := file.Statements[0].(*ast.ConstDecl)
-	if !ok {
-		t.Fatalf("statement 0 = %T, want *ast.ConstDecl", file.Statements[0])
+func TestParseInvalidSource(t *testing.T) {
+	src := []byte(`task build { deps = [1, 2 }`)
+	_, diags := plano.ParseFile(token.NewFileSet(), "broken.plano", src)
+	if !diags.HasError() {
+		t.Fatal("expected parse diagnostics")
 	}
-	if constDecl.Name.Name != "target" {
-		t.Fatalf("const name = %q, want target", constDecl.Name.Name)
-	}
+}
 
-	workspace, ok := file.Statements[1].(*ast.FormDecl)
-	if !ok {
-		t.Fatalf("statement 1 = %T, want *ast.FormDecl", file.Statements[1])
+func assertStatementCount(t *testing.T, file *ast.File, want int) {
+	t.Helper()
+	if got := len(file.Statements); got != want {
+		t.Fatalf("expected %d statements, got %d", want, got)
 	}
+}
+
+func assertConstDecl(t *testing.T, stmt ast.Stmt, want string) {
+	t.Helper()
+	constDecl, ok := stmt.(*ast.ConstDecl)
+	if !ok {
+		t.Fatalf("statement = %T, want *ast.ConstDecl", stmt)
+	}
+	if constDecl.Name.Name != want {
+		t.Fatalf("const name = %q, want %q", constDecl.Name.Name, want)
+	}
+}
+
+func assertWorkspaceForm(t *testing.T, stmt ast.Stmt) {
+	t.Helper()
+	workspace := requireFormDecl(t, stmt)
 	if got := workspace.Head.String(); got != "workspace" {
 		t.Fatalf("workspace head = %q, want workspace", got)
 	}
@@ -55,11 +74,11 @@ task build {
 	if got := len(workspace.Body.Items); got != 2 {
 		t.Fatalf("workspace body items = %d, want 2", got)
 	}
+}
 
-	task, ok := file.Statements[2].(*ast.FormDecl)
-	if !ok {
-		t.Fatalf("statement 2 = %T, want *ast.FormDecl", file.Statements[2])
-	}
+func assertTaskForm(t *testing.T, stmt ast.Stmt) {
+	t.Helper()
+	task := requireFormDecl(t, stmt)
 	if got := task.Head.String(); got != "task" {
 		t.Fatalf("task head = %q, want task", got)
 	}
@@ -69,26 +88,24 @@ task build {
 	if got := len(task.Body.Items); got != 2 {
 		t.Fatalf("task body items = %d, want 2", got)
 	}
-	runForm, ok := task.Body.Items[1].(*ast.FormDecl)
-	if !ok {
-		t.Fatalf("task body item 1 = %T, want *ast.FormDecl", task.Body.Items[1])
-	}
+	runForm := requireFormDecl(t, task.Body.Items[1])
 	if got := runForm.Head.String(); got != "run" {
 		t.Fatalf("run form head = %q, want run", got)
 	}
 	call, ok := runForm.Body.Items[0].(*ast.CallStmt)
 	if !ok {
-		t.Fatalf("run body item 0 = %T, want *ast.CallStmt", runForm.Body.Items[0])
+		t.Fatalf("run body item = %T, want *ast.CallStmt", runForm.Body.Items[0])
 	}
 	if got := call.Callee.String(); got != "exec" {
 		t.Fatalf("call callee = %q, want exec", got)
 	}
 }
 
-func TestParseInvalidSource(t *testing.T) {
-	src := []byte(`task build { deps = [1, 2 }`)
-	_, diags := ParseFile(token.NewFileSet(), "broken.plano", src)
-	if !diags.HasError() {
-		t.Fatal("expected parse diagnostics")
+func requireFormDecl(t *testing.T, node any) *ast.FormDecl {
+	t.Helper()
+	form, ok := node.(*ast.FormDecl)
+	if !ok {
+		t.Fatalf("node = %T, want *ast.FormDecl", node)
 	}
+	return form
 }

@@ -3,14 +3,12 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"go/token"
 	"io"
 	"strings"
 
 	"github.com/arcgolabs/plano/compiler"
 	"github.com/arcgolabs/plano/diag"
-	examplebuilddsl "github.com/arcgolabs/plano/examples/builddsl"
 	"github.com/spf13/cobra"
 )
 
@@ -20,7 +18,93 @@ type compileOptions struct {
 	output  outputOptions
 }
 
+type phaseResult struct {
+	value       any
+	fileSet     *token.FileSet
+	diagnostics diag.Diagnostics
+}
+
+type phaseLoader func(filename, example string) (phaseResult, error)
+
 func newCompileCmd() *cobra.Command {
+	return newPhaseOutputCmd(
+		"compile <file>",
+		"Compile a .plano file and print the typed document",
+		func(filename, example string) (phaseResult, error) {
+			result, err := compileDetailed(filename, example)
+			if err != nil {
+				return phaseResult{}, err
+			}
+			return phaseResult{
+				value:       result.Document,
+				fileSet:     result.FileSet,
+				diagnostics: result.Diagnostics,
+			}, nil
+		},
+	)
+}
+
+func newBindCmd() *cobra.Command {
+	return newPhaseOutputCmd(
+		"bind <file>",
+		"Bind declarations in a .plano file",
+		func(filename, example string) (phaseResult, error) {
+			result, err := bindDetailed(filename, example)
+			if err != nil {
+				return phaseResult{}, err
+			}
+			return phaseResult{
+				value:       result.Binding,
+				fileSet:     result.FileSet,
+				diagnostics: result.Diagnostics,
+			}, nil
+		},
+	)
+}
+
+func newCheckCmd() *cobra.Command {
+	return newPhaseOutputCmd(
+		"check <file>",
+		"Typecheck a .plano file",
+		func(filename, example string) (phaseResult, error) {
+			result, err := checkDetailed(filename, example)
+			if err != nil {
+				return phaseResult{}, err
+			}
+			return phaseResult{
+				value: struct {
+					Binding *compiler.Binding   `json:"binding" yaml:"binding"`
+					Checks  *compiler.CheckInfo `json:"checks"  yaml:"checks"`
+				}{
+					Binding: result.Binding,
+					Checks:  result.Checks,
+				},
+				fileSet:     result.FileSet,
+				diagnostics: result.Diagnostics,
+			}, nil
+		},
+	)
+}
+
+func newHIRCmd() *cobra.Command {
+	return newPhaseOutputCmd(
+		"hir <file>",
+		"Compile a .plano file and print the typed HIR",
+		func(filename, example string) (phaseResult, error) {
+			result, err := compileDetailed(filename, example)
+			if err != nil {
+				return phaseResult{}, err
+			}
+			return phaseResult{
+				value:       result.HIR,
+				fileSet:     result.FileSet,
+				diagnostics: result.Diagnostics,
+			}, nil
+		},
+	)
+}
+
+func newPhaseOutputCmd(use, short string, load phaseLoader) *cobra.Command {
 	opts := compileOptions{
 		output: outputOptions{
 			format: string(formatJSON),
@@ -28,19 +112,19 @@ func newCompileCmd() *cobra.Command {
 		},
 	}
 	cmd := &cobra.Command{
-		Use:   "compile <file>",
-		Short: "Compile a .plano file and print the typed document",
+		Use:   use,
+		Short: short,
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			result, err := compileDetailed(args[0], opts.example)
+			result, err := load(args[0], opts.example)
 			if err != nil {
 				return err
 			}
-			if shouldFail(result.Diagnostics, opts.strict) {
-				return printDiagnostics(cmd.ErrOrStderr(), result.FileSet, result.Diagnostics)
+			if shouldFail(result.diagnostics, opts.strict) {
+				return printDiagnostics(cmd.ErrOrStderr(), result.fileSet, result.diagnostics)
 			}
 			return withOutput(cmd.OutOrStdout(), opts.output.out, func(w io.Writer) error {
-				return writeValue(w, result.Document, outputFormat(opts.output.format))
+				return writeValue(w, result.value, outputFormat(opts.output.format))
 			})
 		},
 	}
@@ -60,7 +144,7 @@ func newLowerCmd() *cobra.Command {
 		Short: "Compile and lower a .plano file using an example host DSL",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if compileExample(opts.example) == exampleNone {
+			if opts.example == "" {
 				return errors.New("lower requires --example")
 			}
 			result, err := compileDetailed(args[0], opts.example)
@@ -70,7 +154,7 @@ func newLowerCmd() *cobra.Command {
 			if shouldFail(result.Diagnostics, opts.strict) {
 				return printDiagnostics(cmd.ErrOrStderr(), result.FileSet, result.Diagnostics)
 			}
-			lowered, err := lowerDocument(result.Document, compileExample(opts.example))
+			lowered, err := lowerDocument(result.HIR, opts.example)
 			if err != nil {
 				return err
 			}
@@ -137,30 +221,31 @@ func newDiagCmd() *cobra.Command {
 }
 
 func compileDetailed(filename, example string) (compiler.Result, error) {
-	c, err := newCompilerForExample(compileExample(example))
+	c, err := newCompilerForExample(example)
 	if err != nil {
 		return compiler.Result{}, err
 	}
 	return c.CompileFileDetailed(context.Background(), filename), nil
 }
 
-func lowerDocument(doc *compiler.Document, example compileExample) (any, error) {
-	switch example {
-	case exampleBuildDSL:
-		project, err := examplebuilddsl.Lower(doc)
-		if err != nil {
-			return nil, fmt.Errorf("lower with %q example: %w", example, err)
-		}
-		return project, nil
-	case exampleNone:
-		return nil, errors.New("lower requires --example")
-	default:
-		return nil, fmt.Errorf("unsupported example %q", example)
+func bindDetailed(filename, example string) (compiler.BindResult, error) {
+	c, err := newCompilerForExample(example)
+	if err != nil {
+		return compiler.BindResult{}, err
 	}
+	return c.BindFileDetailed(context.Background(), filename), nil
+}
+
+func checkDetailed(filename, example string) (compiler.CheckResult, error) {
+	c, err := newCompilerForExample(example)
+	if err != nil {
+		return compiler.CheckResult{}, err
+	}
+	return c.CheckFileDetailed(context.Background(), filename), nil
 }
 
 func bindCompilerFlags(cmd *cobra.Command, opts *compileOptions, includeText bool) {
-	cmd.Flags().StringVar(&opts.example, "example", "", "register an example host DSL (currently: builddsl)")
+	cmd.Flags().StringVar(&opts.example, "example", "", "register an example host DSL (currently: "+exampleNames()+")")
 	cmd.Flags().BoolVar(&opts.strict, "strict", false, "fail on any diagnostics, not only errors")
 	bindOutputFlags(cmd, &opts.output, includeText)
 }

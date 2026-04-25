@@ -1,11 +1,9 @@
 // Package lexer tokenizes plano source text.
-//
-//nolint:cyclop,gocognit,gocyclo,funlen // Lexing keeps the token-state machine in one place.
 package lexer
 
 import (
 	"go/token"
-	"strings"
+	"strconv"
 	"unicode"
 
 	"github.com/arcgolabs/plano/diag"
@@ -39,83 +37,8 @@ func (l *Lexer) Next() Token {
 	ch := l.src[l.offset]
 	start := l.offset
 
-	switch ch {
-	case '{':
-		l.offset++
-		return l.token(LBrace, start, l.offset)
-	case '}':
-		l.offset++
-		return l.token(RBrace, start, l.offset)
-	case '(':
-		l.offset++
-		return l.token(LParen, start, l.offset)
-	case ')':
-		l.offset++
-		return l.token(RParen, start, l.offset)
-	case '[':
-		l.offset++
-		return l.token(LBracket, start, l.offset)
-	case ']':
-		l.offset++
-		return l.token(RBracket, start, l.offset)
-	case ',':
-		l.offset++
-		return l.token(Comma, start, l.offset)
-	case '.':
-		l.offset++
-		return l.token(Dot, start, l.offset)
-	case ':':
-		l.offset++
-		return l.token(Colon, start, l.offset)
-	case '+':
-		l.offset++
-		return l.token(Plus, start, l.offset)
-	case '-':
-		l.offset++
-		return l.token(Minus, start, l.offset)
-	case '*':
-		l.offset++
-		return l.token(Star, start, l.offset)
-	case '%':
-		l.offset++
-		return l.token(Percent, start, l.offset)
-	case '!':
-		if l.match('=') {
-			return l.token(NotEq, start, l.offset)
-		}
-		l.offset++
-		return l.token(Bang, start, l.offset)
-	case '=':
-		if l.match('=') {
-			return l.token(Eq, start, l.offset)
-		}
-		l.offset++
-		return l.token(Assign, start, l.offset)
-	case '>':
-		if l.match('=') {
-			return l.token(GTE, start, l.offset)
-		}
-		l.offset++
-		return l.token(GT, start, l.offset)
-	case '<':
-		if l.match('=') {
-			return l.token(LTE, start, l.offset)
-		}
-		l.offset++
-		return l.token(LT, start, l.offset)
-	case '&':
-		if l.match('&') {
-			return l.token(AndAnd, start, l.offset)
-		}
-	case '|':
-		if l.match('|') {
-			return l.token(OrOr, start, l.offset)
-		}
-	case '/':
-		l.offset++
-		return l.token(Slash, start, l.offset)
-	case '"':
-		return l.scanString()
+	if tok, ok := l.scanPunctuation(start, ch); ok {
+		return tok
 	}
 
 	if isIdentStart(ch) {
@@ -130,6 +53,57 @@ func (l *Lexer) Next() Token {
 	return l.token(Illegal, start, l.offset)
 }
 
+func (l *Lexer) scanPunctuation(start int, ch byte) (Token, bool) {
+	if tok, ok := l.scanSingleRuneToken(start, ch); ok {
+		return tok, true
+	}
+	switch ch {
+	case '!':
+		return l.scanPairedToken(start, NotEq, Bang)
+	case '=':
+		return l.scanPairedToken(start, Eq, Assign)
+	case '>':
+		return l.scanPairedToken(start, GTE, GT)
+	case '<':
+		return l.scanPairedToken(start, LTE, LT)
+	case '&':
+		return l.scanLogicalToken(start, '&', AndAnd)
+	case '|':
+		return l.scanLogicalToken(start, '|', OrOr)
+	case '"':
+		return l.scanString(), true
+	default:
+		return Token{}, false
+	}
+}
+
+func (l *Lexer) scanSingleRuneToken(start int, ch byte) (Token, bool) {
+	kind, ok := singleRuneTokens[ch]
+	if !ok {
+		return Token{}, false
+	}
+	return l.advanceToken(kind, start), true
+}
+
+func (l *Lexer) scanPairedToken(start int, paired, single Kind) (Token, bool) {
+	if l.match('=') {
+		return l.token(paired, start, l.offset), true
+	}
+	return l.advanceToken(single, start), true
+}
+
+func (l *Lexer) scanLogicalToken(start int, next byte, kind Kind) (Token, bool) {
+	if l.match(next) {
+		return l.token(kind, start, l.offset), true
+	}
+	return Token{}, false
+}
+
+func (l *Lexer) advanceToken(kind Kind, start int) Token {
+	l.offset++
+	return l.token(kind, start, l.offset)
+}
+
 func (l *Lexer) token(kind Kind, start, end int) Token {
 	return Token{
 		Kind: kind,
@@ -141,34 +115,53 @@ func (l *Lexer) token(kind Kind, start, end int) Token {
 
 func (l *Lexer) skipSpaceAndComments() {
 	for {
-		for l.offset < len(l.src) && unicode.IsSpace(rune(l.src[l.offset])) {
-			l.offset++
-		}
-		if l.offset+1 >= len(l.src) || l.src[l.offset] != '/' {
-			return
-		}
-		switch l.src[l.offset+1] {
-		case '/':
-			l.offset += 2
-			for l.offset < len(l.src) && l.src[l.offset] != '\n' {
-				l.offset++
-			}
-		case '*':
-			start := l.offset
-			l.offset += 2
-			for l.offset+1 < len(l.src) && (l.src[l.offset] != '*' || l.src[l.offset+1] != '/') {
-				l.offset++
-			}
-			if l.offset+1 >= len(l.src) {
-				l.diags.AddError(l.file.Pos(start), l.file.Pos(len(l.src)), "unterminated block comment")
-				l.offset = len(l.src)
-				return
-			}
-			l.offset += 2
-		default:
+		l.skipWhitespace()
+		if !l.skipComment() {
 			return
 		}
 	}
+}
+
+func (l *Lexer) skipWhitespace() {
+	for l.offset < len(l.src) && unicode.IsSpace(rune(l.src[l.offset])) {
+		l.offset++
+	}
+}
+
+func (l *Lexer) skipComment() bool {
+	if l.offset+1 >= len(l.src) || l.src[l.offset] != '/' {
+		return false
+	}
+	if l.src[l.offset+1] == '/' {
+		l.skipLineComment()
+		return true
+	}
+	if l.src[l.offset+1] == '*' {
+		return l.skipBlockComment()
+	}
+	return false
+}
+
+func (l *Lexer) skipLineComment() {
+	l.offset += 2
+	for l.offset < len(l.src) && l.src[l.offset] != '\n' {
+		l.offset++
+	}
+}
+
+func (l *Lexer) skipBlockComment() bool {
+	start := l.offset
+	l.offset += 2
+	for l.offset+1 < len(l.src) && (l.src[l.offset] != '*' || l.src[l.offset+1] != '/') {
+		l.offset++
+	}
+	if l.offset+1 >= len(l.src) {
+		l.diags.AddError(l.file.Pos(start), l.file.Pos(len(l.src)), "unterminated block comment")
+		l.offset = len(l.src)
+		return false
+	}
+	l.offset += 2
+	return true
 }
 
 func (l *Lexer) scanIdent() Token {
@@ -191,12 +184,17 @@ func (l *Lexer) scanString() Token {
 		ch := l.src[l.offset]
 		if ch == '"' {
 			l.offset++
-			raw := string(l.src[start+1 : l.offset-1])
+			raw := string(l.src[start:l.offset])
+			text, err := strconv.Unquote(raw)
+			if err != nil {
+				l.diags.AddError(l.file.Pos(start), l.file.Pos(l.offset), "invalid string literal")
+				text = string(l.src[start+1 : l.offset-1])
+			}
 			return Token{
 				Kind: String,
 				Pos:  l.file.Pos(start),
 				End:  l.file.Pos(l.offset),
-				Text: unescape(raw),
+				Text: text,
 			}
 		}
 		if ch == '\\' {
@@ -216,37 +214,46 @@ func (l *Lexer) scanString() Token {
 
 func (l *Lexer) scanNumber() Token {
 	start := l.offset
+	l.scanDigits()
+	if l.hasFraction() {
+		l.offset++
+		l.scanDigits()
+		return l.token(Float, start, l.offset)
+	}
+	unitStart := l.offset
+	l.scanLetters()
+	if unitStart == l.offset {
+		return l.token(Int, start, l.offset)
+	}
+	return l.tokenWithNumericSuffix(start, unitStart)
+}
+
+func (l *Lexer) scanDigits() {
 	for l.offset < len(l.src) && isDigit(l.src[l.offset]) {
 		l.offset++
 	}
-	kind := Int
-	if l.offset < len(l.src) && l.src[l.offset] == '.' && l.offset+1 < len(l.src) && isDigit(l.src[l.offset+1]) {
-		kind = Float
-		l.offset++
-		for l.offset < len(l.src) && isDigit(l.src[l.offset]) {
-			l.offset++
-		}
-		return l.token(kind, start, l.offset)
-	}
+}
 
-	unitStart := l.offset
+func (l *Lexer) hasFraction() bool {
+	return l.offset < len(l.src) && l.src[l.offset] == '.' && l.offset+1 < len(l.src) && isDigit(l.src[l.offset+1])
+}
+
+func (l *Lexer) scanLetters() {
 	for l.offset < len(l.src) && unicode.IsLetter(rune(l.src[l.offset])) {
 		l.offset++
 	}
-	if unitStart == l.offset {
-		return l.token(kind, start, l.offset)
-	}
+}
 
+func (l *Lexer) tokenWithNumericSuffix(start, unitStart int) Token {
 	unit := string(l.src[unitStart:l.offset])
-	switch unit {
-	case "ms", "s", "m", "h":
+	if isDurationUnit(unit) {
 		return l.token(Duration, start, l.offset)
-	case "B", "Ki", "Mi", "Gi", "Ti":
-		return l.token(Size, start, l.offset)
-	default:
-		l.diags.AddError(l.file.Pos(start), l.file.Pos(l.offset), "invalid numeric suffix")
-		return l.token(Illegal, start, l.offset)
 	}
+	if isSizeUnit(unit) {
+		return l.token(Size, start, l.offset)
+	}
+	l.diags.AddError(l.file.Pos(start), l.file.Pos(l.offset), "invalid numeric suffix")
+	return l.token(Illegal, start, l.offset)
 }
 
 func (l *Lexer) match(next byte) bool {
@@ -255,27 +262,4 @@ func (l *Lexer) match(next byte) bool {
 		return true
 	}
 	return false
-}
-
-func isDigit(ch byte) bool {
-	return ch >= '0' && ch <= '9'
-}
-
-func isIdentStart(ch byte) bool {
-	return ch == '_' || unicode.IsLetter(rune(ch))
-}
-
-func isIdentContinue(ch byte) bool {
-	return isIdentStart(ch) || isDigit(ch)
-}
-
-func unescape(s string) string {
-	replacer := strings.NewReplacer(
-		`\\`, `\`,
-		`\n`, "\n",
-		`\r`, "\r",
-		`\t`, "\t",
-		`\"`, `"`,
-	)
-	return replacer.Replace(s)
 }

@@ -111,17 +111,17 @@ func withOutput(defaultWriter io.Writer, path string, fn func(w io.Writer) error
 	if path == "" || path == "-" {
 		return fn(defaultWriter)
 	}
-	file, err := createFile(path)
+	writer, err := openWriter(path)
 	if err != nil {
 		return err
 	}
 	defer func() {
-		closeErr := closeFile(file)
+		closeErr := writer.Close()
 		if err == nil && closeErr != nil {
 			err = closeErr
 		}
 	}()
-	return fn(file)
+	return fn(writer)
 }
 
 func printDiagnostics(w io.Writer, fset *token.FileSet, diags diag.Diagnostics) error {
