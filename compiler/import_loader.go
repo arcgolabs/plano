@@ -55,7 +55,7 @@ func (c *Compiler) loadImportUnit(
 	}
 	seen[next] = true
 
-	src, err := readSourceFile(next)
+	src, err := c.ReadFile(next)
 	if err != nil {
 		diags.AddError(imp.Pos(), imp.End(), oops.Wrapf(err, "read import file %q", next).Error())
 		return nil, diags

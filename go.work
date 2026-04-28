@@ -6,4 +6,5 @@ use (
 	./examples/builddsl
 	./examples/pipelinedsl
 	./examples/servicedsl
+	./lsp
 )

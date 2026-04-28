@@ -13,17 +13,17 @@ tasks:
   test:
     desc: Run the workspace Go test suite
     cmds:
-      - go test ./... ./cmd/plano/... ./examples/builddsl/... ./examples/pipelinedsl/... ./examples/servicedsl/...
+      - go test ./... ./cmd/plano/... ./examples/builddsl/... ./examples/pipelinedsl/... ./examples/servicedsl/... ./lsp/...
 
   lint:
     desc: Run golangci-lint across all workspace modules
     cmds:
-      - /Users/daiyuang/.go/bin/golangci-lint run ./... ./cmd/plano/... ./examples/builddsl/... ./examples/pipelinedsl/... ./examples/servicedsl/...
+      - /Users/daiyuang/.go/bin/golangci-lint run ./... ./cmd/plano/... ./examples/builddsl/... ./examples/pipelinedsl/... ./examples/servicedsl/... ./lsp/...
 
   fmt:
     desc: Format all Go sources in the workspace
     cmds:
-      - gofmt -w ast/*.go cmd/plano/*.go compiler/*.go diag/*.go examples/builddsl/*.go examples/pipelinedsl/*.go examples/servicedsl/*.go frontend/plano/*.go internal/lexer/*.go internal/parser/*.go schema/*.go
+      - gofmt -w ast/*.go cmd/plano/*.go compiler/*.go diag/*.go examples/builddsl/*.go examples/pipelinedsl/*.go examples/servicedsl/*.go frontend/plano/*.go internal/lexer/*.go internal/parser/*.go lsp/*.go schema/*.go
 
   work:sync:
     desc: Sync the Go workspace after module layout changes

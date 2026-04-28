@@ -25,7 +25,8 @@ This repository currently contains a first usable implementation with:
 
 - `cmd/plano`: CLI for parsing, compiling, and lowering `.plano` files
 - `frontend/plano`: `ParseFile` API for `.plano` source to AST
-- `compiler`: structured compile API from source/file to typed document
+- `compiler`: structured compile API from source bytes, strings, or files to typed documents
+- `lsp`: workspace analysis plus a basic `go.lsp.dev/protocol` LSP server with hover, definition, and diagnostics
 - `schema`: form specs, field specs, types, refs, and builtin scalar types
 - `ast`: parser output nodes
 - `diag`: diagnostics model
@@ -89,6 +90,13 @@ _ = binding
 _ = diags
 ```
 
+The compiler also exposes string helpers when you already have in-memory source text:
+
+```go
+result := c.CompileStringDetailed(ctx, "build.plano", src)
+_ = result.Document
+```
+
 And the static typecheck phase:
 
 ```go
@@ -102,6 +110,17 @@ And the typed HIR phase:
 ```go
 result := c.CompileSourceDetailed(ctx, "build.plano", src)
 _ = result.HIR
+```
+
+For editor integrations, the `lsp` module can either analyze in-memory documents directly or expose a basic LSP server:
+
+```go
+server := lsp.NewServer(lsp.ServerOptions{
+    Compiler: configuredCompiler,
+})
+_ = lsp.ServeStdio(context.Background(), lsp.ServerOptions{
+    Compiler: configuredCompiler,
+})
 ```
 
 ## Docs
@@ -169,6 +188,7 @@ The repository now runs as a small Go workspace rather than a single module.
 
 - Root module `github.com/arcgolabs/plano`: compiler core, AST, diagnostics, schema, and frontend packages
 - `cmd/plano`: standalone CLI module
+- `lsp`: standalone LSP helper module
 - `examples/builddsl`: example build DSL module
 - `examples/pipelinedsl`: example pipeline DSL module
 - `examples/servicedsl`: example service DSL module

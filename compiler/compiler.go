@@ -15,6 +15,7 @@ import (
 
 type Options struct {
 	LookupEnv func(string) (string, bool)
+	ReadFile  func(string) ([]byte, error)
 }
 
 type Compiler struct {
@@ -23,6 +24,7 @@ type Compiler struct {
 	actions   *mapping.OrderedMap[string, ActionSpec]
 	globals   *mapping.OrderedMap[string, any]
 	lookupEnv func(string) (string, bool)
+	readFile  func(string) ([]byte, error)
 }
 
 type Document struct {
@@ -40,6 +42,7 @@ type Symbol struct {
 	Name string
 	Kind string
 	Pos  token.Pos
+	End  token.Pos
 }
 
 type Call struct {
@@ -87,6 +90,10 @@ func New(opts Options) *Compiler {
 	if lookupEnv == nil {
 		lookupEnv = os.LookupEnv
 	}
+	readFile := opts.ReadFile
+	if readFile == nil {
+		readFile = readSourceFile
+	}
 
 	c := &Compiler{
 		forms:     mapping.NewOrderedMap[string, schema.FormSpec](),
@@ -94,11 +101,65 @@ func New(opts Options) *Compiler {
 		actions:   mapping.NewOrderedMap[string, ActionSpec](),
 		globals:   mapping.NewOrderedMap[string, any](),
 		lookupEnv: lookupEnv,
+		readFile:  readFile,
 	}
 	c.RegisterConst("os", goruntime.GOOS)
 	c.RegisterConst("arch", goruntime.GOARCH)
 	c.registerBuiltins()
 	return c
+}
+
+func (c *Compiler) Clone() *Compiler {
+	if c == nil {
+		return New(Options{})
+	}
+	return &Compiler{
+		forms:     c.forms.Clone(),
+		funcs:     c.funcs.Clone(),
+		actions:   c.actions.Clone(),
+		globals:   c.globals.Clone(),
+		lookupEnv: c.lookupEnv,
+		readFile:  c.readFile,
+	}
+}
+
+func (c *Compiler) SetReadFile(fn func(string) ([]byte, error)) {
+	if c == nil {
+		return
+	}
+	if fn == nil {
+		c.readFile = readSourceFile
+		return
+	}
+	c.readFile = fn
+}
+
+func (c *Compiler) ReadFile(path string) ([]byte, error) {
+	if c == nil || c.readFile == nil {
+		return readSourceFile(path)
+	}
+	return c.readFile(path)
+}
+
+func (c *Compiler) FormSpec(name string) (schema.FormSpec, bool) {
+	if c == nil || c.forms == nil {
+		return schema.FormSpec{}, false
+	}
+	return c.forms.Get(name)
+}
+
+func (c *Compiler) FunctionSpec(name string) (schema.FunctionSpec, bool) {
+	if c == nil || c.funcs == nil {
+		return schema.FunctionSpec{}, false
+	}
+	return c.funcs.Get(name)
+}
+
+func (c *Compiler) ActionSpec(name string) (ActionSpec, bool) {
+	if c == nil || c.actions == nil {
+		return ActionSpec{}, false
+	}
+	return c.actions.Get(name)
 }
 
 func (c *Compiler) RegisterForm(spec schema.FormSpec) error {

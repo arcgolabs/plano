@@ -22,6 +22,7 @@ This document describes the current implementation in this repository relative t
 - AST model with source positions
 - Diagnostics model
 - Go workspace layout with separate core, CLI, and example modules
+- Separate `lsp` workspace module for downstream language-server integration
 - Cobra-based CLI:
   - `plano parse`
   - `plano examples`
@@ -72,6 +73,14 @@ This document describes the current implementation in this repository relative t
   - `let`, local reassignment, `if`, `else if`, single- and dual-variable `for`, `break`, and `continue` execution inside script bodies
   - user-defined function execution with typed parameters and returns
   - typed document output
+- LSP support module:
+  - in-memory workspace document tracking
+  - source-based analysis helpers for bytes and strings
+  - basic `go.lsp.dev/protocol` server wiring
+  - stdio server entrypoint
+  - LSP-friendly diagnostics
+  - definition lookup
+  - hover content generation
 - Example host lowering packages:
   - `examples/builddsl.Register(...)`
   - `examples/builddsl.Lower(...)`
@@ -142,6 +151,13 @@ c := compiler.New(compiler.Options{})
 binding, diags := c.BindSource(ctx, "build.plano", src)
 ```
 
+String binding API:
+
+```go
+c := compiler.New(compiler.Options{})
+binding, diags := c.BindString(ctx, "build.plano", src)
+```
+
 Check API:
 
 ```go
@@ -149,11 +165,25 @@ c := compiler.New(compiler.Options{})
 checks, diags := c.CheckSource(ctx, "build.plano", src)
 ```
 
+String check API:
+
+```go
+c := compiler.New(compiler.Options{})
+checks, diags := c.CheckString(ctx, "build.plano", src)
+```
+
 Compiler API:
 
 ```go
 c := compiler.New(compiler.Options{})
 doc, diags := c.CompileSource(ctx, "build.plano", src)
+```
+
+String compiler API:
+
+```go
+c := compiler.New(compiler.Options{})
+doc, diags := c.CompileString(ctx, "build.plano", src)
 ```
 
 Detailed compiler API:
@@ -174,6 +204,15 @@ _ = builddsl.Register(c) // import from github.com/arcgolabs/plano/examples/buil
 doc, diags := c.CompileSource(ctx, "build.plano", src)
 result := c.CompileSourceDetailed(ctx, "build.plano", src)
 project, err := builddsl.Lower(result.HIR)
+```
+
+LSP server API:
+
+```go
+base := compiler.New(compiler.Options{})
+workspace := lsp.NewWorkspace(lsp.Options{Compiler: base})
+server := lsp.NewServer(lsp.ServerOptions{Workspace: workspace})
+err := lsp.ServeStdio(ctx, lsp.ServerOptions{Workspace: workspace})
 ```
 
 CLI:
@@ -212,7 +251,7 @@ Current automated tests cover:
 Run with:
 
 ```bash
-go test ./... ./cmd/plano/... ./examples/builddsl/... ./examples/pipelinedsl/... ./examples/servicedsl/...
+go test ./... ./cmd/plano/... ./examples/builddsl/... ./examples/pipelinedsl/... ./examples/servicedsl/... ./lsp/...
 ```
 
 ## Near-Term Direction
@@ -230,6 +269,7 @@ The repository now uses `go.work` to stitch together a few focused modules:
 
 - root module: compiler core and public language packages
 - `cmd/plano`: CLI distribution module
+- `lsp`: LSP helper module
 - `examples/builddsl`: build-oriented example DSL module
 - `examples/pipelinedsl`: pipeline-oriented example DSL module
 - `examples/servicedsl`: service-topology example DSL module

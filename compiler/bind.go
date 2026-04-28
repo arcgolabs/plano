@@ -3,7 +3,6 @@ package compiler
 import (
 	"context"
 	"go/token"
-	"os"
 	"path/filepath"
 
 	"github.com/arcgolabs/collectionx/mapping"
@@ -64,7 +63,7 @@ func (c *Compiler) prepareFile(filename string) preparedInput {
 	fset := token.NewFileSet()
 	clean := filepath.Clean(filename)
 
-	src, err := os.ReadFile(clean)
+	src, err := c.ReadFile(clean)
 	if err != nil {
 		var diags diag.Diagnostics
 		diags.AddError(token.NoPos, token.NoPos, oops.Wrapf(err, "read source file %q", clean).Error())
@@ -139,8 +138,8 @@ func (b *binder) bindConst(decl *ast.ConstDecl) {
 	b.binding.Consts.Set(name, ConstBinding{
 		Name: name,
 		Type: convertTypeExpr(decl.Type),
-		Pos:  decl.Pos(),
-		End:  decl.End(),
+		Pos:  decl.Name.Pos(),
+		End:  decl.Name.End(),
 	})
 }
 
@@ -155,8 +154,8 @@ func (b *binder) bindFunction(decl *ast.FnDecl) {
 		Name:   name,
 		Params: bindParams(decl.Params),
 		Result: convertTypeExpr(decl.Result),
-		Pos:    decl.Pos(),
-		End:    decl.End(),
+		Pos:    decl.Name.Pos(),
+		End:    decl.Name.End(),
 	})
 }
 
@@ -171,6 +170,7 @@ func (b *binder) bindFormSymbols(form *ast.FormDecl) {
 				Name: name,
 				Kind: spec.Declares,
 				Pos:  form.Label.Pos(),
+				End:  form.Label.End(),
 			}
 			b.symbols.Set(name, symbol)
 			b.binding.Symbols.Set(name, symbol)
