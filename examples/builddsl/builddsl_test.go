@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/plano/compiler"
 	"github.com/arcgolabs/plano/examples/builddsl"
 )
@@ -154,11 +155,12 @@ func requireTask(t *testing.T, project *builddsl.Project, name string) builddsl.
 
 func assertTaskDeps(t *testing.T, task builddsl.Task, want []string) {
 	t.Helper()
-	if len(task.Deps) != len(want) {
+	got := task.Deps.Values()
+	if len(got) != len(want) {
 		t.Fatalf("deps = %#v, want %#v", task.Deps, want)
 	}
 	for idx, item := range want {
-		if task.Deps[idx] != item {
+		if got[idx] != item {
 			t.Fatalf("deps = %#v, want %#v", task.Deps, want)
 		}
 	}
@@ -166,43 +168,48 @@ func assertTaskDeps(t *testing.T, task builddsl.Task, want []string) {
 
 func assertTaskOutputs(t *testing.T, task builddsl.Task, want []string) {
 	t.Helper()
-	if len(task.Outputs) != len(want) {
+	got := task.Outputs.Values()
+	if len(got) != len(want) {
 		t.Fatalf("outputs = %#v, want %#v", task.Outputs, want)
 	}
 	for idx, item := range want {
-		if task.Outputs[idx] != item {
+		if got[idx] != item {
 			t.Fatalf("outputs = %#v, want %#v", task.Outputs, want)
 		}
 	}
 }
 
-func assertCommandArgs(t *testing.T, commands []builddsl.Command, index int, wantLast string) {
+func assertCommandArgs(t *testing.T, commands list.List[builddsl.Command], index int, wantLast string) {
 	t.Helper()
-	if len(commands) <= index {
+	if commands.Len() <= index {
 		t.Fatalf("commands = %#v", commands)
 	}
-	if got := commands[index].Args[2]; got != wantLast {
-		t.Fatalf("command args = %#v, want last %#v", commands[index].Args, wantLast)
+	command, _ := commands.Get(index)
+	args := command.Args.Values()
+	if got := args[2]; got != wantLast {
+		t.Fatalf("command args = %#v, want last %#v", args, wantLast)
 	}
 }
 
-func assertGoTestCommand(t *testing.T, commands []builddsl.Command) {
+func assertGoTestCommand(t *testing.T, commands list.List[builddsl.Command]) {
 	t.Helper()
-	if len(commands) == 0 {
+	if commands.Len() == 0 {
 		t.Fatal("expected commands")
 	}
-	args := commands[0].Args
+	command, _ := commands.Get(0)
+	args := command.Args.Values()
 	if len(args) != 4 || args[0] != "go" || args[1] != "test" {
 		t.Fatalf("go.test command = %#v", args)
 	}
 }
 
-func assertGoBuildCommand(t *testing.T, commands []builddsl.Command) {
+func assertGoBuildCommand(t *testing.T, commands list.List[builddsl.Command]) {
 	t.Helper()
-	if len(commands) == 0 {
+	if commands.Len() == 0 {
 		t.Fatal("expected commands")
 	}
-	args := commands[0].Args
+	command, _ := commands.Get(0)
+	args := command.Args.Values()
 	if len(args) != 5 || args[0] != "go" || args[1] != "build" || args[3] != "dist/demo" {
 		t.Fatalf("go.binary command = %#v", args)
 	}

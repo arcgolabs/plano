@@ -85,8 +85,8 @@ func (s *compileState) appendCompiledForm(form *ast.FormDecl, fileEnv *env, doc 
 	if compiled == nil || hirForm == nil {
 		return
 	}
-	doc.Forms = append(doc.Forms, *compiled)
-	s.hir.Forms = append(s.hir.Forms, *hirForm)
+	doc.Forms.Add(*compiled)
+	s.hir.Forms.Add(*hirForm)
 }
 
 func isSkippableTopLevel(stmt ast.Stmt) bool {

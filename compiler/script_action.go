@@ -3,6 +3,7 @@ package compiler
 import (
 	"fmt"
 
+	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/plano/ast"
 	"github.com/arcgolabs/plano/schema"
 )
@@ -13,13 +14,13 @@ func (s *compileState) buildActionCall(current *ast.CallStmt, locals *env) (Call
 	if !ok {
 		return Call{}, ActionSpec{}, false
 	}
-	call.Args = args
+	call.Args = *list.NewList(args...)
 	spec, ok := s.compiler.actions.Get(call.Name)
 	if !ok {
 		s.diags.AddError(current.Pos(), current.End(), fmt.Sprintf("unknown action %q", call.Name))
 		return Call{}, ActionSpec{}, false
 	}
-	if err := validateArity("action", call.Name, spec.MinArgs, spec.MaxArgs, len(call.Args)); err != nil {
+	if err := validateArity("action", call.Name, spec.MinArgs, spec.MaxArgs, call.Args.Len()); err != nil {
 		s.diags.AddError(current.Pos(), current.End(), err.Error())
 		return Call{}, ActionSpec{}, false
 	}
@@ -51,9 +52,9 @@ func (s *compileState) lowerActionCall(current *ast.CallStmt, scopeID string, ca
 		scopeID = callCheck.ScopeID
 		resultType = callCheck.Result
 	}
-	hirArgs := make([]HIRArg, 0, len(call.Args))
-	for idx, arg := range call.Args {
-		hirArgs = append(hirArgs, HIRArg{
+	hirArgs := list.NewListWithCapacity[HIRArg](call.Args.Len())
+	for idx, arg := range call.Args.Values() {
+		hirArgs.Add(HIRArg{
 			Type:  signatureArgType(idx, spec.ArgTypes, spec.VariadicType),
 			Value: arg,
 		})
@@ -61,7 +62,7 @@ func (s *compileState) lowerActionCall(current *ast.CallStmt, scopeID string, ca
 	return HIRCall{
 		Name:    call.Name,
 		ScopeID: scopeID,
-		Args:    hirArgs,
+		Args:    *hirArgs,
 		Result:  resultType,
 		Pos:     current.Pos(),
 		End:     current.End(),

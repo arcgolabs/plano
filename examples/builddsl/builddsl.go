@@ -5,6 +5,7 @@ package builddsl
 import (
 	"errors"
 
+	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/compiler"
 	"github.com/arcgolabs/plano/schema"
@@ -23,21 +24,22 @@ type Workspace struct {
 
 type Task struct {
 	Name     string
-	Deps     []string
-	Outputs  []string
-	Commands []Command
+	Deps     list.List[string]
+	Outputs  list.List[string]
+	Commands list.List[Command]
 }
 
 type Command struct {
 	Name string
-	Args []string
+	Args list.List[string]
 }
 
 func Lower(hir *compiler.HIR) (*Project, error) {
 	project := &Project{
 		Workspace: mo.None[Workspace](),
 	}
-	for _, form := range hir.Forms {
+	for idx := range hir.Forms.Len() {
+		form, _ := hir.Forms.Get(idx)
 		if err := applyRootForm(project, form); err != nil {
 			return nil, err
 		}
@@ -171,12 +173,12 @@ func lowerGoTestTask(form compiler.HIRForm) (Task, error) {
 	return Task{
 		Name: form.Symbol.Name,
 		Deps: deps,
-		Commands: []Command{
-			{
+		Commands: *list.NewList(
+			Command{
 				Name: "exec",
-				Args: append([]string{"go", "test"}, packages...),
+				Args: *list.NewList(append([]string{"go", "test"}, packages.Values()...)...),
 			},
-		},
+		),
 	}, nil
 }
 
@@ -208,12 +210,12 @@ func lowerGoBinaryTask(form compiler.HIRForm) (Task, error) {
 	return Task{
 		Name:    form.Symbol.Name,
 		Deps:    deps,
-		Outputs: []string{outPath},
-		Commands: []Command{
-			{
+		Outputs: *list.NewList(outPath),
+		Commands: *list.NewList(
+			Command{
 				Name: "exec",
-				Args: []string{"go", "build", "-o", outPath, mainPath},
+				Args: *list.NewList("go", "build", "-o", outPath, mainPath),
 			},
-		},
+		),
 	}, nil
 }

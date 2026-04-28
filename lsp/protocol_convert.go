@@ -3,6 +3,7 @@ package lsp
 import (
 	"math"
 
+	"github.com/arcgolabs/collectionx/list"
 	"github.com/samber/lo"
 	"go.lsp.dev/protocol"
 )
@@ -46,8 +47,8 @@ func toProtocolHover(hover Hover) *protocol.Hover {
 	}
 }
 
-func toProtocolDiagnostics(items []Diagnostic) []protocol.Diagnostic {
-	return lo.Map(items, func(item Diagnostic, _ int) protocol.Diagnostic {
+func toProtocolDiagnostics(items list.List[Diagnostic]) []protocol.Diagnostic {
+	return lo.Map(items.Values(), func(item Diagnostic, _ int) protocol.Diagnostic {
 		return protocol.Diagnostic{
 			Range:    toProtocolRange(item.Range),
 			Severity: protocolSeverity(item.Severity),

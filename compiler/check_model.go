@@ -3,6 +3,7 @@ package compiler
 import (
 	"go/token"
 
+	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/diag"
 	"github.com/arcgolabs/plano/schema"
@@ -35,13 +36,13 @@ type FieldCheck struct {
 }
 
 type CallCheck struct {
-	ID      string        `json:"id"      yaml:"id"`
-	Name    string        `json:"name"    yaml:"name"`
-	ScopeID string        `json:"scopeId" yaml:"scopeId"`
-	Args    []schema.Type `json:"args"    yaml:"args"`
-	Result  schema.Type   `json:"result"  yaml:"result"`
-	Pos     token.Pos     `json:"pos"     yaml:"pos"`
-	End     token.Pos     `json:"end"     yaml:"end"`
+	ID      string                 `json:"id"      yaml:"id"`
+	Name    string                 `json:"name"    yaml:"name"`
+	ScopeID string                 `json:"scopeId" yaml:"scopeId"`
+	Args    list.List[schema.Type] `json:"args"    yaml:"args"`
+	Result  schema.Type            `json:"result"  yaml:"result"`
+	Pos     token.Pos              `json:"pos"     yaml:"pos"`
+	End     token.Pos              `json:"end"     yaml:"end"`
 }
 
 type CheckResult struct {

@@ -3,12 +3,13 @@ package compiler
 import (
 	"go/token"
 
+	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/schema"
 )
 
 type HIR struct {
-	Forms   []HIRForm                             `json:"forms"   yaml:"forms"`
+	Forms   list.List[HIRForm]                    `json:"forms"   yaml:"forms"`
 	Symbols *mapping.OrderedMap[string, Symbol]   `json:"symbols" yaml:"symbols"`
 	Consts  *mapping.OrderedMap[string, HIRConst] `json:"consts"  yaml:"consts"`
 }
@@ -27,8 +28,8 @@ type HIRForm struct {
 	Label   *FormLabel                            `json:"label,omitempty"   yaml:"label,omitempty"`
 	Symbol  *Symbol                               `json:"symbol,omitempty"  yaml:"symbol,omitempty"`
 	Fields  *mapping.OrderedMap[string, HIRField] `json:"fields"            yaml:"fields"`
-	Forms   []HIRForm                             `json:"forms"             yaml:"forms"`
-	Calls   []HIRCall                             `json:"calls"             yaml:"calls"`
+	Forms   list.List[HIRForm]                    `json:"forms"             yaml:"forms"`
+	Calls   list.List[HIRCall]                    `json:"calls"             yaml:"calls"`
 	Pos     token.Pos                             `json:"pos"               yaml:"pos"`
 	End     token.Pos                             `json:"end"               yaml:"end"`
 }
@@ -44,12 +45,12 @@ type HIRField struct {
 }
 
 type HIRCall struct {
-	Name    string      `json:"name"              yaml:"name"`
-	ScopeID string      `json:"scopeId,omitempty" yaml:"scopeId,omitempty"`
-	Args    []HIRArg    `json:"args"              yaml:"args"`
-	Result  schema.Type `json:"result"            yaml:"result"`
-	Pos     token.Pos   `json:"pos"               yaml:"pos"`
-	End     token.Pos   `json:"end"               yaml:"end"`
+	Name    string            `json:"name"              yaml:"name"`
+	ScopeID string            `json:"scopeId,omitempty" yaml:"scopeId,omitempty"`
+	Args    list.List[HIRArg] `json:"args"              yaml:"args"`
+	Result  schema.Type       `json:"result"            yaml:"result"`
+	Pos     token.Pos         `json:"pos"               yaml:"pos"`
+	End     token.Pos         `json:"end"               yaml:"end"`
 }
 
 type HIRArg struct {

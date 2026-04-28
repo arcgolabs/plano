@@ -5,6 +5,7 @@ import (
 	"go/token"
 	"path/filepath"
 
+	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/collectionx/set"
 	"github.com/arcgolabs/plano/ast"
@@ -215,8 +216,8 @@ func (b *binder) hasDefinition(name string) bool {
 	return false
 }
 
-func bindParams(params []*ast.Param) []ParamBinding {
-	return lo.Map(params, func(param *ast.Param, _ int) ParamBinding {
+func bindParams(params []*ast.Param) list.List[ParamBinding] {
+	items := lo.Map(params, func(param *ast.Param, _ int) ParamBinding {
 		return ParamBinding{
 			Name: param.Name.Name,
 			Type: convertTypeExpr(param.Type),
@@ -224,10 +225,12 @@ func bindParams(params []*ast.Param) []ParamBinding {
 			End:  param.End(),
 		}
 	})
+	return *list.NewList(items...)
 }
 
-func unitNames(units []parsedUnit) []string {
-	return lo.Map(units, func(unit parsedUnit, _ int) string {
+func unitNames(units []parsedUnit) list.List[string] {
+	items := lo.Map(units, func(unit parsedUnit, _ int) string {
 		return unit.Name
 	})
+	return *list.NewList(items...)
 }

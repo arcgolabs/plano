@@ -21,31 +21,28 @@ type Stage struct {
 	Name     string
 	Needs    list.List[string]
 	Image    string
-	Commands []Command
+	Commands list.List[Command]
 }
 
 type Command struct {
 	Name string
-	Args []string
+	Args list.List[string]
 }
 
 func Register(c *compiler.Compiler) error {
-	for _, spec := range pipelineForms() {
-		if err := c.RegisterForm(spec); err != nil {
-			return fmt.Errorf("register form %q: %w", spec.Name, err)
-		}
+	if err := c.RegisterForms(pipelineForms()); err != nil {
+		return fmt.Errorf("register pipelinedsl forms: %w", err)
 	}
-	for _, action := range pipelineActions() {
-		if err := c.RegisterAction(action); err != nil {
-			return fmt.Errorf("register action %q: %w", action.Name, err)
-		}
+	if err := c.RegisterActions(pipelineActions()); err != nil {
+		return fmt.Errorf("register pipelinedsl actions: %w", err)
 	}
 	return nil
 }
 
 func Lower(hir *compiler.HIR) (*Pipeline, error) {
 	project := &Pipeline{}
-	for _, form := range hir.Forms {
+	for idx := range hir.Forms.Len() {
+		form, _ := hir.Forms.Get(idx)
 		if err := applyRootForm(project, form); err != nil {
 			return nil, err
 		}
@@ -77,9 +74,9 @@ func applyRootForm(project *Pipeline, form compiler.HIRForm) error {
 	return nil
 }
 
-func pipelineForms() []schema.FormSpec {
-	return []schema.FormSpec{
-		{
+func pipelineForms() list.List[schema.FormSpec] {
+	return schema.FormSpecs(
+		schema.FormSpec{
 			Name:      "pipeline",
 			LabelKind: schema.LabelNone,
 			BodyMode:  schema.BodyFieldOnly,
@@ -91,7 +88,7 @@ func pipelineForms() []schema.FormSpec {
 				},
 			),
 		},
-		{
+		schema.FormSpec{
 			Name:         "stage",
 			LabelKind:    schema.LabelSymbol,
 			LabelRefKind: "stage",
@@ -112,32 +109,32 @@ func pipelineForms() []schema.FormSpec {
 			),
 			NestedForms: schema.NestedForms("run"),
 		},
-		{
+		schema.FormSpec{
 			Name:      "run",
 			LabelKind: schema.LabelNone,
 			BodyMode:  schema.BodyCallOnly,
 		},
-	}
+	)
 }
 
-func pipelineActions() []compiler.ActionSpec {
-	return []compiler.ActionSpec{
-		{
+func pipelineActions() list.List[compiler.ActionSpec] {
+	return compiler.ActionSpecs(
+		compiler.ActionSpec{
 			Name:         "exec",
 			MinArgs:      1,
 			MaxArgs:      -1,
-			ArgTypes:     []schema.Type{schema.TypeString},
+			ArgTypes:     schema.Types(schema.TypeString),
 			VariadicType: schema.TypeString,
 			Validate:     validateStringArgs("exec"),
 		},
-		{
+		compiler.ActionSpec{
 			Name:     "shell",
 			MinArgs:  1,
 			MaxArgs:  1,
-			ArgTypes: []schema.Type{schema.TypeString},
+			ArgTypes: schema.Types(schema.TypeString),
 			Validate: validateStringArgs("shell"),
 		},
-	}
+	)
 }
 
 func lowerStage(form compiler.HIRForm) (Stage, error) {
@@ -159,7 +156,7 @@ func lowerStage(form compiler.HIRForm) (Stage, error) {
 	}
 	return Stage{
 		Name:     form.Symbol.Name,
-		Needs:    *list.NewList(needs...),
+		Needs:    needs,
 		Image:    image,
 		Commands: commands,
 	}, nil
@@ -177,78 +174,80 @@ func requiredStringField(form compiler.HIRForm, name string) (string, error) {
 	return value, nil
 }
 
-func lowerCommands(form compiler.HIRForm) ([]Command, error) {
-	commands := make([]Command, 0, len(form.Calls))
+func lowerCommands(form compiler.HIRForm) (list.List[Command], error) {
+	commands := list.NewListWithCapacity[Command](form.Calls.Len())
 	direct, err := callsToCommands(form.Calls)
 	if err != nil {
-		return nil, err
+		return list.List[Command]{}, err
 	}
-	commands = append(commands, direct...)
-	for _, nested := range form.Forms {
+	commands.Merge(&direct)
+	for idx := range form.Forms.Len() {
+		nested, _ := form.Forms.Get(idx)
 		if nested.Kind != "run" {
 			continue
 		}
 		items, err := callsToCommands(nested.Calls)
 		if err != nil {
-			return nil, err
+			return list.List[Command]{}, err
 		}
-		commands = append(commands, items...)
+		commands.Merge(&items)
 	}
-	return commands, nil
+	return *commands, nil
 }
 
-func callsToCommands(calls []compiler.HIRCall) ([]Command, error) {
-	commands := make([]Command, 0, len(calls))
-	for _, call := range calls {
-		args, err := stringList(lo.Map(call.Args, func(arg compiler.HIRArg, _ int) any {
+func callsToCommands(calls list.List[compiler.HIRCall]) (list.List[Command], error) {
+	commands := list.NewListWithCapacity[Command](calls.Len())
+	for idx := range calls.Len() {
+		call, _ := calls.Get(idx)
+		args, err := stringList(lo.Map(call.Args.Values(), func(arg compiler.HIRArg, _ int) any {
 			return arg.Value
 		}))
 		if err != nil {
-			return nil, err
+			return list.List[Command]{}, err
 		}
-		commands = append(commands, Command{Name: call.Name, Args: args})
+		commands.Add(Command{Name: call.Name, Args: args})
 	}
-	return commands, nil
+	return *commands, nil
 }
 
-func refNames(value any, kind string) ([]string, error) {
+func refNames(value any, kind string) (list.List[string], error) {
 	items, ok := value.([]any)
 	if !ok {
-		return nil, fmt.Errorf("pipelinedsl: expected list of refs, got %T", value)
+		return list.List[string]{}, fmt.Errorf("pipelinedsl: expected list of refs, got %T", value)
 	}
 	names := make([]string, 0, len(items))
 	for _, item := range items {
 		ref, ok := item.(schema.Ref)
 		if !ok {
-			return nil, fmt.Errorf("pipelinedsl: expected ref<%s>, got %T", kind, item)
+			return list.List[string]{}, fmt.Errorf("pipelinedsl: expected ref<%s>, got %T", kind, item)
 		}
 		if ref.Kind != kind {
-			return nil, fmt.Errorf("pipelinedsl: expected ref<%s>, got ref<%s>", kind, ref.Kind)
+			return list.List[string]{}, fmt.Errorf("pipelinedsl: expected ref<%s>, got ref<%s>", kind, ref.Kind)
 		}
 		names = append(names, ref.Name)
 	}
-	return names, nil
+	return *list.NewList(names...), nil
 }
 
-func stringList(value any) ([]string, error) {
+func stringList(value any) (list.List[string], error) {
 	items, ok := value.([]any)
 	if !ok {
-		return nil, fmt.Errorf("pipelinedsl: expected list of strings, got %T", value)
+		return list.List[string]{}, fmt.Errorf("pipelinedsl: expected list of strings, got %T", value)
 	}
 	values := make([]string, 0, len(items))
 	for _, item := range items {
 		text, ok := item.(string)
 		if !ok {
-			return nil, fmt.Errorf("pipelinedsl: expected string, got %T", item)
+			return list.List[string]{}, fmt.Errorf("pipelinedsl: expected string, got %T", item)
 		}
 		values = append(values, text)
 	}
-	return values, nil
+	return *list.NewList(values...), nil
 }
 
-func validateStringArgs(name string) func(args []any) error {
-	return func(args []any) error {
-		for _, arg := range args {
+func validateStringArgs(name string) func(args list.List[any]) error {
+	return func(args list.List[any]) error {
+		for _, arg := range args.Values() {
 			if _, ok := arg.(string); !ok {
 				return fmt.Errorf("pipelinedsl: action %q expects string arguments, got %T", name, arg)
 			}

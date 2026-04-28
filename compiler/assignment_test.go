@@ -27,7 +27,7 @@ task build {
 		t.Fatalf("unexpected diagnostics: %v", diags)
 	}
 	assertFormCount(t, doc, 1)
-	assertTaskOutputs(t, doc.Forms[0], []string{filepath.Join("dist", "demo")})
+	assertTaskOutputs(t, formAt(t, doc.Forms, 0), []string{filepath.Join("dist", "demo")})
 }
 
 func TestCompileRejectsFieldShadowingBindings(t *testing.T) {

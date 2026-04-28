@@ -6,13 +6,14 @@ import (
 	"path/filepath"
 	"slices"
 
+	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/schema"
 	"github.com/samber/lo"
 )
 
 func (c *Compiler) registerBuiltins() {
-	c.mustRegisterFunc(builtinFunction("env", "Read an environment variable with an optional fallback string.", 1, 2, []schema.Type{schema.TypeString, schema.TypeString}, nil, schema.TypeString, func(args []any) (any, error) {
+	c.mustRegisterFunc(builtinFunction("env", "Read an environment variable with an optional fallback string.", 1, 2, schema.Types(schema.TypeString, schema.TypeString), nil, schema.TypeString, func(args []any) (any, error) {
 		key, ok := args[0].(string)
 		if !ok {
 			return nil, errors.New("env expects string key")
@@ -28,19 +29,19 @@ func (c *Compiler) registerBuiltins() {
 		}
 		return "", nil
 	}))
-	c.mustRegisterFunc(builtinFunction("join_path", "Join one or more path fragments into a normalized path.", 1, -1, []schema.Type{schema.TypePath}, schema.TypePath, schema.TypePath, evalJoinPath))
-	c.mustRegisterFunc(builtinFunction("basename", "Return the last path element.", 1, 1, []schema.Type{schema.TypePath}, nil, schema.TypeString, evalBaseName))
-	c.mustRegisterFunc(builtinFunction("dirname", "Return the parent directory of a path.", 1, 1, []schema.Type{schema.TypePath}, nil, schema.TypePath, evalDirName))
-	c.mustRegisterFunc(builtinFunction("len", "Return the length of a string, list, or map.", 1, 1, []schema.Type{schema.TypeAny}, nil, schema.TypeInt, evalLen))
-	c.mustRegisterFunc(builtinFunction("keys", "Return the ordered string keys of a map value.", 1, 1, []schema.Type{schema.MapType{Elem: schema.TypeAny}}, nil, schema.ListType{Elem: schema.TypeString}, evalKeys))
-	c.mustRegisterFunc(builtinFunction("values", "Return the ordered values of a map value.", 1, 1, []schema.Type{schema.MapType{Elem: schema.TypeAny}}, nil, schema.ListType{Elem: schema.TypeAny}, evalValues))
-	c.mustRegisterFunc(builtinFunction("range", "Build an integer list from start, end, and optional step values.", 1, 3, []schema.Type{schema.TypeInt, schema.TypeInt, schema.TypeInt}, nil, schema.ListType{Elem: schema.TypeInt}, evalRange))
-	c.mustRegisterFunc(builtinFunction("get", "Read a list or map element with an optional default value.", 2, 3, []schema.Type{schema.TypeAny, schema.TypeAny, schema.TypeAny}, nil, schema.TypeAny, evalGet))
-	c.mustRegisterFunc(builtinFunction("slice", "Return a sub-slice from a list using start and optional end indexes.", 2, 3, []schema.Type{schema.ListType{Elem: schema.TypeAny}, schema.TypeInt, schema.TypeInt}, nil, schema.ListType{Elem: schema.TypeAny}, evalSlice))
-	c.mustRegisterFunc(builtinFunction("has", "Report whether a list contains a value or a map contains a key.", 2, 2, []schema.Type{schema.TypeAny, schema.TypeAny}, nil, schema.TypeBool, evalHas))
-	c.mustRegisterFunc(builtinFunction("append", "Append one or more values to a list.", 1, -1, []schema.Type{schema.ListType{Elem: schema.TypeAny}}, schema.TypeAny, schema.ListType{Elem: schema.TypeAny}, evalAppend))
-	c.mustRegisterFunc(builtinFunction("concat", "Concatenate multiple lists into one list.", 1, -1, []schema.Type{schema.ListType{Elem: schema.TypeAny}}, schema.ListType{Elem: schema.TypeAny}, schema.ListType{Elem: schema.TypeAny}, evalConcat))
-	c.mustRegisterFunc(builtinFunction("merge", "Merge one or more maps from left to right.", 1, -1, []schema.Type{schema.MapType{Elem: schema.TypeAny}}, schema.MapType{Elem: schema.TypeAny}, schema.MapType{Elem: schema.TypeAny}, evalMerge))
+	c.mustRegisterFunc(builtinFunction("join_path", "Join one or more path fragments into a normalized path.", 1, -1, schema.Types(schema.TypePath), schema.TypePath, schema.TypePath, evalJoinPath))
+	c.mustRegisterFunc(builtinFunction("basename", "Return the last path element.", 1, 1, schema.Types(schema.TypePath), nil, schema.TypeString, evalBaseName))
+	c.mustRegisterFunc(builtinFunction("dirname", "Return the parent directory of a path.", 1, 1, schema.Types(schema.TypePath), nil, schema.TypePath, evalDirName))
+	c.mustRegisterFunc(builtinFunction("len", "Return the length of a string, list, or map.", 1, 1, schema.Types(schema.TypeAny), nil, schema.TypeInt, evalLen))
+	c.mustRegisterFunc(builtinFunction("keys", "Return the ordered string keys of a map value.", 1, 1, schema.Types(schema.MapType{Elem: schema.TypeAny}), nil, schema.ListType{Elem: schema.TypeString}, evalKeys))
+	c.mustRegisterFunc(builtinFunction("values", "Return the ordered values of a map value.", 1, 1, schema.Types(schema.MapType{Elem: schema.TypeAny}), nil, schema.ListType{Elem: schema.TypeAny}, evalValues))
+	c.mustRegisterFunc(builtinFunction("range", "Build an integer list from start, end, and optional step values.", 1, 3, schema.Types(schema.TypeInt, schema.TypeInt, schema.TypeInt), nil, schema.ListType{Elem: schema.TypeInt}, evalRange))
+	c.mustRegisterFunc(builtinFunction("get", "Read a list or map element with an optional default value.", 2, 3, schema.Types(schema.TypeAny, schema.TypeAny, schema.TypeAny), nil, schema.TypeAny, evalGet))
+	c.mustRegisterFunc(builtinFunction("slice", "Return a sub-slice from a list using start and optional end indexes.", 2, 3, schema.Types(schema.ListType{Elem: schema.TypeAny}, schema.TypeInt, schema.TypeInt), nil, schema.ListType{Elem: schema.TypeAny}, evalSlice))
+	c.mustRegisterFunc(builtinFunction("has", "Report whether a list contains a value or a map contains a key.", 2, 2, schema.Types(schema.TypeAny, schema.TypeAny), nil, schema.TypeBool, evalHas))
+	c.mustRegisterFunc(builtinFunction("append", "Append one or more values to a list.", 1, -1, schema.Types(schema.ListType{Elem: schema.TypeAny}), schema.TypeAny, schema.ListType{Elem: schema.TypeAny}, evalAppend))
+	c.mustRegisterFunc(builtinFunction("concat", "Concatenate multiple lists into one list.", 1, -1, schema.Types(schema.ListType{Elem: schema.TypeAny}), schema.ListType{Elem: schema.TypeAny}, schema.ListType{Elem: schema.TypeAny}, evalConcat))
+	c.mustRegisterFunc(builtinFunction("merge", "Merge one or more maps from left to right.", 1, -1, schema.Types(schema.MapType{Elem: schema.TypeAny}), schema.MapType{Elem: schema.TypeAny}, schema.MapType{Elem: schema.TypeAny}, evalMerge))
 }
 
 func (c *Compiler) mustRegisterFunc(spec schema.FunctionSpec) {
@@ -54,7 +55,7 @@ func builtinFunction(
 	docs string,
 	minArgs int,
 	maxArgs int,
-	paramTypes []schema.Type,
+	paramTypes list.List[schema.Type],
 	variadicType schema.Type,
 	result schema.Type,
 	eval func(args []any) (any, error),
@@ -66,8 +67,10 @@ func builtinFunction(
 		ParamTypes:   paramTypes,
 		VariadicType: variadicType,
 		Result:       result,
-		Eval:         eval,
-		Docs:         docs,
+		Eval: func(args list.List[any]) (any, error) {
+			return eval(args.Values())
+		},
+		Docs: docs,
 	}
 }
 

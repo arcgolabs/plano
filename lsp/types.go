@@ -1,6 +1,7 @@
 package lsp
 
 import (
+	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/compiler"
 )
@@ -44,11 +45,11 @@ type Options struct {
 }
 
 type Snapshot struct {
-	URI         string          `json:"uri"         yaml:"uri"`
-	Path        string          `json:"path"        yaml:"path"`
-	Version     int32           `json:"version"     yaml:"version"`
-	Result      compiler.Result `json:"result"      yaml:"result"`
-	Diagnostics []Diagnostic    `json:"diagnostics" yaml:"diagnostics"`
+	URI         string                `json:"uri"         yaml:"uri"`
+	Path        string                `json:"path"        yaml:"path"`
+	Version     int32                 `json:"version"     yaml:"version"`
+	Result      compiler.Result       `json:"result"      yaml:"result"`
+	Diagnostics list.List[Diagnostic] `json:"diagnostics" yaml:"diagnostics"`
 	compiler    *compiler.Compiler
 	documents   *mapping.Map[string, Document]
 	sources     *mapping.Map[string, []byte]

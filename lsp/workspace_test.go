@@ -45,7 +45,7 @@ task build {}
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(snapshot.Diagnostics) != 0 {
+	if snapshot.Diagnostics.Len() != 0 {
 		t.Fatalf("diagnostics = %#v", snapshot.Diagnostics)
 	}
 }

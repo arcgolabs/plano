@@ -7,6 +7,7 @@ import (
 	"os"
 	goruntime "runtime"
 
+	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/collectionx/set"
 	"github.com/arcgolabs/plano/ast"
@@ -29,7 +30,7 @@ type Compiler struct {
 }
 
 type Document struct {
-	Forms   []Form                              `json:"forms"   yaml:"forms"`
+	Forms   list.List[Form]                     `json:"forms"   yaml:"forms"`
 	Symbols *mapping.OrderedMap[string, Symbol] `json:"symbols" yaml:"symbols"`
 	Consts  *mapping.OrderedMap[string, any]    `json:"consts"  yaml:"consts"`
 }
@@ -48,7 +49,7 @@ type Symbol struct {
 
 type Call struct {
 	Name string
-	Args []any
+	Args list.List[any]
 	Pos  token.Pos
 	End  token.Pos
 }
@@ -58,8 +59,8 @@ type Form struct {
 	Label  *FormLabel
 	Symbol *Symbol
 	Fields *mapping.OrderedMap[string, any]
-	Forms  []Form
-	Calls  []Call
+	Forms  list.List[Form]
+	Calls  list.List[Call]
 	Pos    token.Pos
 	End    token.Pos
 }
@@ -186,6 +187,16 @@ func (c *Compiler) RegisterForm(spec schema.FormSpec) error {
 		spec.NestedForms = spec.NestedForms.Clone()
 	}
 	c.forms.Set(spec.Name, spec)
+	return nil
+}
+
+func (c *Compiler) RegisterForms(specs list.List[schema.FormSpec]) error {
+	for idx := range specs.Len() {
+		spec, _ := specs.Get(idx)
+		if err := c.RegisterForm(spec); err != nil {
+			return fmt.Errorf("register form %q: %w", spec.Name, err)
+		}
+	}
 	return nil
 }
 

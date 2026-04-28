@@ -19,10 +19,12 @@ func TestLowerCollectionsSample(t *testing.T) {
 		filepath.Join("dist", "demo"),
 		filepath.Join("dist", "backup"),
 	})
-	if got := len(task.Commands); got != 1 {
+	if got := task.Commands.Len(); got != 1 {
 		t.Fatalf("commands = %d, want 1", got)
 	}
-	if task.Commands[0].Args[1] != filepath.Join("dist", "demo") {
-		t.Fatalf("command args = %#v", task.Commands[0].Args)
+	command, _ := task.Commands.Get(0)
+	args := command.Args.Values()
+	if args[1] != filepath.Join("dist", "demo") {
+		t.Fatalf("command args = %#v", args)
 	}
 }

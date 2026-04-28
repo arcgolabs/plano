@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/collectionx/set"
 	"github.com/arcgolabs/plano/compiler"
@@ -64,16 +65,16 @@ func exampleNames() string {
 }
 
 type exampleView struct {
-	Name        string   `json:"name"        yaml:"name"`
-	Description string   `json:"description" yaml:"description"`
-	Sample      string   `json:"sample"      yaml:"sample"`
-	Samples     []string `json:"samples"     yaml:"samples"`
+	Name        string            `json:"name"        yaml:"name"`
+	Description string            `json:"description" yaml:"description"`
+	Sample      string            `json:"sample"      yaml:"sample"`
+	Samples     list.List[string] `json:"samples"     yaml:"samples"`
 }
 
-func exampleViews() []exampleView {
-	views := make([]exampleView, 0, availableExamples().Len())
+func exampleViews() *list.List[exampleView] {
+	views := list.NewListWithCapacity[exampleView](availableExamples().Len())
 	availableExamples().Range(func(name string, spec exampleSpec) bool {
-		views = append(views, exampleView{
+		views.Add(exampleView{
 			Name:        name,
 			Description: spec.description,
 			Sample:      spec.sample,
@@ -84,9 +85,9 @@ func exampleViews() []exampleView {
 	return views
 }
 
-func exampleSamples(spec exampleSpec) []string {
+func exampleSamples(spec exampleSpec) list.List[string] {
 	seen := set.NewSet[string]()
-	samples := appendSamplePath(nil, seen, spec.sample)
+	samples := appendSamplePath(list.List[string]{}, seen, spec.sample)
 	entries, dir, ok := readExampleDir(spec.dir)
 	if !ok {
 		return samples
@@ -117,7 +118,7 @@ func exampleDirCandidates(dir string) []string {
 	return []string{dir, filepath.Join("..", "..", dir)}
 }
 
-func appendSamplePath(samples []string, seen *set.Set[string], path string) []string {
+func appendSamplePath(samples list.List[string], seen *set.Set[string], path string) list.List[string] {
 	if path == "" {
 		return samples
 	}
@@ -126,7 +127,8 @@ func appendSamplePath(samples []string, seen *set.Set[string], path string) []st
 		return samples
 	}
 	seen.Add(path)
-	return append(samples, path)
+	samples.Add(path)
+	return samples
 }
 
 func newCompilerForExample(name string) (*compiler.Compiler, error) {

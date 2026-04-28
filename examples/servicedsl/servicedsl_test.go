@@ -86,11 +86,12 @@ func requireService(t *testing.T, stack *servicedsl.Stack, name string) serviced
 
 func assertDependsOn(t *testing.T, service servicedsl.Service, want []string) {
 	t.Helper()
-	if len(service.DependsOn) != len(want) {
+	got := service.DependsOn.Values()
+	if len(got) != len(want) {
 		t.Fatalf("depends_on = %#v, want %#v", service.DependsOn, want)
 	}
 	for idx, item := range want {
-		if service.DependsOn[idx] != item {
+		if got[idx] != item {
 			t.Fatalf("depends_on = %#v, want %#v", service.DependsOn, want)
 		}
 	}

@@ -2,8 +2,12 @@ github.com/arcgolabs/collectionx/internal v0.2.0 h1:h2D1f4eleFHA9BUJi2QTomtwxGIY
 github.com/arcgolabs/collectionx/internal v0.2.0/go.mod h1:H1Ihoa7PvEUJvLCjhQwydHLe6ClyIln7ZzpkuJKtB0c=
 github.com/arcgolabs/collectionx/list v0.2.0 h1:RmMVt4eX24SDFpkiwS8KcIXfgwPD+FggG6Ps+3FxfrM=
 github.com/arcgolabs/collectionx/list v0.2.0/go.mod h1:IjX8ZRyMZbJspx+VppjyrOaibDnHSY8/jkygk9Mmws4=
+github.com/arcgolabs/collectionx/list v0.4.0 h1:IWZVoCdekxNJQKxpGQymYUjTEBHwXZxSFsqiUIIFStE=
+github.com/arcgolabs/collectionx/list v0.4.0/go.mod h1:IjX8ZRyMZbJspx+VppjyrOaibDnHSY8/jkygk9Mmws4=
 github.com/arcgolabs/collectionx/mapping v0.2.0 h1:o0ISMjQDXeXjLHbl4PiMYQAKxQjcbMugi+L/MkWvDkY=
 github.com/arcgolabs/collectionx/mapping v0.2.0/go.mod h1:9LmFTF7m/hJ3vYx/SkcaHPBHDj2nSPImBYGyHflWEXA=
+github.com/arcgolabs/collectionx/mapping v0.4.0 h1:9KcWJVZ0XPn2tQN1rVK7Xck/DKT3rbpJFxitwOXeg68=
+github.com/arcgolabs/collectionx/mapping v0.4.0/go.mod h1:9LmFTF7m/hJ3vYx/SkcaHPBHDj2nSPImBYGyHflWEXA=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 h1:Jamvg5psRIccs7FGNTlIRMkT8wgtp5eCXdBlqhYGL6U=

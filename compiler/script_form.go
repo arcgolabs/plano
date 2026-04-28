@@ -96,8 +96,8 @@ func (s *compileState) execNestedForm(state *formExecState, current *ast.FormDec
 	}
 	nested, hirNested := s.compileForm(current, locals)
 	if nested != nil && hirNested != nil {
-		state.form.Forms = append(state.form.Forms, *nested)
-		state.hir.Forms = append(state.hir.Forms, *hirNested)
+		state.form.Forms.Add(*nested)
+		state.hir.Forms.Add(*hirNested)
 	}
 }
 
@@ -110,8 +110,8 @@ func (s *compileState) execCall(state *formExecState, current *ast.CallStmt, loc
 	if !ok {
 		return
 	}
-	state.form.Calls = append(state.form.Calls, call)
-	state.hir.Calls = append(state.hir.Calls, s.lowerActionCall(current, locals.scope, call, spec))
+	state.form.Calls.Add(call)
+	state.hir.Calls.Add(s.lowerActionCall(current, locals.scope, call, spec))
 }
 
 func (s *compileState) execFormLoopControl(state *formExecState, pos, end token.Pos, isBreak bool) execSignal {

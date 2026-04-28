@@ -4,6 +4,7 @@ import (
 	"go/token"
 	"strconv"
 
+	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/plano/ast"
 	"github.com/arcgolabs/plano/schema"
 	"github.com/samber/lo"
@@ -39,17 +40,20 @@ func (c *checker) resolveConstTypeInScope(name string, scope *checkScope) schema
 	return resolved
 }
 
-func signatureArgType(index int, paramTypes []schema.Type, variadicType schema.Type) schema.Type {
-	if index < len(paramTypes) {
-		return paramTypes[index]
+func signatureArgType(index int, paramTypes list.List[schema.Type], variadicType schema.Type) schema.Type {
+	if index < paramTypes.Len() {
+		if typ, ok := paramTypes.Get(index); ok {
+			return typ
+		}
 	}
 	return variadicType
 }
 
-func paramTypes(params []ParamBinding) []schema.Type {
-	return lo.Map(params, func(param ParamBinding, _ int) schema.Type {
+func paramTypes(params list.List[ParamBinding]) list.List[schema.Type] {
+	items := lo.Map(params.Values(), func(param ParamBinding, _ int) schema.Type {
 		return param.Type
 	})
+	return *list.NewList(items...)
 }
 
 func (c *checker) recordExpr(expr ast.Expr, kind string, scope *checkScope, typ schema.Type) schema.Type {
@@ -92,7 +96,7 @@ func (c *checker) recordCall(name, scopeID string, args []schema.Type, result sc
 		ID:      id,
 		Name:    name,
 		ScopeID: scopeID,
-		Args:    args,
+		Args:    *list.NewList(args...),
 		Result:  normalizeType(result),
 		Pos:     pos,
 		End:     end,

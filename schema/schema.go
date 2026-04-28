@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/collectionx/set"
 )
@@ -143,10 +144,10 @@ type FunctionSpec struct {
 	Name         string
 	MinArgs      int
 	MaxArgs      int
-	ParamTypes   []Type
+	ParamTypes   list.List[Type]
 	VariadicType Type
 	Result       Type
-	Eval         func(args []any) (any, error)
+	Eval         func(args list.List[any]) (any, error)
 	Docs         string
 }
 

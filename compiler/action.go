@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/plano/schema"
 )
 
@@ -12,10 +13,17 @@ type ActionSpec struct {
 	Name         string
 	MinArgs      int
 	MaxArgs      int
-	ArgTypes     []schema.Type
+	ArgTypes     list.List[schema.Type]
 	VariadicType schema.Type
-	Validate     func(args []any) error
+	Validate     func(args list.List[any]) error
 	Docs         string
+}
+
+func ActionSpecs(items ...ActionSpec) list.List[ActionSpec] {
+	if len(items) == 0 {
+		return list.List[ActionSpec]{}
+	}
+	return *list.NewList(items...)
 }
 
 func (c *Compiler) RegisterAction(spec ActionSpec) error {
@@ -23,6 +31,16 @@ func (c *Compiler) RegisterAction(spec ActionSpec) error {
 		return errors.New("action name cannot be empty")
 	}
 	c.actions.Set(spec.Name, spec)
+	return nil
+}
+
+func (c *Compiler) RegisterActions(specs list.List[ActionSpec]) error {
+	for idx := range specs.Len() {
+		spec, _ := specs.Get(idx)
+		if err := c.RegisterAction(spec); err != nil {
+			return fmt.Errorf("register action %q: %w", spec.Name, err)
+		}
+	}
 	return nil
 }
 

@@ -7,8 +7,8 @@ import (
 	"go/token"
 	"io"
 
+	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/plano/diag"
-	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -134,8 +134,9 @@ func printDiagnostics(w io.Writer, fset *token.FileSet, diags diag.Diagnostics) 
 	return errors.New("compilation failed")
 }
 
-func diagnosticsToView(fset *token.FileSet, items diag.Diagnostics) []diagnosticView {
-	return lo.Map(items, func(item diag.Diagnostic, _ int) diagnosticView {
+func diagnosticsToView(fset *token.FileSet, items diag.Diagnostics) *list.List[diagnosticView] {
+	views := list.NewListWithCapacity[diagnosticView](len(items))
+	for _, item := range items {
 		view := diagnosticView{
 			Severity: string(item.Severity),
 			Message:  item.Message,
@@ -149,6 +150,7 @@ func diagnosticsToView(fset *token.FileSet, items diag.Diagnostics) []diagnostic
 			view.EndLine = end.Line
 			view.EndColumn = end.Column
 		}
-		return view
-	})
+		views.Add(view)
+	}
+	return views
 }

@@ -52,19 +52,22 @@ task build {
 		t.Fatalf("unexpected diagnostics: %v", diags)
 	}
 	assertFormCount(t, doc, 1)
-	assertTaskOutputs(t, doc.Forms[0], []string{
+	build := formAt(t, doc.Forms, 0)
+	assertTaskOutputs(t, build, []string{
 		filepath.Join("dist", "demo"),
 		filepath.Join("dist", "backup"),
 	})
-	if got := len(doc.Forms[0].Forms); got != 2 {
+	if got := build.Forms.Len(); got != 2 {
 		t.Fatalf("nested run forms = %d, want 2", got)
 	}
-	first := doc.Forms[0].Forms[0].Calls[0]
-	if first.Name != "exec" || len(first.Args) != 3 || first.Args[2] != "./..." {
+	first := firstCall(t, nestedFormAt(t, build, 0))
+	firstArgs := first.Args.Values()
+	if first.Name != "exec" || len(firstArgs) != 3 || firstArgs[2] != "./..." {
 		t.Fatalf("first call = %#v", first)
 	}
-	second := doc.Forms[0].Forms[1].Calls[0]
-	if second.Name != "exec" || len(second.Args) != 2 || second.Args[1] != filepath.Join("dist", "demo") {
+	second := firstCall(t, nestedFormAt(t, build, 1))
+	secondArgs := second.Args.Values()
+	if second.Name != "exec" || len(secondArgs) != 2 || secondArgs[1] != filepath.Join("dist", "demo") {
 		t.Fatalf("second call = %#v", second)
 	}
 }
@@ -86,7 +89,7 @@ task build {
 		t.Fatalf("unexpected diagnostics: %v", diags)
 	}
 	assertFormCount(t, doc, 1)
-	assertTaskOutputs(t, doc.Forms[0], []string{
+	assertTaskOutputs(t, formAt(t, doc.Forms, 0), []string{
 		filepath.Join("dist", "demo"),
 		"dist/fallback",
 		"two",

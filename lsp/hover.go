@@ -4,6 +4,7 @@ import (
 	"go/token"
 	"strings"
 
+	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/plano/compiler"
 	"github.com/arcgolabs/plano/schema"
 	"github.com/samber/lo"
@@ -177,14 +178,14 @@ func formatActionSpec(spec compiler.ActionSpec) string {
 	return body + "\n\n" + spec.Docs
 }
 
-func paramStrings(params []compiler.ParamBinding) []string {
-	return lo.Map(params, func(param compiler.ParamBinding, _ int) string {
+func paramStrings(params list.List[compiler.ParamBinding]) []string {
+	return lo.Map(params.Values(), func(param compiler.ParamBinding, _ int) string {
 		return param.Name + ": " + param.Type.String()
 	})
 }
 
-func typeStrings(items []schema.Type, variadic schema.Type) []string {
-	out := lo.Map(items, func(item schema.Type, _ int) string {
+func typeStrings(items list.List[schema.Type], variadic schema.Type) []string {
+	out := lo.Map(items.Values(), func(item schema.Type, _ int) string {
 		return item.String()
 	})
 	if variadic != nil {

@@ -56,12 +56,13 @@ task build {
 		t.Fatalf("unexpected diagnostics: %v", diags)
 	}
 	assertFormCount(t, doc, 1)
-	assertTaskOutputs(t, doc.Forms[0], []string{filepath.Join("dist", "demo")})
-	if got := len(doc.Forms[0].Forms); got != 2 {
+	build := formAt(t, doc.Forms, 0)
+	assertTaskOutputs(t, build, []string{filepath.Join("dist", "demo")})
+	if got := build.Forms.Len(); got != 2 {
 		t.Fatalf("nested run forms = %d, want 2", got)
 	}
-	assertCallArgs(t, doc.Forms[0].Forms[0].Calls[0].Args, "./cmd/...")
-	assertCallArgs(t, doc.Forms[0].Forms[1].Calls[0].Args, "./...")
+	assertCallArgs(t, firstCall(t, nestedFormAt(t, build, 0)).Args, "./cmd/...")
+	assertCallArgs(t, firstCall(t, nestedFormAt(t, build, 1)).Args, "./...")
 }
 
 func TestCompileRejectsLoopControlOutsideLoops(t *testing.T) {

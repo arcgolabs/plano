@@ -3,16 +3,18 @@ package lsp
 import (
 	"path/filepath"
 
+	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/compiler"
 	"github.com/arcgolabs/plano/diag"
-	"github.com/samber/lo"
 )
 
-func diagnosticsFromResult(result compiler.Result, sources *mapping.Map[string, []byte]) []Diagnostic {
-	return lo.Map(result.Diagnostics, func(item diag.Diagnostic, _ int) Diagnostic {
-		return diagnosticFromCompiler(result, sources, item)
-	})
+func diagnosticsFromResult(result compiler.Result, sources *mapping.Map[string, []byte]) list.List[Diagnostic] {
+	out := list.NewListWithCapacity[Diagnostic](len(result.Diagnostics))
+	for _, item := range result.Diagnostics {
+		out.Add(diagnosticFromCompiler(result, sources, item))
+	}
+	return *out
 }
 
 func diagnosticFromCompiler(result compiler.Result, sources *mapping.Map[string, []byte], item diag.Diagnostic) Diagnostic {

@@ -3,6 +3,7 @@ package compiler
 import (
 	"go/token"
 
+	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/ast"
 	"github.com/arcgolabs/plano/diag"
@@ -10,7 +11,7 @@ import (
 )
 
 type Binding struct {
-	Files     []string
+	Files     list.List[string]
 	Scopes    *mapping.OrderedMap[string, ScopeBinding]
 	Locals    *mapping.OrderedMap[string, LocalBinding]
 	Uses      *mapping.OrderedMap[string, NameUse]
@@ -66,7 +67,7 @@ type LocalBinding struct {
 
 type FunctionBinding struct {
 	Name   string
-	Params []ParamBinding
+	Params list.List[ParamBinding]
 	Result schema.Type
 	Pos    token.Pos
 	End    token.Pos

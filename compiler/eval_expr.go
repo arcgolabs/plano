@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/ast"
 	"github.com/arcgolabs/plano/schema"
@@ -186,7 +187,7 @@ func (s *compileState) evalCallExpr(node *ast.CallExpr, locals *env) (any, error
 		if err := validateArity("function", name, spec.MinArgs, spec.MaxArgs, len(args)); err != nil {
 			return nil, err
 		}
-		value, err := spec.Eval(args)
+		value, err := spec.Eval(*list.NewList(args...))
 		if err != nil {
 			return nil, fmt.Errorf("evaluate function %q: %w", name, err)
 		}

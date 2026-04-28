@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/compiler"
 	"github.com/arcgolabs/plano/schema"
@@ -21,22 +22,21 @@ type Service struct {
 	Name      string
 	Image     string
 	Port      int64
-	DependsOn []string
+	DependsOn list.List[string]
 	Env       mapping.OrderedMap[string, string]
 }
 
 func Register(c *compiler.Compiler) error {
-	for _, spec := range serviceForms() {
-		if err := c.RegisterForm(spec); err != nil {
-			return fmt.Errorf("register form %q: %w", spec.Name, err)
-		}
+	if err := c.RegisterForms(serviceForms()); err != nil {
+		return fmt.Errorf("register servicedsl forms: %w", err)
 	}
 	return nil
 }
 
 func Lower(hir *compiler.HIR) (*Stack, error) {
 	stack := &Stack{}
-	for _, form := range hir.Forms {
+	for idx := range hir.Forms.Len() {
+		form, _ := hir.Forms.Get(idx)
 		if err := applyRootForm(stack, form); err != nil {
 			return nil, err
 		}
@@ -68,9 +68,9 @@ func applyRootForm(stack *Stack, form compiler.HIRForm) error {
 	return nil
 }
 
-func serviceForms() []schema.FormSpec {
-	return []schema.FormSpec{
-		{
+func serviceForms() list.List[schema.FormSpec] {
+	return schema.FormSpecs(
+		schema.FormSpec{
 			Name:      "stack",
 			LabelKind: schema.LabelNone,
 			BodyMode:  schema.BodyFieldOnly,
@@ -82,7 +82,7 @@ func serviceForms() []schema.FormSpec {
 				},
 			),
 		},
-		{
+		schema.FormSpec{
 			Name:         "service",
 			LabelKind:    schema.LabelSymbol,
 			LabelRefKind: "service",
@@ -113,7 +113,7 @@ func serviceForms() []schema.FormSpec {
 				},
 			),
 		},
-	}
+	)
 }
 
 func lowerService(form compiler.HIRForm) (Service, error) {
@@ -163,23 +163,23 @@ func requiredStringField(form compiler.HIRForm, name string) (string, error) {
 	return value, nil
 }
 
-func refNames(value any, kind string) ([]string, error) {
+func refNames(value any, kind string) (list.List[string], error) {
 	items, ok := value.([]any)
 	if !ok {
-		return nil, fmt.Errorf("servicedsl: expected list of refs, got %T", value)
+		return list.List[string]{}, fmt.Errorf("servicedsl: expected list of refs, got %T", value)
 	}
 	names := make([]string, 0, len(items))
 	for _, item := range items {
 		ref, ok := item.(schema.Ref)
 		if !ok {
-			return nil, fmt.Errorf("servicedsl: expected ref<%s>, got %T", kind, item)
+			return list.List[string]{}, fmt.Errorf("servicedsl: expected ref<%s>, got %T", kind, item)
 		}
 		if ref.Kind != kind {
-			return nil, fmt.Errorf("servicedsl: expected ref<%s>, got ref<%s>", kind, ref.Kind)
+			return list.List[string]{}, fmt.Errorf("servicedsl: expected ref<%s>, got ref<%s>", kind, ref.Kind)
 		}
 		names = append(names, ref.Name)
 	}
-	return names, nil
+	return *list.NewList(names...), nil
 }
 
 func stringMap(value any) (mapping.OrderedMap[string, string], error) {

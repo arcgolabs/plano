@@ -4,6 +4,7 @@ import (
 	"go/token"
 	"strconv"
 
+	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/plano/ast"
 	"github.com/arcgolabs/plano/schema"
 )
@@ -246,7 +247,7 @@ func (c *checker) checkUserFunctionCall(name string, argTypes []schema.Type, exp
 	if !ok {
 		return false
 	}
-	c.checkSignature("function", name, len(fn.Params), len(fn.Params), paramTypes(fn.Params), nil, argTypes, expr.Pos(), expr.End())
+	c.checkSignature("function", name, fn.Params.Len(), fn.Params.Len(), paramTypes(fn.Params), nil, argTypes, expr.Pos(), expr.End())
 	return true
 }
 
@@ -275,7 +276,7 @@ func (c *checker) checkActionCall(call *ast.CallStmt, scope *checkScope) {
 	c.recordCall(call.Callee.String(), scope.id, argTypes, schema.TypeAny, call.Pos(), call.End())
 }
 
-func (c *checker) checkSignature(kind, name string, minArgs, maxArgs int, paramTypes []schema.Type, variadicType schema.Type, argTypes []schema.Type, pos, end token.Pos) {
+func (c *checker) checkSignature(kind, name string, minArgs, maxArgs int, paramTypes list.List[schema.Type], variadicType schema.Type, argTypes []schema.Type, pos, end token.Pos) {
 	if err := validateArity(kind, name, minArgs, maxArgs, len(argTypes)); err != nil {
 		c.diagnostics.AddError(pos, end, err.Error())
 		return

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/plano/compiler"
 	"github.com/arcgolabs/plano/schema"
 )
@@ -39,9 +40,9 @@ task prepare {}
 	}
 	assertFormCount(t, doc, 3)
 	assertTargetConst(t, doc)
-	assertWorkspaceDefault(t, doc.Forms[0], "build")
-	assertTaskDependencies(t, doc.Forms[1], []schema.Ref{{Kind: "task", Name: "prepare"}})
-	assertFirstNestedCall(t, doc.Forms[1], "exec")
+	assertWorkspaceDefault(t, formAt(t, doc.Forms, 0), "build")
+	assertTaskDependencies(t, formAt(t, doc.Forms, 1), []schema.Ref{{Kind: "task", Name: "prepare"}})
+	assertFirstNestedCall(t, formAt(t, doc.Forms, 1), "exec")
 }
 
 func TestCompileFileWithImport(t *testing.T) {
@@ -69,10 +70,10 @@ workspace {
 	if diags.HasError() {
 		t.Fatalf("unexpected diagnostics: %v", diags)
 	}
-	if got := len(doc.Forms); got != 2 {
+	if got := doc.Forms.Len(); got != 2 {
 		t.Fatalf("forms = %d, want 2", got)
 	}
-	if got := doc.Forms[0].Kind; got != "task" {
+	if got := formAt(t, doc.Forms, 0).Kind; got != "task" {
 		t.Fatalf("first imported form kind = %q, want task", got)
 	}
 }
@@ -106,7 +107,7 @@ workspace {
 	if diags.HasError() {
 		t.Fatalf("unexpected diagnostics: %v", diags)
 	}
-	if got := len(doc.Forms); got != 3 {
+	if got := doc.Forms.Len(); got != 3 {
 		t.Fatalf("forms = %d, want 3", got)
 	}
 }
@@ -169,14 +170,15 @@ task build {
 		t.Fatalf("unexpected diagnostics: %v", diags)
 	}
 	assertFormCount(t, doc, 1)
-	assertTaskOutputs(t, doc.Forms[0], []string{filepath.Join("dist", "app")})
-	assertCallArgs(t, doc.Forms[0].Forms[0].Calls[0].Args, "./...")
-	assertCallArgs(t, doc.Forms[0].Forms[1].Calls[0].Args, "./cmd/...")
+	build := formAt(t, doc.Forms, 0)
+	assertTaskOutputs(t, build, []string{filepath.Join("dist", "app")})
+	assertCallArgs(t, firstCall(t, nestedFormAt(t, build, 0)).Args, "./...")
+	assertCallArgs(t, firstCall(t, nestedFormAt(t, build, 1)).Args, "./cmd/...")
 }
 
 func assertFormCount(t *testing.T, doc *compiler.Document, want int) {
 	t.Helper()
-	if got := len(doc.Forms); got != want {
+	if got := doc.Forms.Len(); got != want {
 		t.Fatalf("forms = %d, want %d", got, want)
 	}
 }
@@ -219,13 +221,14 @@ func assertTaskDependencies(t *testing.T, form compiler.Form, want []schema.Ref)
 
 func assertFirstNestedCall(t *testing.T, form compiler.Form, want string) {
 	t.Helper()
-	if len(form.Forms) != 1 {
-		t.Fatalf("nested forms = %d, want 1", len(form.Forms))
+	if form.Forms.Len() != 1 {
+		t.Fatalf("nested forms = %d, want 1", form.Forms.Len())
 	}
-	if len(form.Forms[0].Calls) != 1 {
-		t.Fatalf("run calls = %d, want 1", len(form.Forms[0].Calls))
+	run := nestedFormAt(t, form, 0)
+	if run.Calls.Len() != 1 {
+		t.Fatalf("run calls = %d, want 1", run.Calls.Len())
 	}
-	if got := form.Forms[0].Calls[0].Name; got != want {
+	if got := firstCall(t, run).Name; got != want {
 		t.Fatalf("call name = %q, want %q", got, want)
 	}
 }
@@ -247,12 +250,40 @@ func assertTaskOutputs(t *testing.T, form compiler.Form, want []string) {
 	}
 }
 
-func assertCallArgs(t *testing.T, args []any, wantLast string) {
+func assertCallArgs(t *testing.T, args list.List[any], wantLast string) {
 	t.Helper()
-	if len(args) < 3 {
-		t.Fatalf("args = %#v", args)
+	values := args.Values()
+	if len(values) < 3 {
+		t.Fatalf("args = %#v", values)
 	}
-	if got := args[2]; got != wantLast {
+	if got := values[2]; got != wantLast {
 		t.Fatalf("call arg = %#v, want %#v", got, wantLast)
 	}
+}
+
+func formAt(t *testing.T, forms list.List[compiler.Form], index int) compiler.Form {
+	t.Helper()
+	form, ok := forms.Get(index)
+	if !ok {
+		t.Fatalf("form %d missing", index)
+	}
+	return form
+}
+
+func nestedFormAt(t *testing.T, form compiler.Form, index int) compiler.Form {
+	t.Helper()
+	nested, ok := form.Forms.Get(index)
+	if !ok {
+		t.Fatalf("nested form %d missing", index)
+	}
+	return nested
+}
+
+func firstCall(t *testing.T, form compiler.Form) compiler.Call {
+	t.Helper()
+	call, ok := form.Calls.Get(0)
+	if !ok {
+		t.Fatal("first call missing")
+	}
+	return call
 }

@@ -16,7 +16,7 @@ func TestLowerControlFlowSample(t *testing.T) {
 	assertDemoWorkspace(t, project)
 	task := requireTask(t, project, "build")
 	assertTaskOutputs(t, task, []string{filepath.Join("dist", "demo")})
-	if got := len(task.Commands); got != 2 {
+	if got := task.Commands.Len(); got != 2 {
 		t.Fatalf("commands = %d, want 2", got)
 	}
 	assertCommandArgs(t, task.Commands, 0, "./cmd/...")

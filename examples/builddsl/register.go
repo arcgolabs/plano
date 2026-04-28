@@ -3,56 +3,53 @@ package builddsl
 import (
 	"fmt"
 
+	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/plano/compiler"
 	"github.com/arcgolabs/plano/schema"
 )
 
 func Register(c *compiler.Compiler) error {
-	for _, spec := range formSpecs() {
-		if err := c.RegisterForm(spec); err != nil {
-			return fmt.Errorf("register form %q: %w", spec.Name, err)
-		}
+	if err := c.RegisterForms(formSpecs()); err != nil {
+		return fmt.Errorf("register builddsl forms: %w", err)
 	}
-	for _, action := range actionSpecs() {
-		if err := c.RegisterAction(action); err != nil {
-			return fmt.Errorf("register action %q: %w", action.Name, err)
-		}
+	if err := c.RegisterActions(actionSpecs()); err != nil {
+		return fmt.Errorf("register builddsl actions: %w", err)
 	}
 	return nil
 }
 
-func formSpecs() []schema.FormSpec {
-	return []schema.FormSpec{
+func formSpecs() list.List[schema.FormSpec] {
+	return schema.FormSpecs(
 		workspaceFormSpec(),
 		taskFormSpec(),
 		goTestFormSpec(),
 		goBinaryFormSpec(),
 		runFormSpec(),
-	}
+	)
 }
 
-func actionSpecs() []compiler.ActionSpec {
-	return []compiler.ActionSpec{
-		{
+func actionSpecs() list.List[compiler.ActionSpec] {
+	return compiler.ActionSpecs(
+		compiler.ActionSpec{
 			Name:         "exec",
 			MinArgs:      1,
 			MaxArgs:      -1,
-			ArgTypes:     []schema.Type{schema.TypeString},
+			ArgTypes:     schema.Types(schema.TypeString),
 			VariadicType: schema.TypeString,
-			Validate: func(args []any) error {
+			Validate: func(args list.List[any]) error {
 				return validateStringArgs("exec", args)
 			},
 		},
-		{
+		compiler.ActionSpec{
 			Name:     "shell",
 			MinArgs:  1,
 			MaxArgs:  1,
-			ArgTypes: []schema.Type{schema.TypeString},
-			Validate: func(args []any) error {
+			ArgTypes: schema.Types(schema.TypeString),
+			Validate: func(args list.List[any]) error {
 				return validateStringArgs("shell", args)
 			},
 		},
-	}
+	)
 }
 
 func workspaceFormSpec() schema.FormSpec {

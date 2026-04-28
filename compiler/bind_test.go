@@ -31,7 +31,7 @@ task build {}
 	if result.Binding == nil {
 		t.Fatal("expected binding")
 	}
-	assertStrings(t, "files", result.Binding.Files, []string{"build.plano"})
+	assertStrings(t, "files", result.Binding.Files.Values(), []string{"build.plano"})
 	assertStrings(t, "const order", result.Binding.Consts.Keys(), []string{"target"})
 	assertConstType(t, result.Binding, "target", schema.TypeString.String())
 	assertStrings(t, "function order", result.Binding.Functions.Keys(), []string{"output"})
@@ -71,7 +71,7 @@ task build {}
 	if got := result.Binding.Symbols.Keys(); !reflect.DeepEqual(got, []string{"prepare", "build"}) {
 		t.Fatalf("symbol order = %#v", got)
 	}
-	if got := len(result.Binding.Files); got != 2 {
+	if got := result.Binding.Files.Len(); got != 2 {
 		t.Fatalf("file count = %d", got)
 	}
 }
@@ -152,8 +152,8 @@ func assertFunctionSignature(t *testing.T, binding *compiler.Binding, name strin
 	if !ok {
 		t.Fatalf("expected function binding %q", name)
 	}
-	gotParams := make([]string, 0, len(item.Params))
-	for _, param := range item.Params {
+	gotParams := make([]string, 0, item.Params.Len())
+	for _, param := range item.Params.Values() {
 		gotParams = append(gotParams, param.Type.String())
 	}
 	assertStrings(t, "function params", gotParams, wantParams)

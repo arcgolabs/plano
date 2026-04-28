@@ -31,8 +31,9 @@ func newExamplesCmd() *cobra.Command {
 }
 
 func writeTextExamples(w io.Writer) error {
-	lines := lo.Map(exampleViews(), func(item exampleView, _ int) string {
-		return item.Name + ": " + item.Description + " [" + strings.Join(item.Samples, ", ") + "]"
+	views := exampleViews()
+	lines := lo.Map(views.Values(), func(item exampleView, _ int) string {
+		return item.Name + ": " + item.Description + " [" + strings.Join(item.Samples.Values(), ", ") + "]"
 	})
 	return writeString(w, strings.Join(lines, "\n")+"\n")
 }

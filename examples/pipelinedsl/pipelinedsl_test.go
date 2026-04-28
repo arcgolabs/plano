@@ -78,11 +78,13 @@ func requireStage(t *testing.T, project *pipelinedsl.Pipeline, name string) pipe
 
 func assertStageCommands(t *testing.T, stage pipelinedsl.Stage, wantCount int, wantLast string) {
 	t.Helper()
-	if len(stage.Commands) != wantCount {
-		t.Fatalf("commands = %d", len(stage.Commands))
+	if stage.Commands.Len() != wantCount {
+		t.Fatalf("commands = %d", stage.Commands.Len())
 	}
-	if got := stage.Commands[wantCount-1].Args[2]; got != wantLast {
-		t.Fatalf("last command = %#v", stage.Commands[wantCount-1].Args)
+	command, _ := stage.Commands.Get(wantCount - 1)
+	args := command.Args.Values()
+	if got := args[2]; got != wantLast {
+		t.Fatalf("last command = %#v", args)
 	}
 }
 
