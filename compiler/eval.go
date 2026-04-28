@@ -11,7 +11,7 @@ import (
 )
 
 func (c *Compiler) registerBuiltins() {
-	c.mustRegisterFunc(builtinFunction("env", 2, []schema.Type{schema.TypeString, schema.TypeString}, nil, schema.TypeString, func(args []any) (any, error) {
+	c.mustRegisterFunc(builtinFunction("env", 1, 2, []schema.Type{schema.TypeString, schema.TypeString}, nil, schema.TypeString, func(args []any) (any, error) {
 		key, ok := args[0].(string)
 		if !ok {
 			return nil, errors.New("env expects string key")
@@ -27,13 +27,19 @@ func (c *Compiler) registerBuiltins() {
 		}
 		return "", nil
 	}))
-	c.mustRegisterFunc(builtinFunction("join_path", -1, []schema.Type{schema.TypePath}, schema.TypePath, schema.TypePath, evalJoinPath))
-	c.mustRegisterFunc(builtinFunction("basename", 1, []schema.Type{schema.TypePath}, nil, schema.TypeString, evalBaseName))
-	c.mustRegisterFunc(builtinFunction("dirname", 1, []schema.Type{schema.TypePath}, nil, schema.TypePath, evalDirName))
-	c.mustRegisterFunc(builtinFunction("len", 1, []schema.Type{schema.TypeAny}, nil, schema.TypeInt, evalLen))
-	c.mustRegisterFunc(builtinFunction("keys", 1, []schema.Type{schema.MapType{Elem: schema.TypeAny}}, nil, schema.ListType{Elem: schema.TypeString}, evalKeys))
-	c.mustRegisterFunc(builtinFunction("values", 1, []schema.Type{schema.MapType{Elem: schema.TypeAny}}, nil, schema.ListType{Elem: schema.TypeAny}, evalValues))
-	c.mustRegisterFunc(builtinFunction("range", 3, []schema.Type{schema.TypeInt, schema.TypeInt, schema.TypeInt}, nil, schema.ListType{Elem: schema.TypeInt}, evalRange))
+	c.mustRegisterFunc(builtinFunction("join_path", 1, -1, []schema.Type{schema.TypePath}, schema.TypePath, schema.TypePath, evalJoinPath))
+	c.mustRegisterFunc(builtinFunction("basename", 1, 1, []schema.Type{schema.TypePath}, nil, schema.TypeString, evalBaseName))
+	c.mustRegisterFunc(builtinFunction("dirname", 1, 1, []schema.Type{schema.TypePath}, nil, schema.TypePath, evalDirName))
+	c.mustRegisterFunc(builtinFunction("len", 1, 1, []schema.Type{schema.TypeAny}, nil, schema.TypeInt, evalLen))
+	c.mustRegisterFunc(builtinFunction("keys", 1, 1, []schema.Type{schema.MapType{Elem: schema.TypeAny}}, nil, schema.ListType{Elem: schema.TypeString}, evalKeys))
+	c.mustRegisterFunc(builtinFunction("values", 1, 1, []schema.Type{schema.MapType{Elem: schema.TypeAny}}, nil, schema.ListType{Elem: schema.TypeAny}, evalValues))
+	c.mustRegisterFunc(builtinFunction("range", 1, 3, []schema.Type{schema.TypeInt, schema.TypeInt, schema.TypeInt}, nil, schema.ListType{Elem: schema.TypeInt}, evalRange))
+	c.mustRegisterFunc(builtinFunction("get", 2, 3, []schema.Type{schema.TypeAny, schema.TypeAny, schema.TypeAny}, nil, schema.TypeAny, evalGet))
+	c.mustRegisterFunc(builtinFunction("slice", 2, 3, []schema.Type{schema.ListType{Elem: schema.TypeAny}, schema.TypeInt, schema.TypeInt}, nil, schema.ListType{Elem: schema.TypeAny}, evalSlice))
+	c.mustRegisterFunc(builtinFunction("has", 2, 2, []schema.Type{schema.TypeAny, schema.TypeAny}, nil, schema.TypeBool, evalHas))
+	c.mustRegisterFunc(builtinFunction("append", 1, -1, []schema.Type{schema.ListType{Elem: schema.TypeAny}}, schema.TypeAny, schema.ListType{Elem: schema.TypeAny}, evalAppend))
+	c.mustRegisterFunc(builtinFunction("concat", 1, -1, []schema.Type{schema.ListType{Elem: schema.TypeAny}}, schema.ListType{Elem: schema.TypeAny}, schema.ListType{Elem: schema.TypeAny}, evalConcat))
+	c.mustRegisterFunc(builtinFunction("merge", 1, -1, []schema.Type{schema.MapType{Elem: schema.TypeAny}}, schema.MapType{Elem: schema.TypeAny}, schema.MapType{Elem: schema.TypeAny}, evalMerge))
 }
 
 func (c *Compiler) mustRegisterFunc(spec schema.FunctionSpec) {
@@ -44,6 +50,7 @@ func (c *Compiler) mustRegisterFunc(spec schema.FunctionSpec) {
 
 func builtinFunction(
 	name string,
+	minArgs int,
 	maxArgs int,
 	paramTypes []schema.Type,
 	variadicType schema.Type,
@@ -52,7 +59,7 @@ func builtinFunction(
 ) schema.FunctionSpec {
 	return schema.FunctionSpec{
 		Name:         name,
-		MinArgs:      1,
+		MinArgs:      minArgs,
 		MaxArgs:      maxArgs,
 		ParamTypes:   paramTypes,
 		VariadicType: variadicType,

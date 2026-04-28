@@ -123,6 +123,30 @@ task build {
 	assertContainsDiagnostic(t, result.Diagnostics, "assignment \"enabled\" expects bool, got int")
 }
 
+func TestCheckSourceDetailedReportsCollectionBuiltinErrors(t *testing.T) {
+	c := newTestCompiler(t)
+	src := []byte(`
+task build {
+  let items = ["one", "two"]
+  let data = {name = "demo"}
+  let a = get(items, "x")
+  let b = get(data, 1)
+  let c = slice(data, 0)
+  let d = has(data, 1)
+  outputs = [a, b, c, d]
+}
+`)
+
+	result := c.CheckSourceDetailed(context.Background(), "collections.plano", src)
+	if !result.Diagnostics.HasError() {
+		t.Fatal("expected diagnostics")
+	}
+	assertContainsDiagnostic(t, result.Diagnostics, "get index expects int, got string")
+	assertContainsDiagnostic(t, result.Diagnostics, "get key expects string, got int")
+	assertContainsDiagnostic(t, result.Diagnostics, "slice expects list argument")
+	assertContainsDiagnostic(t, result.Diagnostics, "has key expects string, got int")
+}
+
 func assertContainsDiagnostic(t *testing.T, diags diag.Diagnostics, want string) {
 	t.Helper()
 	for _, item := range diags {

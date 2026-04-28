@@ -100,10 +100,18 @@ func (p *Parser) parseIfStmt() *ast.IfStmt {
 
 func (p *Parser) parseForStmt() *ast.ForStmt {
 	start := p.expect(lexer.KwFor, "expected for")
-	name := p.parseIdent()
+	first := p.parseIdent()
+	var index *ast.Ident
+	name := first
+	if p.cur.Kind == lexer.Comma {
+		p.advance()
+		index = first
+		name = p.parseIdent()
+	}
 	inTok := p.expect(lexer.KwIn, "expected in")
 	return &ast.ForStmt{
 		For:      start.Pos,
+		Index:    index,
 		Name:     name,
 		In:       inTok.Pos,
 		Iterable: p.parseExpr(),

@@ -108,6 +108,9 @@ func (b *binder) resolveIf(stmt *ast.IfStmt, scope *scopeFrame) {
 func (b *binder) resolveFor(stmt *ast.ForStmt, scope *scopeFrame) {
 	b.resolveExpr(stmt.Iterable, scope)
 	loopScope := b.newScope(ScopeLoop, scope, stmt.Pos(), stmt.End())
+	if stmt.Index != nil {
+		b.bindLocal(loopScope, LocalLoop, stmt.Index, nil)
+	}
 	b.bindLocal(loopScope, LocalLoop, stmt.Name, nil)
 	b.resolveBlock(stmt.Body, loopScope)
 }

@@ -47,6 +47,12 @@ func TestParseInvalidSource(t *testing.T) {
 func TestParseElseIfAndLoopControl(t *testing.T) {
 	src := []byte(`
 task build {
+  for idx, item in range(0, 3) {
+    if idx == 1 {
+      continue
+    }
+  }
+
   if true {
     run {
       exec("echo", "first")
@@ -64,9 +70,26 @@ task build {
 		t.Fatalf("unexpected diagnostics: %v", diags)
 	}
 	task := requireFormDecl(t, file.Statements[0])
-	stmt, ok := task.Body.Items[0].(*ast.IfStmt)
+	assertParsedIndexedLoop(t, task)
+	assertParsedElseIfChain(t, task)
+}
+
+func assertParsedIndexedLoop(t *testing.T, task *ast.FormDecl) {
+	t.Helper()
+	loop, ok := task.Body.Items[0].(*ast.ForStmt)
 	if !ok {
-		t.Fatalf("item = %T, want *ast.IfStmt", task.Body.Items[0])
+		t.Fatalf("item = %T, want *ast.ForStmt", task.Body.Items[0])
+	}
+	if loop.Index == nil || loop.Index.Name != "idx" || loop.Name == nil || loop.Name.Name != "item" {
+		t.Fatalf("loop vars = %#v / %#v", loop.Index, loop.Name)
+	}
+}
+
+func assertParsedElseIfChain(t *testing.T, task *ast.FormDecl) {
+	t.Helper()
+	stmt, ok := task.Body.Items[1].(*ast.IfStmt)
+	if !ok {
+		t.Fatalf("item = %T, want *ast.IfStmt", task.Body.Items[1])
 	}
 	if stmt.Else == nil || len(stmt.Else.Items) != 1 {
 		t.Fatalf("else block = %#v", stmt.Else)

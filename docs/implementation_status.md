@@ -67,7 +67,7 @@ This document describes the current implementation in this repository relative t
   - nested form validation
   - call-only form bodies with action registry validation
   - script-body execution with lexical scope
-  - `let`, local reassignment, `if`, `else if`, `for`, `break`, and `continue` execution inside script bodies
+  - `let`, local reassignment, `if`, `else if`, single- and dual-variable `for`, `break`, and `continue` execution inside script bodies
   - user-defined function execution with typed parameters and returns
   - typed document output
 - Example host lowering packages:
@@ -87,6 +87,12 @@ This document describes the current implementation in this repository relative t
   - `keys`
   - `values`
   - `range`
+  - `get`
+  - `slice`
+  - `has`
+  - `append`
+  - `concat`
+  - `merge`
 - Builtin compile-time globals:
   - `os`
   - `arch`

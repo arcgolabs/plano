@@ -39,7 +39,7 @@ task build {
 }
 `))
 
-	assertWorkspace(t, project, "demo", "build")
+	assertDemoWorkspace(t, project)
 	assertTaskOrder(t, project, []string{"prepare", "build"})
 	task := requireTask(t, project, "build")
 	assertTaskDeps(t, task, []string{"prepare"})
@@ -79,7 +79,7 @@ go.binary build {
 func TestLowerSample(t *testing.T) {
 	src := mustReadBuildSample(t)
 	project := compileProject(t, src)
-	assertWorkspace(t, project, "demo", "build")
+	assertDemoWorkspace(t, project)
 	assertTaskOrder(t, project, []string{"prepare", "test", "build"})
 	buildTask := requireTask(t, project, "build")
 	assertTaskDeps(t, buildTask, []string{"prepare", "test"})
@@ -119,13 +119,13 @@ func compileProject(t *testing.T, src []byte) *builddsl.Project {
 	return project
 }
 
-func assertWorkspace(t *testing.T, project *builddsl.Project, wantName, wantDefault string) {
+func assertDemoWorkspace(t *testing.T, project *builddsl.Project) {
 	t.Helper()
 	workspace, ok := project.Workspace.Get()
 	if !ok {
 		t.Fatal("expected workspace")
 	}
-	if workspace.Name != wantName || workspace.DefaultTask != wantDefault {
+	if workspace.Name != "demo" || workspace.DefaultTask != "build" {
 		t.Fatalf("workspace = %#v", workspace)
 	}
 }

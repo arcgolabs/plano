@@ -13,7 +13,7 @@ func TestLowerControlFlowSample(t *testing.T) {
 	}
 
 	project := compileProject(t, src)
-	assertWorkspace(t, project, "demo", "build")
+	assertDemoWorkspace(t, project)
 	task := requireTask(t, project, "build")
 	assertTaskOutputs(t, task, []string{filepath.Join("dist", "demo")})
 	if got := len(task.Commands); got != 2 {

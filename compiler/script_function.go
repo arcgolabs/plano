@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/ast"
 	"github.com/arcgolabs/plano/schema"
 	"github.com/samber/mo"
@@ -166,13 +165,16 @@ func (s *compileState) execFunctionFor(stmt *ast.ForStmt, locals *env) (execSign
 	if err != nil {
 		return noExecSignal(), true, err
 	}
-	items, err := iterateValues(value)
+	items, err := iterateItems(value)
 	if err != nil {
 		return noExecSignal(), true, err
 	}
-	for _, itemValue := range items {
+	for _, item := range items {
 		blockEnv := s.newScopeEnv(locals, ScopeLoop, stmt.Pos(), stmt.End())
-		blockEnv.BindLocal(stmt.Name.Name, LocalLoop, staticTypeOfValue(itemValue), itemValue)
+		if stmt.Index != nil {
+			blockEnv.BindLocal(stmt.Index.Name, LocalLoop, staticTypeOfValue(item.Key), item.Key)
+		}
+		blockEnv.BindLocal(stmt.Name.Name, LocalLoop, staticTypeOfValue(item.Value), item.Value)
 		result, err := s.execFunctionBlock(stmt.Body, blockEnv)
 		if err != nil {
 			return result, true, err
@@ -216,21 +218,4 @@ func (s *compileState) bindFunctionLocal(kind LocalBindingKind, name string, typ
 		return err
 	}
 	return s.bindLocalValue(locals, kind, name, typeExpr, value)
-}
-
-func iterateValues(value any) ([]any, error) {
-	switch current := value.(type) {
-	case []any:
-		return current, nil
-	case *mapping.OrderedMap[string, any]:
-		return current.Values(), nil
-	case map[string]any:
-		items := make([]any, 0, len(current))
-		for _, item := range current {
-			items = append(items, item)
-		}
-		return items, nil
-	default:
-		return nil, fmt.Errorf("for loop expects list or map, got %T", value)
-	}
 }

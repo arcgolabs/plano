@@ -1,0 +1,21 @@
+workspace {
+  name = "demo"
+  default = build
+}
+
+task build {
+  let outputs_map = merge(
+    {main = join_path("dist", "demo")},
+    {backup = join_path("dist", "backup")},
+  )
+  outputs = values(outputs_map)
+
+  for name, output in outputs_map {
+    if name == "backup" {
+      break
+    }
+    run {
+      exec("echo", output)
+    }
+  }
+}

@@ -154,6 +154,9 @@ func (c *checker) checkFor(stmt *ast.ForStmt, scope *checkScope, expectedReturn 
 		c.diagnostics.AddError(stmt.Iterable.Pos(), stmt.Iterable.End(), "for loop expects list or map")
 	}
 	loopScope := c.newScope(ScopeLoop, scope, stmt.Pos(), stmt.End())
+	if stmt.Index != nil {
+		c.bindLocal(loopScope, LocalLoop, stmt.Index, inferIterationKeyType(iterable))
+	}
 	c.bindLocal(loopScope, LocalLoop, stmt.Name, inferIterationType(iterable))
 	c.checkBlock(stmt.Body, loopScope, expectedReturn, formSpec)
 }
@@ -219,6 +222,17 @@ func inferIterationType(typ schema.Type) schema.Type {
 		return normalizeType(current.Elem)
 	case schema.MapType:
 		return normalizeType(current.Elem)
+	default:
+		return schema.TypeAny
+	}
+}
+
+func inferIterationKeyType(typ schema.Type) schema.Type {
+	switch normalizeType(typ).(type) {
+	case schema.ListType:
+		return schema.TypeInt
+	case schema.MapType:
+		return schema.TypeString
 	default:
 		return schema.TypeAny
 	}

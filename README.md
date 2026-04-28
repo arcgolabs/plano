@@ -174,12 +174,12 @@ The implementation is still narrower than the full language draft, but the main 
 - glob imports such as `import "tasks/**/*.plano"`
 - top-level `const`
 - top-level user-defined `fn`
-- builtins such as `len`, `keys`, `values`, and `range`
+- builtins such as `len`, `keys`, `values`, `range`, `get`, `slice`, `has`, `append`, `concat`, and `merge`
 - static typechecking for expressions, fields, returns, and registered function/action signatures
 - validated call statements through host-registered actions
 - typed HIR output for stable lowering
 - form declarations
-- script-body execution with `let`, local reassignment, `if`, `else if`, `for`, `break`, and `continue`
+- script-body execution with `let`, local reassignment, `if`, `else if`, single- and dual-variable `for`, `break`, and `continue`
 - field assignments, nested forms, and call statements
 - expression evaluation with registered and user-defined functions
 - lowering from HIR to sample IRs through `examples/builddsl`, `examples/pipelinedsl`, and `examples/servicedsl`

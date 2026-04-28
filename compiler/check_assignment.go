@@ -51,6 +51,12 @@ func (c *checker) checkScriptFor(scope *checkScope, spec schema.FormSpec, stmt *
 		c.diagnostics.AddError(stmt.Pos(), stmt.End(), spec.Name+" does not allow script statements in "+spec.BodyMode.String()+" body")
 		return
 	}
+	if stmt.Index != nil {
+		if _, ok := spec.Fields[stmt.Index.Name]; ok {
+			c.diagnostics.AddError(stmt.Pos(), stmt.End(), `loop variable "`+stmt.Index.Name+`" conflicts with field "`+stmt.Index.Name+`" in `+spec.Name)
+			return
+		}
+	}
 	if _, ok := spec.Fields[stmt.Name.Name]; ok {
 		c.diagnostics.AddError(stmt.Pos(), stmt.End(), `loop variable "`+stmt.Name.Name+`" conflicts with field "`+stmt.Name.Name+`" in `+spec.Name)
 		return

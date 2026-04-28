@@ -223,15 +223,22 @@ func (c *checker) checkCallExpr(expr *ast.CallExpr, scope *checkScope) schema.Ty
 }
 
 func builtinResultType(name string, argTypes []schema.Type, fallback schema.Type) schema.Type {
-	if name == "values" {
-		if len(argTypes) == 0 {
-			return normalizeType(fallback)
-		}
-		if current, ok := normalizeType(argTypes[0]).(schema.MapType); ok {
-			return schema.ListType{Elem: normalizeType(current.Elem)}
-		}
+	switch name {
+	case "get":
+		return getResultType(argTypes, fallback)
+	case "slice":
+		return sliceResultType(argTypes, fallback)
+	case "values":
+		return valuesResultType(argTypes, fallback)
+	case "append":
+		return appendResultType(argTypes, fallback)
+	case "concat":
+		return concatResultType(argTypes, fallback)
+	case "merge":
+		return mergeResultType(argTypes, fallback)
+	default:
+		return normalizeType(fallback)
 	}
-	return normalizeType(fallback)
 }
 
 func (c *checker) checkUserFunctionCall(name string, argTypes []schema.Type, expr *ast.CallExpr) bool {
@@ -249,6 +256,7 @@ func (c *checker) checkBuiltinFunctionCall(name string, argTypes []schema.Type, 
 		return false
 	}
 	c.checkSignature("function", name, spec.MinArgs, spec.MaxArgs, spec.ParamTypes, spec.VariadicType, argTypes, expr.Pos(), expr.End())
+	c.checkCollectionBuiltin(name, argTypes, expr)
 	return true
 }
 

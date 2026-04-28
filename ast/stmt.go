@@ -145,6 +145,7 @@ func (*IfStmt) formItemNode() {}
 
 type ForStmt struct {
 	For      token.Pos
+	Index    *Ident
 	Name     *Ident
 	In       token.Pos
 	Iterable Expr
@@ -158,6 +159,9 @@ func (n *ForStmt) End() token.Pos {
 	}
 	if n.Iterable != nil {
 		return n.Iterable.End()
+	}
+	if n.Index != nil {
+		return n.Index.End()
 	}
 	if n.Name != nil {
 		return n.Name.End()
