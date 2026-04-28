@@ -1,0 +1,45 @@
+workspace {
+  name = "demo"
+  default = build
+}
+
+task build {
+  let packages = values({
+    unit = "./...",
+    integration = "./cmd/...",
+    lint = "./internal/...",
+  })
+  let names = keys({
+    unit = "./...",
+    integration = "./cmd/...",
+  })
+
+  if len(names) == 1 {
+    outputs = [join_path("dist", "wrong")]
+  } else if len(names) == 2 {
+    outputs = [join_path("dist", "demo")]
+  } else {
+    outputs = [join_path("dist", "fallback")]
+  }
+
+  for pkg in packages {
+    if pkg == "./..." {
+      continue
+    }
+    if pkg == "./internal/..." {
+      break
+    }
+    run {
+      exec("go", "test", pkg)
+    }
+  }
+
+  for idx in range(0, len(packages)) {
+    if idx == 1 {
+      break
+    }
+    run {
+      exec("go", "test", packages[idx])
+    }
+  }
+}

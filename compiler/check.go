@@ -12,8 +12,14 @@ import (
 
 type checkScope struct {
 	id     string
+	kind   ScopeKind
 	parent *checkScope
-	locals map[string]schema.Type
+	locals map[string]checkLocalBinding
+}
+
+type checkLocalBinding struct {
+	kind LocalBindingKind
+	typ  schema.Type
 }
 
 type checkScopeKey struct {

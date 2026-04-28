@@ -37,6 +37,8 @@ func (b *binder) resolveStmt(stmt ast.Stmt, scope *scopeFrame) {
 		b.resolveFunction(current, scope)
 	case *ast.ReturnStmt:
 		b.resolveExpr(current.Value, scope)
+	case *ast.BreakStmt, *ast.ContinueStmt:
+		return
 	case *ast.IfStmt:
 		b.resolveIf(current, scope)
 	case *ast.ForStmt:
@@ -78,6 +80,7 @@ func (b *binder) resolveFormItem(item ast.FormItem, scope *scopeFrame) {
 	}
 	switch current := item.(type) {
 	case *ast.Assignment:
+		b.recordAssignableUse(current.Name, scope)
 		b.resolveExpr(current.Value, scope)
 	case *ast.FormDecl:
 		b.resolveForm(current, scope)
@@ -139,6 +142,8 @@ func (b *binder) resolveBindingItem(item ast.FormItem, scope *scopeFrame) bool {
 		b.resolveFunction(current, scope)
 	case *ast.ReturnStmt:
 		b.resolveExpr(current.Value, scope)
+	case *ast.BreakStmt, *ast.ContinueStmt:
+		return true
 	default:
 		return false
 	}
@@ -151,6 +156,8 @@ func (b *binder) resolveControlItem(item ast.FormItem, scope *scopeFrame) bool {
 		b.resolveIf(current, scope)
 	case *ast.ForStmt:
 		b.resolveFor(current, scope)
+	case *ast.BreakStmt, *ast.ContinueStmt:
+		return true
 	default:
 		return false
 	}

@@ -166,11 +166,11 @@ func accessExprKind(expr ast.Expr) (string, bool) {
 	}
 }
 
-func findCheckLocal(scope *checkScope, name string) (schema.Type, bool) {
+func findCheckLocal(scope *checkScope, name string) (checkLocalBinding, bool) {
 	for current := scope; current != nil; current = current.parent {
-		if typ, ok := current.locals[name]; ok {
-			return typ, true
+		if binding, ok := current.locals[name]; ok {
+			return binding, true
 		}
 	}
-	return nil, false
+	return checkLocalBinding{}, false
 }

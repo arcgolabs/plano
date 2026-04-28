@@ -52,6 +52,19 @@ func (p *Parser) parseFile() *ast.File {
 }
 
 func (p *Parser) parseStatement() ast.Stmt {
+	if stmt := p.parseDeclStatement(); stmt != nil {
+		return stmt
+	}
+	if stmt := p.parseControlStatement(); stmt != nil {
+		return stmt
+	}
+	if p.cur.Kind == lexer.Ident {
+		return p.parseFormDeclWithHead(p.parseQualifiedIdent())
+	}
+	return nil
+}
+
+func (p *Parser) parseDeclStatement() ast.Stmt {
 	if p.cur.Kind == lexer.KwImport {
 		return p.parseImportDecl()
 	}
@@ -67,14 +80,21 @@ func (p *Parser) parseStatement() ast.Stmt {
 	if p.cur.Kind == lexer.KwReturn {
 		return p.parseReturnStmt()
 	}
+	if p.cur.Kind == lexer.KwBreak {
+		return p.parseBreakStmt()
+	}
+	if p.cur.Kind == lexer.KwContinue {
+		return p.parseContinueStmt()
+	}
+	return nil
+}
+
+func (p *Parser) parseControlStatement() ast.Stmt {
 	if p.cur.Kind == lexer.KwIf {
 		return p.parseIfStmt()
 	}
 	if p.cur.Kind == lexer.KwFor {
 		return p.parseForStmt()
-	}
-	if p.cur.Kind == lexer.Ident {
-		return p.parseFormDeclWithHead(p.parseQualifiedIdent())
 	}
 	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/compiler"
 	"github.com/arcgolabs/plano/schema"
@@ -18,7 +19,7 @@ type Pipeline struct {
 
 type Stage struct {
 	Name     string
-	Needs    []string
+	Needs    *list.List[string]
 	Image    string
 	Commands []Command
 }
@@ -162,7 +163,7 @@ func lowerStage(form compiler.HIRForm) (Stage, error) {
 	}
 	return Stage{
 		Name:     form.Symbol.Name,
-		Needs:    needs,
+		Needs:    list.NewList(needs...),
 		Image:    image,
 		Commands: commands,
 	}, nil

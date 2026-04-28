@@ -76,6 +76,53 @@ task build {
 	assertContainsDiagnostic(t, result.Diagnostics, "action argument 1 expects string, got int")
 }
 
+func TestCheckSourceDetailedReportsLoopControlErrors(t *testing.T) {
+	c := newTestCompiler(t)
+	src := []byte(`
+task build {
+  break
+}
+
+fn pick(): int {
+  continue
+  return 1
+}
+`)
+
+	result := c.CheckSourceDetailed(context.Background(), "flow.plano", src)
+	if !result.Diagnostics.HasError() {
+		t.Fatal("expected diagnostics")
+	}
+	assertContainsDiagnostic(t, result.Diagnostics, "break is only allowed inside loops")
+	assertContainsDiagnostic(t, result.Diagnostics, "continue is only allowed inside loops")
+}
+
+func TestCheckSourceDetailedReportsAssignmentErrors(t *testing.T) {
+	c := newTestCompiler(t)
+	src := []byte(`
+fn output(): string {
+  const name = "demo"
+  name = "next"
+  missing = "x"
+  return name
+}
+
+task build {
+  let enabled = true
+  enabled = 1
+  outputs = [output()]
+}
+`)
+
+	result := c.CheckSourceDetailed(context.Background(), "assign.plano", src)
+	if !result.Diagnostics.HasError() {
+		t.Fatal("expected diagnostics")
+	}
+	assertContainsDiagnostic(t, result.Diagnostics, `cannot assign to const "name"`)
+	assertContainsDiagnostic(t, result.Diagnostics, `undefined local binding "missing"`)
+	assertContainsDiagnostic(t, result.Diagnostics, "assignment \"enabled\" expects bool, got int")
+}
+
 func assertContainsDiagnostic(t *testing.T, diags diag.Diagnostics, want string) {
 	t.Helper()
 	for _, item := range diags {

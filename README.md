@@ -13,6 +13,7 @@ This repository currently contains a first usable implementation with:
 - a public HIR phase for typed compiler-internal lowering input
 - a compiler that produces a typed document
 - script-body execution with lexical scope and user-defined functions
+- script control flow with `else if`, `break`, and `continue`
 - bundled example host DSLs under `examples/`
 - validated action registry for call statements
 - glob imports via `**`
@@ -173,11 +174,12 @@ The implementation is still narrower than the full language draft, but the main 
 - glob imports such as `import "tasks/**/*.plano"`
 - top-level `const`
 - top-level user-defined `fn`
+- builtins such as `len`, `keys`, `values`, and `range`
 - static typechecking for expressions, fields, returns, and registered function/action signatures
 - validated call statements through host-registered actions
 - typed HIR output for stable lowering
 - form declarations
-- script-body execution with `let`, `if`, and `for`
+- script-body execution with `let`, local reassignment, `if`, `else if`, `for`, `break`, and `continue`
 - field assignments, nested forms, and call statements
 - expression evaluation with registered and user-defined functions
 - lowering from HIR to sample IRs through `examples/builddsl`, `examples/pipelinedsl`, and `examples/servicedsl`

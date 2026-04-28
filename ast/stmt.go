@@ -102,6 +102,24 @@ func (n *ReturnStmt) End() token.Pos {
 func (*ReturnStmt) stmtNode()     {}
 func (*ReturnStmt) formItemNode() {}
 
+type BreakStmt struct {
+	Break token.Pos
+}
+
+func (n *BreakStmt) Pos() token.Pos { return n.Break }
+func (n *BreakStmt) End() token.Pos { return n.Break }
+func (*BreakStmt) stmtNode()        {}
+func (*BreakStmt) formItemNode()    {}
+
+type ContinueStmt struct {
+	Continue token.Pos
+}
+
+func (n *ContinueStmt) Pos() token.Pos { return n.Continue }
+func (n *ContinueStmt) End() token.Pos { return n.Continue }
+func (*ContinueStmt) stmtNode()        {}
+func (*ContinueStmt) formItemNode()    {}
+
 type IfStmt struct {
 	If        token.Pos
 	Condition Expr

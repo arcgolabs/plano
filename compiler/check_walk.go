@@ -29,31 +29,56 @@ func (c *checker) checkUnit(unit parsedUnit, scope *checkScope) {
 }
 
 func (c *checker) checkStmt(stmt ast.Stmt, scope *checkScope) {
+	if c.checkDeclStmt(stmt, scope) {
+		return
+	}
+	if c.checkControlStmt(stmt, scope) {
+		return
+	}
+	if form, ok := stmt.(*ast.FormDecl); ok {
+		c.checkForm(form, scope)
+	}
+}
+
+func (c *checker) checkDeclStmt(stmt ast.Stmt, scope *checkScope) bool {
 	switch current := stmt.(type) {
 	case *ast.ImportDecl:
-		return
+		return true
 	case *ast.ConstDecl:
 		c.resolveConstType(current.Name.Name)
 	case *ast.LetDecl:
-		c.checkLocalDecl(scope, current.Name, current.Type, current.Value)
+		c.checkLocalDecl(scope, LocalLet, current.Name, current.Type, current.Value)
 	case *ast.FnDecl:
 		c.checkFunction(current, scope)
 	case *ast.ReturnStmt:
 		c.checkExpr(current.Value, scope)
+	case *ast.BreakStmt:
+		c.checkLoopControl(current.Pos(), current.End(), "break", scope)
+	case *ast.ContinueStmt:
+		c.checkLoopControl(current.Pos(), current.End(), "continue", scope)
+	default:
+		return false
+	}
+	return true
+}
+
+func (c *checker) checkControlStmt(stmt ast.Stmt, scope *checkScope) bool {
+	switch current := stmt.(type) {
 	case *ast.IfStmt:
 		c.checkIf(current, scope, nil, nil)
 	case *ast.ForStmt:
 		c.checkFor(current, scope, nil, nil)
-	case *ast.FormDecl:
-		c.checkForm(current, scope)
+	default:
+		return false
 	}
+	return true
 }
 
 func (c *checker) checkFunction(fn *ast.FnDecl, parent *checkScope) {
 	scope := c.newScope(ScopeFunction, parent, fn.Pos(), fn.End())
 	expected := normalizeType(convertTypeExpr(fn.Result))
 	for _, param := range fn.Params {
-		c.bindLocal(scope, param.Name, convertTypeExpr(param.Type))
+		c.bindLocal(scope, LocalParam, param.Name, convertTypeExpr(param.Type))
 	}
 	if fn.Body == nil {
 		return
@@ -71,7 +96,9 @@ func (c *checker) checkFunctionItem(item ast.FormItem, scope *checkScope, expect
 		return
 	}
 	switch current := item.(type) {
-	case *ast.Assignment, *ast.CallStmt, *ast.FormDecl:
+	case *ast.Assignment:
+		c.checkLocalAssignment(current, scope)
+	case *ast.CallStmt, *ast.FormDecl:
 		c.diagnostics.AddError(current.Pos(), current.End(), "unsupported function body item")
 	case *ast.ImportDecl:
 		c.diagnostics.AddError(current.Pos(), current.End(), "import is not allowed in function bodies")
@@ -112,59 +139,6 @@ func (c *checker) checkFormItem(item ast.FormItem, scope *checkScope, spec schem
 	}
 }
 
-func (c *checker) checkAssignment(assign *ast.Assignment, scope *checkScope, spec schema.FormSpec) {
-	if !allowsField(spec.BodyMode) {
-		c.diagnostics.AddError(assign.Pos(), assign.End(), spec.Name+" does not allow fields in "+spec.BodyMode.String()+" body")
-		return
-	}
-	fieldSpec, ok := spec.Fields[assign.Name.Name]
-	if !ok {
-		c.diagnostics.AddError(assign.Pos(), assign.End(), `field "`+assign.Name.Name+`" is not allowed in `+spec.Name)
-		return
-	}
-	actual := c.checkExpr(assign.Value, scope)
-	c.recordField(spec.Name, fieldSpec.Name, scope.id, fieldSpec.Type, actual, assign.Pos(), assign.End())
-	if !isTypeAssignable(fieldSpec.Type, actual) {
-		c.diagnostics.AddError(assign.Pos(), assign.End(), typeMismatchError(`field "`+fieldSpec.Name+`"`, fieldSpec.Type, actual).Error())
-	}
-}
-
-func (c *checker) checkScriptDecl(scope *checkScope, spec schema.FormSpec, name *ast.Ident, typeExpr ast.TypeExpr, value ast.Expr) {
-	if spec.BodyMode != schema.BodyScript {
-		c.diagnostics.AddError(value.Pos(), value.End(), spec.Name+" does not allow script statements in "+spec.BodyMode.String()+" body")
-		return
-	}
-	c.checkLocalDecl(scope, name, typeExpr, value)
-}
-
-func (c *checker) checkScriptIf(scope *checkScope, spec schema.FormSpec, stmt *ast.IfStmt) {
-	if spec.BodyMode != schema.BodyScript {
-		c.diagnostics.AddError(stmt.Pos(), stmt.End(), spec.Name+" does not allow script statements in "+spec.BodyMode.String()+" body")
-		return
-	}
-	c.checkIf(stmt, scope, nil, &spec)
-}
-
-func (c *checker) checkScriptFor(scope *checkScope, spec schema.FormSpec, stmt *ast.ForStmt) {
-	if spec.BodyMode != schema.BodyScript {
-		c.diagnostics.AddError(stmt.Pos(), stmt.End(), spec.Name+" does not allow script statements in "+spec.BodyMode.String()+" body")
-		return
-	}
-	c.checkFor(stmt, scope, nil, &spec)
-}
-
-func (c *checker) checkLocalDecl(scope *checkScope, name *ast.Ident, typeExpr ast.TypeExpr, value ast.Expr) {
-	actual := c.checkExpr(value, scope)
-	declared := convertTypeExpr(typeExpr)
-	if declared != nil && !isTypeAssignable(declared, actual) {
-		c.diagnostics.AddError(value.Pos(), value.End(), typeMismatchError(`binding "`+name.Name+`"`, declared, actual).Error())
-	}
-	if declared == nil {
-		declared = actual
-	}
-	c.bindLocal(scope, name, declared)
-}
-
 func (c *checker) checkIf(stmt *ast.IfStmt, scope *checkScope, expectedReturn schema.Type, formSpec *schema.FormSpec) {
 	condition := c.checkExpr(stmt.Condition, scope)
 	if !isTypeAssignable(schema.TypeBool, condition) {
@@ -180,7 +154,7 @@ func (c *checker) checkFor(stmt *ast.ForStmt, scope *checkScope, expectedReturn 
 		c.diagnostics.AddError(stmt.Iterable.Pos(), stmt.Iterable.End(), "for loop expects list or map")
 	}
 	loopScope := c.newScope(ScopeLoop, scope, stmt.Pos(), stmt.End())
-	c.bindLocal(loopScope, stmt.Name, inferIterationType(iterable))
+	c.bindLocal(loopScope, LocalLoop, stmt.Name, inferIterationType(iterable))
 	c.checkBlock(stmt.Body, loopScope, expectedReturn, formSpec)
 }
 
@@ -214,16 +188,20 @@ func (c *checker) newScope(kind ScopeKind, parent *checkScope, pos, end token.Po
 			pos:      pos,
 			end:      end,
 		}],
+		kind:   kind,
 		parent: parent,
-		locals: make(map[string]schema.Type),
+		locals: make(map[string]checkLocalBinding),
 	}
 }
 
-func (c *checker) bindLocal(scope *checkScope, name *ast.Ident, typ schema.Type) {
+func (c *checker) bindLocal(scope *checkScope, kind LocalBindingKind, name *ast.Ident, typ schema.Type) {
 	if scope == nil || name == nil {
 		return
 	}
-	scope.locals[name.Name] = normalizeType(typ)
+	scope.locals[name.Name] = checkLocalBinding{
+		kind: kind,
+		typ:  normalizeType(typ),
+	}
 }
 
 func isIterableType(typ schema.Type) bool {

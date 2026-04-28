@@ -1,16 +1,42 @@
 package compiler
 
 import (
+	"go/token"
+
 	"github.com/arcgolabs/plano/ast"
 	"github.com/arcgolabs/plano/schema"
 )
 
+func (c *checker) checkLoopControl(pos, end token.Pos, keyword string, scope *checkScope) {
+	if isInsideLoop(scope) {
+		return
+	}
+	c.diagnostics.AddError(pos, end, keyword+" is only allowed inside loops")
+}
+
+func (c *checker) checkScriptLoopControl(scope *checkScope, spec schema.FormSpec, pos, end token.Pos, keyword string) {
+	if spec.BodyMode != schema.BodyScript {
+		c.diagnostics.AddError(pos, end, spec.Name+" does not allow script statements in "+spec.BodyMode.String()+" body")
+		return
+	}
+	c.checkLoopControl(pos, end, keyword, scope)
+}
+
+func isInsideLoop(scope *checkScope) bool {
+	for current := scope; current != nil; current = current.parent {
+		if current.kind == ScopeLoop {
+			return true
+		}
+	}
+	return false
+}
+
 func (c *checker) checkFunctionBindingItem(item ast.FormItem, scope *checkScope) bool {
 	switch current := item.(type) {
 	case *ast.ConstDecl:
-		c.checkLocalDecl(scope, current.Name, current.Type, current.Value)
+		c.checkLocalDecl(scope, LocalConst, current.Name, current.Type, current.Value)
 	case *ast.LetDecl:
-		c.checkLocalDecl(scope, current.Name, current.Type, current.Value)
+		c.checkLocalDecl(scope, LocalLet, current.Name, current.Type, current.Value)
 	default:
 		return false
 	}
@@ -28,6 +54,10 @@ func (c *checker) checkFunctionControlItem(item ast.FormItem, scope *checkScope,
 		if expectedReturn != schema.TypeAny && !isTypeAssignable(expectedReturn, actual) {
 			c.diagnostics.AddError(current.Pos(), current.End(), typeMismatchError("return", expectedReturn, actual).Error())
 		}
+	case *ast.BreakStmt:
+		c.checkLoopControl(current.Pos(), current.End(), "break", scope)
+	case *ast.ContinueStmt:
+		c.checkLoopControl(current.Pos(), current.End(), "continue", scope)
 	default:
 		return false
 	}
@@ -59,13 +89,17 @@ func (c *checker) checkFormStatementItem(item ast.FormItem, scope *checkScope, s
 func (c *checker) checkFormScriptItem(item ast.FormItem, scope *checkScope, spec schema.FormSpec) bool {
 	switch current := item.(type) {
 	case *ast.ConstDecl:
-		c.checkScriptDecl(scope, spec, current.Name, current.Type, current.Value)
+		c.checkScriptDecl(scope, spec, LocalConst, current.Name, current.Type, current.Value)
 	case *ast.LetDecl:
-		c.checkScriptDecl(scope, spec, current.Name, current.Type, current.Value)
+		c.checkScriptDecl(scope, spec, LocalLet, current.Name, current.Type, current.Value)
 	case *ast.IfStmt:
 		c.checkScriptIf(scope, spec, current)
 	case *ast.ForStmt:
 		c.checkScriptFor(scope, spec, current)
+	case *ast.BreakStmt:
+		c.checkScriptLoopControl(scope, spec, current.Pos(), current.End(), "break")
+	case *ast.ContinueStmt:
+		c.checkScriptLoopControl(scope, spec, current.Pos(), current.End(), "continue")
 	default:
 		return false
 	}

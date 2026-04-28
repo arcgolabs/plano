@@ -79,6 +79,12 @@ func (p *Parser) parseKeywordFormItem() ast.FormItem {
 	if p.cur.Kind == lexer.KwReturn {
 		return p.parseReturnStmt()
 	}
+	if p.cur.Kind == lexer.KwBreak {
+		return p.parseBreakStmt()
+	}
+	if p.cur.Kind == lexer.KwContinue {
+		return p.parseContinueStmt()
+	}
 	if p.cur.Kind == lexer.KwIf {
 		return p.parseIfStmt()
 	}

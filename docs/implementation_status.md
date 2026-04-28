@@ -11,6 +11,8 @@ This document describes the current implementation in this repository relative t
   - `let`
   - `fn`
   - `return`
+  - `break`
+  - `continue`
   - `if`
   - `for`
   - form declarations
@@ -65,7 +67,7 @@ This document describes the current implementation in this repository relative t
   - nested form validation
   - call-only form bodies with action registry validation
   - script-body execution with lexical scope
-  - `let`, `if`, and `for` execution inside script bodies
+  - `let`, local reassignment, `if`, `else if`, `for`, `break`, and `continue` execution inside script bodies
   - user-defined function execution with typed parameters and returns
   - typed document output
 - Example host lowering packages:
@@ -81,6 +83,10 @@ This document describes the current implementation in this repository relative t
   - `join_path`
   - `basename`
   - `dirname`
+  - `len`
+  - `keys`
+  - `values`
+  - `range`
 - Builtin compile-time globals:
   - `os`
   - `arch`
@@ -100,6 +106,9 @@ This document describes the current implementation in this repository relative t
   - Hyphenated identifiers from the draft are not enabled yet.
 - `map<T>` currently means a string-keyed map whose values must match `T`
 - Call statements are captured structurally in the output document and validated against host-registered actions.
+- In script-capable form bodies, assignments prefer declared fields.
+  - Non-field local bindings can still be reassigned.
+  - Local bindings that collide with field names are rejected.
 - Blocks used by `fn`, `if`, and `for` currently accept the same script items as form script bodies
   - This is slightly broader than the stricter draft grammar and is intentional in the current implementation.
 - The compiler only accepts these top-level compiled statements:

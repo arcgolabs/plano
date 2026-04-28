@@ -34,12 +34,15 @@ func (s *compileState) compileForm(node *ast.FormDecl, locals *env) (*Form, *HIR
 	fieldSeen := map[string]bool{}
 	formEnv := s.newScopeEnv(locals, ScopeForm, node.Pos(), node.End())
 	if node.Body != nil {
-		s.execFormItems(&formExecState{
+		signal := s.execFormItems(&formExecState{
 			spec:      spec,
 			form:      out,
 			hir:       hir,
 			fieldSeen: fieldSeen,
 		}, node.Body.Items, formEnv)
+		if err := unexpectedLoopControlError(signal); err != nil {
+			s.diags.AddError(signal.pos, signal.end, err.Error())
+		}
 	}
 	s.applyFormDefaults(node, spec, out, hir, fieldSeen, scopeID)
 	return out, hir

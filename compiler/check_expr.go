@@ -35,7 +35,7 @@ func (c *checker) inferIdent(name *ast.Ident, scope *checkScope) schema.Type {
 		return schema.TypeAny
 	}
 	if local, ok := findCheckLocal(scope, name.Name); ok {
-		return normalizeType(local)
+		return normalizeType(local.typ)
 	}
 	if value, ok := c.compiler.globals.Get(name.Name); ok {
 		return staticTypeOfValue(value)
@@ -212,7 +212,7 @@ func (c *checker) checkCallExpr(expr *ast.CallExpr, scope *checkScope) schema.Ty
 		}
 	case c.checkBuiltinFunctionCall(name, argTypes, expr):
 		if spec, ok := c.compiler.funcs.Get(name); ok {
-			result = normalizeType(spec.Result)
+			result = builtinResultType(name, argTypes, spec.Result)
 		}
 	default:
 		c.diagnostics.AddError(expr.Pos(), expr.End(), `unknown function "`+name+`"`)
@@ -220,6 +220,18 @@ func (c *checker) checkCallExpr(expr *ast.CallExpr, scope *checkScope) schema.Ty
 
 	c.recordCall(name, scope.id, argTypes, result, expr.Pos(), expr.End())
 	return result
+}
+
+func builtinResultType(name string, argTypes []schema.Type, fallback schema.Type) schema.Type {
+	if name == "values" {
+		if len(argTypes) == 0 {
+			return normalizeType(fallback)
+		}
+		if current, ok := normalizeType(argTypes[0]).(schema.MapType); ok {
+			return schema.ListType{Elem: normalizeType(current.Elem)}
+		}
+	}
+	return normalizeType(fallback)
 }
 
 func (c *checker) checkUserFunctionCall(name string, argTypes []schema.Type, expr *ast.CallExpr) bool {

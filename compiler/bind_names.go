@@ -32,6 +32,17 @@ func (b *binder) recordIdentUse(name *ast.Ident, scope *scopeFrame) {
 	b.recordUse(name.Name, useKind, scope, target, name.Pos(), name.End())
 }
 
+func (b *binder) recordAssignableUse(name *ast.Ident, scope *scopeFrame) {
+	if name == nil {
+		return
+	}
+	useKind, target := b.resolveName(name.Name, scope)
+	if useKind == UseUnresolved {
+		return
+	}
+	b.recordUse(name.Name, useKind, scope, target, name.Pos(), name.End())
+}
+
 func (b *binder) recordCallableUse(name string, pos, end token.Pos, scope *scopeFrame) {
 	useKind, target := b.resolveCallable(name)
 	b.recordUse(name, useKind, scope, target, pos, end)

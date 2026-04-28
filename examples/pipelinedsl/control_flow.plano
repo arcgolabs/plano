@@ -1,0 +1,51 @@
+pipeline {
+  name = "flow"
+}
+
+stage lint {
+  image = "golangci/golangci-lint:latest"
+  run {
+    shell("golangci-lint run ./...")
+  }
+}
+
+stage test {
+  needs = [lint]
+  let packages = values({
+    core = "./...",
+    cli = "./cmd/...",
+    internal = "./internal/...",
+  })
+
+  if len(keys({
+    core = "./...",
+    cli = "./cmd/...",
+  })) == 1 {
+    image = "golang:1.25"
+  } else if len(packages) == 3 {
+    image = "golang:1.26"
+  } else {
+    image = "golang:tip"
+  }
+
+  for pkg in packages {
+    if pkg == "./..." {
+      continue
+    }
+    if pkg == "./internal/..." {
+      break
+    }
+    run {
+      exec("go", "test", pkg)
+    }
+  }
+
+  for idx in range(0, len(packages)) {
+    if idx == 1 {
+      break
+    }
+    run {
+      exec("go", "test", packages[idx])
+    }
+  }
+}

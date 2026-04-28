@@ -44,6 +44,48 @@ func TestParseInvalidSource(t *testing.T) {
 	}
 }
 
+func TestParseElseIfAndLoopControl(t *testing.T) {
+	src := []byte(`
+task build {
+  if true {
+    run {
+      exec("echo", "first")
+    }
+  } else if false {
+    break
+  } else {
+    continue
+  }
+}
+`)
+
+	file, diags := plano.ParseFile(token.NewFileSet(), "flow.plano", src)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	task := requireFormDecl(t, file.Statements[0])
+	stmt, ok := task.Body.Items[0].(*ast.IfStmt)
+	if !ok {
+		t.Fatalf("item = %T, want *ast.IfStmt", task.Body.Items[0])
+	}
+	if stmt.Else == nil || len(stmt.Else.Items) != 1 {
+		t.Fatalf("else block = %#v", stmt.Else)
+	}
+	nested, ok := stmt.Else.Items[0].(*ast.IfStmt)
+	if !ok {
+		t.Fatalf("else item = %T, want nested *ast.IfStmt", stmt.Else.Items[0])
+	}
+	if nested.Else == nil || len(nested.Else.Items) != 1 {
+		t.Fatalf("nested else block = %#v", nested.Else)
+	}
+	if _, ok := nested.Then.Items[0].(*ast.BreakStmt); !ok {
+		t.Fatalf("nested then item = %T, want *ast.BreakStmt", nested.Then.Items[0])
+	}
+	if _, ok := nested.Else.Items[0].(*ast.ContinueStmt); !ok {
+		t.Fatalf("nested else item = %T, want *ast.ContinueStmt", nested.Else.Items[0])
+	}
+}
+
 func assertStatementCount(t *testing.T, file *ast.File, want int) {
 	t.Helper()
 	if got := len(file.Statements); got != want {

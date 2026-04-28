@@ -22,10 +22,13 @@ func (s *compileState) callUserFunction(name string, decl *ast.FnDecl, args []an
 	if err != nil {
 		return nil, fmt.Errorf("function %q: %w", name, err)
 	}
-	if err := validateFunctionResult(name, decl.Result, result); err != nil {
+	if err := unexpectedLoopControlError(result); err != nil {
+		return nil, fmt.Errorf("function %q: %w", name, err)
+	}
+	if err := validateFunctionResult(name, decl.Result, result.Result()); err != nil {
 		return nil, err
 	}
-	if value, ok := result.Get(); ok {
+	if value, ok := result.Result().Get(); ok {
 		return value, nil
 	}
 	return schema.Null{}, nil
@@ -38,7 +41,7 @@ func (s *compileState) bindFunctionParams(name string, decl *ast.FnDecl, args []
 		if err := validateFunctionParam(name, param, value); err != nil {
 			return nil, err
 		}
-		locals.Bind(param.Name.Name, value)
+		locals.BindLocal(param.Name.Name, LocalParam, convertTypeExpr(param.Type), value)
 	}
 	return locals, nil
 }
@@ -74,78 +77,116 @@ func validateFunctionResult(name string, typeExpr ast.TypeExpr, result mo.Option
 	return nil
 }
 
-func (s *compileState) execFunctionBlock(block *ast.Block, locals *env) (mo.Option[any], error) {
+func (s *compileState) execFunctionBlock(block *ast.Block, locals *env) (execSignal, error) {
 	if block == nil {
-		return mo.None[any](), nil
+		return noExecSignal(), nil
 	}
 	for _, item := range block.Items {
 		result, handled, err := s.execFunctionItem(item, locals)
-		if !handled || err != nil || result.IsPresent() {
+		if !handled || err != nil || !result.IsNone() {
 			return result, err
 		}
 	}
-	return mo.None[any](), nil
+	return noExecSignal(), nil
 }
 
-func (s *compileState) execFunctionItem(item ast.FormItem, locals *env) (mo.Option[any], bool, error) {
+func (s *compileState) execFunctionItem(item ast.FormItem, locals *env) (execSignal, bool, error) {
+	if signal, handled, err := s.execFunctionBindingItem(item, locals); handled {
+		return signal, true, err
+	}
+	if signal, handled, err := s.execFunctionControlItem(item, locals); handled {
+		return signal, true, err
+	}
+	return s.execFunctionTerminalItem(item, locals)
+}
+
+func (s *compileState) execFunctionBindingItem(item ast.FormItem, locals *env) (execSignal, bool, error) {
 	switch current := item.(type) {
 	case *ast.ConstDecl:
-		return mo.None[any](), true, s.bindFunctionLocal(current.Name.Name, current.Type, current.Value, locals)
+		return noExecSignal(), true, s.bindFunctionLocal(LocalConst, current.Name.Name, current.Type, current.Value, locals)
 	case *ast.LetDecl:
-		return mo.None[any](), true, s.bindFunctionLocal(current.Name.Name, current.Type, current.Value, locals)
+		return noExecSignal(), true, s.bindFunctionLocal(LocalLet, current.Name.Name, current.Type, current.Value, locals)
+	case *ast.Assignment:
+		return noExecSignal(), true, s.execFunctionAssignment(current, locals)
+	default:
+		return noExecSignal(), false, nil
+	}
+}
+
+func (s *compileState) execFunctionControlItem(item ast.FormItem, locals *env) (execSignal, bool, error) {
+	switch current := item.(type) {
 	case *ast.IfStmt:
 		return s.execFunctionIf(current, locals)
 	case *ast.ForStmt:
 		return s.execFunctionFor(current, locals)
-	case *ast.ReturnStmt:
-		value, err := s.evalExpr(current.Value, locals)
-		if err != nil {
-			return mo.None[any](), true, err
-		}
-		return mo.Some[any](value), true, nil
 	default:
-		return mo.None[any](), true, unsupportedFunctionItemError(current)
+		return noExecSignal(), false, nil
 	}
 }
 
-func (s *compileState) execFunctionIf(stmt *ast.IfStmt, locals *env) (mo.Option[any], bool, error) {
+func (s *compileState) execFunctionTerminalItem(item ast.FormItem, locals *env) (execSignal, bool, error) {
+	switch current := item.(type) {
+	case *ast.ReturnStmt:
+		value, err := s.evalExpr(current.Value, locals)
+		if err != nil {
+			return noExecSignal(), true, err
+		}
+		return returnExecSignal(current.Pos(), current.End(), value), true, nil
+	case *ast.BreakStmt:
+		return breakExecSignal(current.Pos(), current.End()), true, nil
+	case *ast.ContinueStmt:
+		return continueExecSignal(current.Pos(), current.End()), true, nil
+	default:
+		return noExecSignal(), true, unsupportedFunctionItemError(current)
+	}
+}
+
+func (s *compileState) execFunctionIf(stmt *ast.IfStmt, locals *env) (execSignal, bool, error) {
 	value, err := s.evalExpr(stmt.Condition, locals)
 	if err != nil {
-		return mo.None[any](), true, err
+		return noExecSignal(), true, err
 	}
 	cond, ok := value.(bool)
 	if !ok {
-		return mo.None[any](), true, errors.New("if condition must be bool")
+		return noExecSignal(), true, errors.New("if condition must be bool")
 	}
 	branch := stmt.Else
 	if cond {
 		branch = stmt.Then
 	}
 	if branch == nil {
-		return mo.None[any](), true, nil
+		return noExecSignal(), true, nil
 	}
 	result, err := s.execFunctionBlock(branch, s.newScopeEnv(locals, ScopeBlock, branch.Pos(), branch.End()))
 	return result, true, err
 }
 
-func (s *compileState) execFunctionFor(stmt *ast.ForStmt, locals *env) (mo.Option[any], bool, error) {
+func (s *compileState) execFunctionFor(stmt *ast.ForStmt, locals *env) (execSignal, bool, error) {
 	value, err := s.evalExpr(stmt.Iterable, locals)
 	if err != nil {
-		return mo.None[any](), true, err
+		return noExecSignal(), true, err
 	}
 	items, err := iterateValues(value)
 	if err != nil {
-		return mo.None[any](), true, err
+		return noExecSignal(), true, err
 	}
 	for _, itemValue := range items {
 		blockEnv := s.newScopeEnv(locals, ScopeLoop, stmt.Pos(), stmt.End())
-		blockEnv.Bind(stmt.Name.Name, itemValue)
+		blockEnv.BindLocal(stmt.Name.Name, LocalLoop, staticTypeOfValue(itemValue), itemValue)
 		result, err := s.execFunctionBlock(stmt.Body, blockEnv)
-		if err != nil || result.IsPresent() {
+		if err != nil {
 			return result, true, err
 		}
+		switch {
+		case result.IsBreak():
+			return noExecSignal(), true, nil
+		case result.IsContinue():
+			continue
+		case !result.IsNone():
+			return result, true, nil
+		}
 	}
-	return mo.None[any](), true, nil
+	return noExecSignal(), true, nil
 }
 
 func unsupportedFunctionItemError(item ast.FormItem) error {
@@ -161,20 +202,20 @@ func unsupportedFunctionItemError(item ast.FormItem) error {
 	}
 }
 
-func (s *compileState) bindFunctionLocal(name string, typeExpr ast.TypeExpr, expr ast.Expr, locals *env) error {
+func (s *compileState) execFunctionAssignment(assign *ast.Assignment, locals *env) error {
+	value, err := s.evalExpr(assign.Value, locals)
+	if err != nil {
+		return err
+	}
+	return locals.Assign(assign.Name.Name, value)
+}
+
+func (s *compileState) bindFunctionLocal(kind LocalBindingKind, name string, typeExpr ast.TypeExpr, expr ast.Expr, locals *env) error {
 	value, err := s.evalExpr(expr, locals)
 	if err != nil {
 		return err
 	}
-	if typeExpr != nil {
-		if typ := convertTypeExpr(typeExpr); typ != nil {
-			if err := schema.CheckAssignable(typ, value); err != nil {
-				return fmt.Errorf("binding %q: %w", name, err)
-			}
-		}
-	}
-	locals.Bind(name, value)
-	return nil
+	return s.bindLocalValue(locals, kind, name, typeExpr, value)
 }
 
 func iterateValues(value any) ([]any, error) {

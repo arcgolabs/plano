@@ -62,6 +62,16 @@ func (p *Parser) parseReturnStmt() *ast.ReturnStmt {
 	}
 }
 
+func (p *Parser) parseBreakStmt() *ast.BreakStmt {
+	start := p.expect(lexer.KwBreak, "expected break")
+	return &ast.BreakStmt{Break: start.Pos}
+}
+
+func (p *Parser) parseContinueStmt() *ast.ContinueStmt {
+	start := p.expect(lexer.KwContinue, "expected continue")
+	return &ast.ContinueStmt{Continue: start.Pos}
+}
+
 func (p *Parser) parseIfStmt() *ast.IfStmt {
 	start := p.expect(lexer.KwIf, "expected if")
 	condition := p.parseExpr()
@@ -69,7 +79,16 @@ func (p *Parser) parseIfStmt() *ast.IfStmt {
 	var elseBlock *ast.Block
 	if p.cur.Kind == lexer.KwElse {
 		p.advance()
-		elseBlock = p.parseBlock()
+		if p.cur.Kind == lexer.KwIf {
+			nested := p.parseIfStmt()
+			elseBlock = &ast.Block{
+				Lbrace: nested.Pos(),
+				Rbrace: nested.End(),
+				Items:  []ast.FormItem{nested},
+			}
+		} else {
+			elseBlock = p.parseBlock()
+		}
 	}
 	return &ast.IfStmt{
 		If:        start.Pos,
