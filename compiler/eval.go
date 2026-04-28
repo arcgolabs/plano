@@ -8,6 +8,7 @@ import (
 
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/schema"
+	"github.com/samber/lo"
 )
 
 func (c *Compiler) registerBuiltins() {
@@ -118,12 +119,7 @@ func evalKeys(args []any) (any, error) {
 	case *mapping.OrderedMap[string, any]:
 		return stringSliceAsAny(current.Keys()), nil
 	case map[string]any:
-		keys := make([]string, 0, len(current))
-		for key := range current {
-			keys = append(keys, key)
-		}
-		slices.Sort(keys)
-		return stringSliceAsAny(keys), nil
+		return stringSliceAsAny(sortedStringKeys(current)), nil
 	default:
 		return nil, errors.New("keys expects map argument")
 	}
@@ -134,16 +130,7 @@ func evalValues(args []any) (any, error) {
 	case *mapping.OrderedMap[string, any]:
 		return slices.Clone(current.Values()), nil
 	case map[string]any:
-		keys := make([]string, 0, len(current))
-		for key := range current {
-			keys = append(keys, key)
-		}
-		slices.Sort(keys)
-		values := make([]any, 0, len(keys))
-		for _, key := range keys {
-			values = append(values, current[key])
-		}
-		return values, nil
+		return slices.Clone(orderedAnyMap(current).Values()), nil
 	default:
 		return nil, errors.New("values expects map argument")
 	}
@@ -161,11 +148,9 @@ func evalRange(args []any) (any, error) {
 }
 
 func stringSliceAsAny(items []string) []any {
-	values := make([]any, 0, len(items))
-	for _, item := range items {
-		values = append(values, item)
-	}
-	return values
+	return lo.Map(items, func(item string, _ int) any {
+		return item
+	})
 }
 
 func parseRangeArgs(args []any) (int64, int64, int64, error) {

@@ -1,6 +1,9 @@
 package lsp
 
-import "github.com/arcgolabs/plano/compiler"
+import (
+	"github.com/arcgolabs/collectionx/mapping"
+	"github.com/arcgolabs/plano/compiler"
+)
 
 type Position struct {
 	Line      int `json:"line"      yaml:"line"`
@@ -47,8 +50,8 @@ type Snapshot struct {
 	Result      compiler.Result `json:"result"      yaml:"result"`
 	Diagnostics []Diagnostic    `json:"diagnostics" yaml:"diagnostics"`
 	compiler    *compiler.Compiler
-	documents   map[string]Document
-	sources     map[string][]byte
+	documents   *mapping.Map[string, Document]
+	sources     *mapping.Map[string, []byte]
 }
 
 func (o Options) baseCompiler() *compiler.Compiler {

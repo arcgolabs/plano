@@ -20,7 +20,7 @@ func (s *compileState) execFieldAssignment(state *formExecState, current *ast.As
 		s.diags.AddError(current.Pos(), current.End(), fmt.Sprintf("%s does not allow fields in %s body", state.spec.Name, state.spec.BodyMode.String()))
 		return
 	}
-	fieldSpec, ok := state.spec.Fields[current.Name.Name]
+	fieldSpec, ok := formFieldSpec(state.spec, current.Name.Name)
 	if !ok {
 		s.diags.AddError(current.Pos(), current.End(), fmt.Sprintf("field %q is not allowed in %s", current.Name.Name, state.spec.Name))
 		return
@@ -35,7 +35,7 @@ func (s *compileState) execFieldAssignment(state *formExecState, current *ast.As
 		return
 	}
 	state.form.Fields.Set(current.Name.Name, value)
-	state.fieldSeen[current.Name.Name] = true
+	state.fieldSeen.Add(current.Name.Name)
 	scopeID := locals.scope
 	expected := fieldSpec.Type
 	actual := staticTypeOfValue(value)
@@ -56,7 +56,7 @@ func (s *compileState) execFieldAssignment(state *formExecState, current *ast.As
 }
 
 func (s *compileState) shouldAssignLocal(spec schema.FormSpec, name string, locals *env) bool {
-	if _, ok := spec.Fields[name]; ok {
+	if hasFormField(spec, name) {
 		return false
 	}
 	_, ok := locals.Lookup(name)
@@ -79,7 +79,7 @@ func (s *compileState) execLocalBinding(state *formExecState, kind LocalBindingK
 		s.diags.AddError(expr.Pos(), expr.End(), fmt.Sprintf("%s does not allow script statements in %s body", state.spec.Name, state.spec.BodyMode.String()))
 		return
 	}
-	if _, ok := state.spec.Fields[name]; ok {
+	if hasFormField(state.spec, name) {
 		s.diags.AddError(expr.Pos(), expr.End(), fmt.Sprintf("binding %q conflicts with field %q in %s", name, name, state.spec.Name))
 		return
 	}

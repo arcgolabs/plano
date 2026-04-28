@@ -3,19 +3,19 @@ package lsp
 import (
 	"path/filepath"
 
+	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/compiler"
 	"github.com/arcgolabs/plano/diag"
+	"github.com/samber/lo"
 )
 
-func diagnosticsFromResult(result compiler.Result, sources map[string][]byte) []Diagnostic {
-	out := make([]Diagnostic, 0, len(result.Diagnostics))
-	for _, item := range result.Diagnostics {
-		out = append(out, diagnosticFromCompiler(result, sources, item))
-	}
-	return out
+func diagnosticsFromResult(result compiler.Result, sources *mapping.Map[string, []byte]) []Diagnostic {
+	return lo.Map(result.Diagnostics, func(item diag.Diagnostic, _ int) Diagnostic {
+		return diagnosticFromCompiler(result, sources, item)
+	})
 }
 
-func diagnosticFromCompiler(result compiler.Result, sources map[string][]byte, item diag.Diagnostic) Diagnostic {
+func diagnosticFromCompiler(result compiler.Result, sources *mapping.Map[string, []byte], item diag.Diagnostic) Diagnostic {
 	rng, ok := diagnosticRange(result, sources, item)
 	if !ok {
 		return Diagnostic{
@@ -30,7 +30,7 @@ func diagnosticFromCompiler(result compiler.Result, sources map[string][]byte, i
 	}
 }
 
-func diagnosticRange(result compiler.Result, sources map[string][]byte, item diag.Diagnostic) (Range, bool) {
+func diagnosticRange(result compiler.Result, sources *mapping.Map[string, []byte], item diag.Diagnostic) (Range, bool) {
 	if !item.Pos.IsValid() || result.FileSet == nil {
 		return Range{}, false
 	}
@@ -39,7 +39,7 @@ func diagnosticRange(result compiler.Result, sources map[string][]byte, item dia
 		return Range{}, false
 	}
 	path := filepath.Clean(file.Name())
-	src, ok := sources[path]
+	src, ok := sources.Get(path)
 	if !ok {
 		return Range{}, false
 	}

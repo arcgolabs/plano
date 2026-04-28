@@ -13,7 +13,7 @@ import (
 
 type Project struct {
 	Workspace mo.Option[Workspace]
-	Tasks     *mapping.OrderedMap[string, Task]
+	Tasks     mapping.OrderedMap[string, Task]
 }
 
 type Workspace struct {
@@ -36,7 +36,6 @@ type Command struct {
 func Lower(hir *compiler.HIR) (*Project, error) {
 	project := &Project{
 		Workspace: mo.None[Workspace](),
-		Tasks:     mapping.NewOrderedMap[string, Task](),
 	}
 	for _, form := range hir.Forms {
 		if err := applyRootForm(project, form); err != nil {

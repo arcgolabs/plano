@@ -14,12 +14,12 @@ import (
 
 type Pipeline struct {
 	Name   string
-	Stages *mapping.OrderedMap[string, Stage]
+	Stages mapping.OrderedMap[string, Stage]
 }
 
 type Stage struct {
 	Name     string
-	Needs    *list.List[string]
+	Needs    list.List[string]
 	Image    string
 	Commands []Command
 }
@@ -44,9 +44,7 @@ func Register(c *compiler.Compiler) error {
 }
 
 func Lower(hir *compiler.HIR) (*Pipeline, error) {
-	project := &Pipeline{
-		Stages: mapping.NewOrderedMap[string, Stage](),
-	}
+	project := &Pipeline{}
 	for _, form := range hir.Forms {
 		if err := applyRootForm(project, form); err != nil {
 			return nil, err
@@ -85,13 +83,13 @@ func pipelineForms() []schema.FormSpec {
 			Name:      "pipeline",
 			LabelKind: schema.LabelNone,
 			BodyMode:  schema.BodyFieldOnly,
-			Fields: map[string]schema.FieldSpec{
-				"name": {
+			Fields: schema.Fields(
+				schema.FieldSpec{
 					Name:     "name",
 					Type:     schema.TypeString,
 					Required: true,
 				},
-			},
+			),
 		},
 		{
 			Name:         "stage",
@@ -99,22 +97,20 @@ func pipelineForms() []schema.FormSpec {
 			LabelRefKind: "stage",
 			BodyMode:     schema.BodyScript,
 			Declares:     "stage",
-			Fields: map[string]schema.FieldSpec{
-				"needs": {
+			Fields: schema.Fields(
+				schema.FieldSpec{
 					Name:       "needs",
 					Type:       schema.ListType{Elem: schema.RefType{Kind: "stage"}},
 					Default:    []any{},
 					HasDefault: true,
 				},
-				"image": {
+				schema.FieldSpec{
 					Name:     "image",
 					Type:     schema.TypeString,
 					Required: true,
 				},
-			},
-			NestedForms: map[string]struct{}{
-				"run": {},
-			},
+			),
+			NestedForms: schema.NestedForms("run"),
 		},
 		{
 			Name:      "run",
@@ -163,7 +159,7 @@ func lowerStage(form compiler.HIRForm) (Stage, error) {
 	}
 	return Stage{
 		Name:     form.Symbol.Name,
-		Needs:    list.NewList(needs...),
+		Needs:    *list.NewList(needs...),
 		Image:    image,
 		Commands: commands,
 	}, nil

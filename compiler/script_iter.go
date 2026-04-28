@@ -2,7 +2,6 @@ package compiler
 
 import (
 	"fmt"
-	"slices"
 
 	"github.com/arcgolabs/collectionx/mapping"
 )
@@ -34,11 +33,7 @@ func iterateItems(value any) ([]iterItem, error) {
 		})
 		return items, nil
 	case map[string]any:
-		keys := make([]string, 0, len(current))
-		for key := range current {
-			keys = append(keys, key)
-		}
-		slices.Sort(keys)
+		keys := sortedStringKeys(current)
 		items := make([]iterItem, 0, len(keys))
 		for _, key := range keys {
 			items = append(items, iterItem{

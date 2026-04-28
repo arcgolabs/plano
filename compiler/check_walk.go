@@ -3,6 +3,7 @@ package compiler
 import (
 	"go/token"
 
+	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/ast"
 	"github.com/arcgolabs/plano/schema"
 )
@@ -185,15 +186,15 @@ func (c *checker) newScope(kind ScopeKind, parent *checkScope, pos, end token.Po
 		parentID = parent.id
 	}
 	return &checkScope{
-		id: c.scopeIndex[checkScopeKey{
+		id: c.scopeID(checkScopeKey{
 			kind:     kind,
 			parentID: parentID,
 			pos:      pos,
 			end:      end,
-		}],
+		}),
 		kind:   kind,
 		parent: parent,
-		locals: make(map[string]checkLocalBinding),
+		locals: mapping.NewMap[string, checkLocalBinding](),
 	}
 }
 
@@ -201,10 +202,10 @@ func (c *checker) bindLocal(scope *checkScope, kind LocalBindingKind, name *ast.
 	if scope == nil || name == nil {
 		return
 	}
-	scope.locals[name.Name] = checkLocalBinding{
+	scope.locals.Set(name.Name, checkLocalBinding{
 		kind: kind,
 		typ:  normalizeType(typ),
-	}
+	})
 }
 
 func isIterableType(typ schema.Type) bool {

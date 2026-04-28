@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/arcgolabs/collectionx/mapping"
+	"github.com/arcgolabs/collectionx/set"
 )
 
 type LabelKind int
@@ -132,8 +133,8 @@ type FormSpec struct {
 	LabelKind    LabelKind
 	LabelRefKind string
 	BodyMode     BodyMode
-	Fields       map[string]FieldSpec
-	NestedForms  map[string]struct{}
+	Fields       *mapping.OrderedMap[string, FieldSpec]
+	NestedForms  *set.Set[string]
 	Declares     string
 	Docs         string
 }

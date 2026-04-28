@@ -4,6 +4,7 @@ import (
 	"go/token"
 	"strconv"
 
+	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/ast"
 )
 
@@ -12,7 +13,7 @@ func (b *binder) bindLocal(scope *scopeFrame, kind LocalBindingKind, name *ast.I
 		return
 	}
 	id := b.nextLocalID()
-	scope.locals[name.Name] = id
+	scope.locals.Set(name.Name, id)
 	b.binding.Locals.Set(id, LocalBinding{
 		ID:      id,
 		Name:    name.Name,
@@ -122,13 +123,13 @@ func (b *binder) newScope(kind ScopeKind, parent *scopeFrame, pos, end token.Pos
 	return &scopeFrame{
 		id:     id,
 		parent: parent,
-		locals: make(map[string]string),
+		locals: mapping.NewMap[string, string](),
 	}
 }
 
 func findLocal(scope *scopeFrame, name string) (string, bool) {
 	for current := scope; current != nil; current = current.parent {
-		if localID, ok := current.locals[name]; ok {
+		if localID, ok := current.locals.Get(name); ok {
 			return localID, true
 		}
 	}

@@ -60,18 +60,18 @@ func workspaceFormSpec() schema.FormSpec {
 		Name:      "workspace",
 		LabelKind: schema.LabelNone,
 		BodyMode:  schema.BodyFieldOnly,
-		Fields: map[string]schema.FieldSpec{
-			"name": {
+		Fields: schema.Fields(
+			schema.FieldSpec{
 				Name:     "name",
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"default": {
+			schema.FieldSpec{
 				Name:     "default",
 				Type:     schema.RefType{Kind: "task"},
 				Required: true,
 			},
-		},
+		),
 	}
 }
 
@@ -82,23 +82,21 @@ func taskFormSpec() schema.FormSpec {
 		LabelRefKind: "task",
 		BodyMode:     schema.BodyScript,
 		Declares:     "task",
-		Fields: map[string]schema.FieldSpec{
-			"deps": {
+		Fields: schema.Fields(
+			schema.FieldSpec{
 				Name:       "deps",
 				Type:       schema.ListType{Elem: schema.RefType{Kind: "task"}},
 				Default:    []any{},
 				HasDefault: true,
 			},
-			"outputs": {
+			schema.FieldSpec{
 				Name:       "outputs",
 				Type:       schema.ListType{Elem: schema.TypePath},
 				Default:    []any{},
 				HasDefault: true,
 			},
-		},
-		NestedForms: map[string]struct{}{
-			"run": {},
-		},
+		),
+		NestedForms: schema.NestedForms("run"),
 	}
 }
 
@@ -109,19 +107,19 @@ func goTestFormSpec() schema.FormSpec {
 		LabelRefKind: "task",
 		BodyMode:     schema.BodyFieldOnly,
 		Declares:     "task",
-		Fields: map[string]schema.FieldSpec{
-			"deps": {
+		Fields: schema.Fields(
+			schema.FieldSpec{
 				Name:       "deps",
 				Type:       schema.ListType{Elem: schema.RefType{Kind: "task"}},
 				Default:    []any{},
 				HasDefault: true,
 			},
-			"packages": {
+			schema.FieldSpec{
 				Name:     "packages",
 				Type:     schema.ListType{Elem: schema.TypePath},
 				Required: true,
 			},
-		},
+		),
 	}
 }
 
@@ -132,24 +130,24 @@ func goBinaryFormSpec() schema.FormSpec {
 		LabelRefKind: "task",
 		BodyMode:     schema.BodyFieldOnly,
 		Declares:     "task",
-		Fields: map[string]schema.FieldSpec{
-			"deps": {
+		Fields: schema.Fields(
+			schema.FieldSpec{
 				Name:       "deps",
 				Type:       schema.ListType{Elem: schema.RefType{Kind: "task"}},
 				Default:    []any{},
 				HasDefault: true,
 			},
-			"main": {
+			schema.FieldSpec{
 				Name:     "main",
 				Type:     schema.TypePath,
 				Required: true,
 			},
-			"out": {
+			schema.FieldSpec{
 				Name:     "out",
 				Type:     schema.TypePath,
 				Required: true,
 			},
-		},
+		),
 	}
 }
 

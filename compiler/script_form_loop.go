@@ -63,11 +63,11 @@ func (s *compileState) execFormLoopIteration(state *formExecState, current *ast.
 
 func validateFormLoopVars(spec schema.FormSpec, stmt *ast.ForStmt) error {
 	if stmt.Index != nil {
-		if _, ok := spec.Fields[stmt.Index.Name]; ok {
+		if hasFormField(spec, stmt.Index.Name) {
 			return fmt.Errorf("loop variable %q conflicts with field %q in %s", stmt.Index.Name, stmt.Index.Name, spec.Name)
 		}
 	}
-	if _, ok := spec.Fields[stmt.Name.Name]; ok {
+	if hasFormField(spec, stmt.Name.Name) {
 		return fmt.Errorf("loop variable %q conflicts with field %q in %s", stmt.Name.Name, stmt.Name.Name, spec.Name)
 	}
 	return nil

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/arcgolabs/collectionx/mapping"
+	"github.com/arcgolabs/collectionx/set"
 	"github.com/arcgolabs/plano/compiler"
 	examplebuilddsl "github.com/arcgolabs/plano/examples/builddsl"
 	"github.com/arcgolabs/plano/examples/pipelinedsl"
@@ -84,7 +85,8 @@ func exampleViews() []exampleView {
 }
 
 func exampleSamples(spec exampleSpec) []string {
-	samples := appendSamplePath(nil, nil, spec.sample)
+	seen := set.NewSet[string]()
+	samples := appendSamplePath(nil, seen, spec.sample)
 	entries, dir, ok := readExampleDir(spec.dir)
 	if !ok {
 		return samples
@@ -93,7 +95,7 @@ func exampleSamples(spec exampleSpec) []string {
 		if entry.IsDir() || filepath.Ext(entry.Name()) != ".plano" {
 			continue
 		}
-		samples = appendSamplePath(samples, nil, filepath.Join(dir, entry.Name()))
+		samples = appendSamplePath(samples, seen, filepath.Join(dir, entry.Name()))
 	}
 	return samples
 }
@@ -115,21 +117,15 @@ func exampleDirCandidates(dir string) []string {
 	return []string{dir, filepath.Join("..", "..", dir)}
 }
 
-func appendSamplePath(samples []string, seen map[string]struct{}, path string) []string {
+func appendSamplePath(samples []string, seen *set.Set[string], path string) []string {
 	if path == "" {
 		return samples
 	}
-	if seen == nil {
-		seen = make(map[string]struct{}, len(samples)+1)
-		for _, item := range samples {
-			seen[item] = struct{}{}
-		}
-	}
 	path = filepath.ToSlash(path)
-	if _, ok := seen[path]; ok {
+	if seen.Contains(path) {
 		return samples
 	}
-	seen[path] = struct{}{}
+	seen.Add(path)
 	return append(samples, path)
 }
 

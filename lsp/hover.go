@@ -6,6 +6,7 @@ import (
 
 	"github.com/arcgolabs/plano/compiler"
 	"github.com/arcgolabs/plano/schema"
+	"github.com/samber/lo"
 )
 
 func (s Snapshot) HoverAt(pos Position) (Hover, bool) {
@@ -177,18 +178,15 @@ func formatActionSpec(spec compiler.ActionSpec) string {
 }
 
 func paramStrings(params []compiler.ParamBinding) []string {
-	out := make([]string, 0, len(params))
-	for _, param := range params {
-		out = append(out, param.Name+": "+param.Type.String())
-	}
-	return out
+	return lo.Map(params, func(param compiler.ParamBinding, _ int) string {
+		return param.Name + ": " + param.Type.String()
+	})
 }
 
 func typeStrings(items []schema.Type, variadic schema.Type) []string {
-	out := make([]string, 0, len(items)+1)
-	for _, item := range items {
-		out = append(out, item.String())
-	}
+	out := lo.Map(items, func(item schema.Type, _ int) string {
+		return item.String()
+	})
 	if variadic != nil {
 		out = append(out, "..."+variadic.String())
 	}

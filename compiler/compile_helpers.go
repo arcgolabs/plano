@@ -7,19 +7,20 @@ func (s *compileState) newScopeEnv(parent *env, kind ScopeKind, pos, end token.P
 }
 
 func (s *compileState) scopeID(kind ScopeKind, pos, end token.Pos) string {
-	return s.scopeIndex[scopeSpanKey{
+	id, _ := s.scopeIndex.Get(scopeSpanKey{
 		kind: kind,
 		pos:  pos,
 		end:  end,
-	}]
+	})
+	return id
 }
 
 func (s *compileState) fieldCheck(pos, end token.Pos) (FieldCheck, bool) {
-	check, ok := s.fieldIndex[spanKey{pos: pos, end: end}]
+	check, ok := s.fieldIndex.Get(spanKey{pos: pos, end: end})
 	return check, ok
 }
 
 func (s *compileState) callCheck(pos, end token.Pos) (CallCheck, bool) {
-	check, ok := s.callIndex[spanKey{pos: pos, end: end}]
+	check, ok := s.callIndex.Get(spanKey{pos: pos, end: end})
 	return check, ok
 }

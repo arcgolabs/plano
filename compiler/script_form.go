@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go/token"
 
+	"github.com/arcgolabs/collectionx/set"
 	"github.com/arcgolabs/plano/ast"
 	"github.com/arcgolabs/plano/schema"
 )
@@ -12,7 +13,7 @@ type formExecState struct {
 	spec      schema.FormSpec
 	form      *Form
 	hir       *HIRForm
-	fieldSeen map[string]bool
+	fieldSeen *set.Set[string]
 }
 
 func (s *compileState) execFormItems(state *formExecState, items []ast.FormItem, locals *env) execSignal {
@@ -89,11 +90,9 @@ func (s *compileState) execNestedForm(state *formExecState, current *ast.FormDec
 		s.diags.AddError(current.Pos(), current.End(), fmt.Sprintf("%s does not allow nested forms in %s body", state.spec.Name, state.spec.BodyMode.String()))
 		return
 	}
-	if len(state.spec.NestedForms) > 0 {
-		if _, ok := state.spec.NestedForms[current.Head.String()]; !ok {
-			s.diags.AddError(current.Pos(), current.End(), fmt.Sprintf("%s cannot contain nested form %q", state.spec.Name, current.Head.String()))
-			return
-		}
+	if !allowsNestedFormName(state.spec, current.Head.String()) {
+		s.diags.AddError(current.Pos(), current.End(), fmt.Sprintf("%s cannot contain nested form %q", state.spec.Name, current.Head.String()))
+		return
 	}
 	nested, hirNested := s.compileForm(current, locals)
 	if nested != nil && hirNested != nil {

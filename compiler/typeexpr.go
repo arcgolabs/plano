@@ -1,25 +1,28 @@
 package compiler
 
 import (
+	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/ast"
 	"github.com/arcgolabs/plano/schema"
 )
 
-var builtinTypes = map[string]schema.Type{
-	"string":   schema.TypeString,
-	"int":      schema.TypeInt,
-	"float":    schema.TypeFloat,
-	"bool":     schema.TypeBool,
-	"duration": schema.TypeDuration,
-	"size":     schema.TypeSize,
-	"path":     schema.TypePath,
-	"any":      schema.TypeAny,
-}
+var builtinTypes = func() *mapping.Map[string, schema.Type] {
+	types := mapping.NewMap[string, schema.Type]()
+	types.Set("string", schema.TypeString)
+	types.Set("int", schema.TypeInt)
+	types.Set("float", schema.TypeFloat)
+	types.Set("bool", schema.TypeBool)
+	types.Set("duration", schema.TypeDuration)
+	types.Set("size", schema.TypeSize)
+	types.Set("path", schema.TypePath)
+	types.Set("any", schema.TypeAny)
+	return types
+}()
 
 func convertTypeExpr(node ast.TypeExpr) schema.Type {
 	switch current := node.(type) {
 	case *ast.SimpleType:
-		if typ, ok := builtinTypes[current.Name.Name]; ok {
+		if typ, ok := builtinTypes.Get(current.Name.Name); ok {
 			return typ
 		}
 		return schema.NamedType{Name: current.Name.Name}

@@ -1,13 +1,14 @@
 package compiler
 
 import (
+	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/ast"
 )
 
 type scopeFrame struct {
 	id     string
 	parent *scopeFrame
-	locals map[string]string
+	locals *mapping.Map[string, string]
 }
 
 func (b *binder) resolveUnits(units []parsedUnit) {

@@ -6,9 +6,11 @@ import (
 	"path/filepath"
 
 	"github.com/arcgolabs/collectionx/mapping"
+	"github.com/arcgolabs/collectionx/set"
 	"github.com/arcgolabs/plano/ast"
 	"github.com/arcgolabs/plano/diag"
 	planofrontend "github.com/arcgolabs/plano/frontend/plano"
+	"github.com/samber/lo"
 	"github.com/samber/oops"
 )
 
@@ -50,7 +52,12 @@ func (c *Compiler) prepareSource(filename string, src []byte) preparedInput {
 	fset := token.NewFileSet()
 	root, diags := planofrontend.ParseFile(fset, filename, src)
 	units := []parsedUnit{{Name: filepath.Clean(filename), File: root}}
-	imported, importDiags := c.loadImports(fset, units[0], map[string]bool{filepath.Clean(filename): true}, map[string]bool{})
+	imported, importDiags := c.loadImports(
+		fset,
+		units[0],
+		set.NewSet(filepath.Clean(filename)),
+		set.NewSet[string](),
+	)
 	diags.Append(importDiags)
 	return preparedInput{
 		fileSet:     fset,
@@ -75,7 +82,12 @@ func (c *Compiler) prepareFile(filename string) preparedInput {
 
 	root, diags := planofrontend.ParseFile(fset, clean, src)
 	units := []parsedUnit{{Name: clean, File: root}}
-	imported, importDiags := c.loadImports(fset, units[0], map[string]bool{clean: true}, map[string]bool{})
+	imported, importDiags := c.loadImports(
+		fset,
+		units[0],
+		set.NewSet(clean),
+		set.NewSet[string](),
+	)
 	diags.Append(importDiags)
 	return preparedInput{
 		fileSet:     fset,
@@ -204,22 +216,18 @@ func (b *binder) hasDefinition(name string) bool {
 }
 
 func bindParams(params []*ast.Param) []ParamBinding {
-	items := make([]ParamBinding, 0, len(params))
-	for _, param := range params {
-		items = append(items, ParamBinding{
+	return lo.Map(params, func(param *ast.Param, _ int) ParamBinding {
+		return ParamBinding{
 			Name: param.Name.Name,
 			Type: convertTypeExpr(param.Type),
 			Pos:  param.Pos(),
 			End:  param.End(),
-		})
-	}
-	return items
+		}
+	})
 }
 
 func unitNames(units []parsedUnit) []string {
-	files := make([]string, 0, len(units))
-	for _, unit := range units {
-		files = append(files, unit.Name)
-	}
-	return files
+	return lo.Map(units, func(unit parsedUnit, _ int) string {
+		return unit.Name
+	})
 }

@@ -3,6 +3,7 @@ package lsp
 import (
 	"math"
 
+	"github.com/samber/lo"
 	"go.lsp.dev/protocol"
 )
 
@@ -46,16 +47,14 @@ func toProtocolHover(hover Hover) *protocol.Hover {
 }
 
 func toProtocolDiagnostics(items []Diagnostic) []protocol.Diagnostic {
-	out := make([]protocol.Diagnostic, 0, len(items))
-	for _, item := range items {
-		out = append(out, protocol.Diagnostic{
+	return lo.Map(items, func(item Diagnostic, _ int) protocol.Diagnostic {
+		return protocol.Diagnostic{
 			Range:    toProtocolRange(item.Range),
 			Severity: protocolSeverity(item.Severity),
 			Source:   "plano",
 			Message:  item.Message,
-		})
-	}
-	return out
+		}
+	})
 }
 
 func protocolSeverity(severity string) protocol.DiagnosticSeverity {

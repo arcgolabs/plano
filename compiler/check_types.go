@@ -5,6 +5,7 @@ import (
 
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/schema"
+	"github.com/samber/lo"
 )
 
 func staticTypeOfValue(value any) schema.Type {
@@ -18,19 +19,15 @@ func staticTypeOfValue(value any) schema.Type {
 }
 
 func typesOfValues(values []any) []schema.Type {
-	types := make([]schema.Type, 0, len(values))
-	for _, value := range values {
-		types = append(types, staticTypeOfValue(value))
-	}
-	return types
+	return lo.Map(values, func(value any, _ int) schema.Type {
+		return staticTypeOfValue(value)
+	})
 }
 
 func typesOfMapValues(values *mapping.OrderedMap[string, any]) []schema.Type {
-	types := make([]schema.Type, 0, values.Len())
-	for _, value := range values.Values() {
-		types = append(types, staticTypeOfValue(value))
-	}
-	return types
+	return lo.Map(values.Values(), func(value any, _ int) schema.Type {
+		return staticTypeOfValue(value)
+	})
 }
 
 func mergeTypes(types []schema.Type) schema.Type {
@@ -115,11 +112,7 @@ func collectionTypeOfValue(value any) (schema.Type, bool) {
 		if len(current) == 0 {
 			return schema.MapType{Elem: schema.TypeAny}, true
 		}
-		ordered := mapping.NewOrderedMapWithCapacity[string, any](len(current))
-		for key, value := range current {
-			ordered.Set(key, value)
-		}
-		return schema.MapType{Elem: mergeTypes(typesOfMapValues(ordered))}, true
+		return schema.MapType{Elem: mergeTypes(typesOfMapValues(orderedAnyMap(current)))}, true
 	default:
 		return nil, false
 	}

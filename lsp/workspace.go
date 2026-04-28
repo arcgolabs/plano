@@ -98,12 +98,12 @@ func (w *Workspace) analyzeDocuments(
 	path string,
 	docs *mapping.OrderedMap[string, Document],
 ) (Snapshot, error) {
-	sources := make(map[string][]byte, docs.Len())
+	sources := mapping.NewMapWithCapacity[string, []byte](docs.Len())
 	readFile := func(name string) ([]byte, error) {
 		current := filepath.Clean(name)
 		if doc, ok := docs.Get(current); ok {
 			data := slices.Clone(doc.Text)
-			sources[current] = data
+			sources.Set(current, data)
 			return data, nil
 		}
 		data, err := w.base.ReadFile(current)
@@ -111,7 +111,7 @@ func (w *Workspace) analyzeDocuments(
 			return nil, fmt.Errorf("read %q: %w", current, err)
 		}
 		cloned := slices.Clone(data)
-		sources[current] = cloned
+		sources.Set(current, cloned)
 		return cloned, nil
 	}
 
@@ -126,9 +126,9 @@ func (w *Workspace) analyzeDocuments(
 	if uri == "" {
 		uri = FileURI(path)
 	}
-	if _, ok := sources[path]; !ok {
+	if _, ok := sources.Get(path); !ok {
 		if doc, ok := docs.Get(path); ok {
-			sources[path] = slices.Clone(doc.Text)
+			sources.Set(path, slices.Clone(doc.Text))
 		}
 	}
 	return Snapshot{
@@ -166,10 +166,10 @@ func (w *Workspace) snapshotDocuments() *mapping.OrderedMap[string, Document] {
 	return w.docs.Clone()
 }
 
-func documentsByPath(items *mapping.OrderedMap[string, Document]) map[string]Document {
-	out := make(map[string]Document, items.Len())
+func documentsByPath(items *mapping.OrderedMap[string, Document]) *mapping.Map[string, Document] {
+	out := mapping.NewMapWithCapacity[string, Document](items.Len())
 	items.Range(func(path string, doc Document) bool {
-		out[path] = doc
+		out.Set(path, doc)
 		return true
 	})
 	return out

@@ -8,6 +8,7 @@ import (
 	"io"
 
 	"github.com/arcgolabs/plano/diag"
+	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -134,8 +135,7 @@ func printDiagnostics(w io.Writer, fset *token.FileSet, diags diag.Diagnostics) 
 }
 
 func diagnosticsToView(fset *token.FileSet, items diag.Diagnostics) []diagnosticView {
-	views := make([]diagnosticView, 0, len(items))
-	for _, item := range items {
+	return lo.Map(items, func(item diag.Diagnostic, _ int) diagnosticView {
 		view := diagnosticView{
 			Severity: string(item.Severity),
 			Message:  item.Message,
@@ -149,7 +149,6 @@ func diagnosticsToView(fset *token.FileSet, items diag.Diagnostics) []diagnostic
 			view.EndLine = end.Line
 			view.EndColumn = end.Column
 		}
-		views = append(views, view)
-	}
-	return views
+		return view
+	})
 }

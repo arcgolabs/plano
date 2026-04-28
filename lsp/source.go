@@ -64,10 +64,10 @@ func (s Snapshot) spanLocation(pos, end token.Pos) (string, Range, bool) {
 
 func (s Snapshot) source(path string) ([]byte, bool) {
 	clean := filepath.Clean(path)
-	if src, ok := s.sources[clean]; ok {
+	if src, ok := s.sources.Get(clean); ok {
 		return src, true
 	}
-	if doc, ok := s.documents[clean]; ok {
+	if doc, ok := s.documents.Get(clean); ok {
 		return doc.Text, true
 	}
 	return nil, false
@@ -75,7 +75,7 @@ func (s Snapshot) source(path string) ([]byte, bool) {
 
 func (s Snapshot) uriForPath(path string) string {
 	clean := filepath.Clean(path)
-	if doc, ok := s.documents[clean]; ok && doc.URI != "" {
+	if doc, ok := s.documents.Get(clean); ok && doc.URI != "" {
 		return doc.URI
 	}
 	return FileURI(clean)

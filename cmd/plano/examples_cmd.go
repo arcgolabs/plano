@@ -4,6 +4,7 @@ import (
 	"io"
 	"strings"
 
+	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 )
 
@@ -30,9 +31,8 @@ func newExamplesCmd() *cobra.Command {
 }
 
 func writeTextExamples(w io.Writer) error {
-	lines := make([]string, 0, len(exampleViews()))
-	for _, item := range exampleViews() {
-		lines = append(lines, item.Name+": "+item.Description+" ["+strings.Join(item.Samples, ", ")+"]")
-	}
+	lines := lo.Map(exampleViews(), func(item exampleView, _ int) string {
+		return item.Name + ": " + item.Description + " [" + strings.Join(item.Samples, ", ") + "]"
+	})
 	return writeString(w, strings.Join(lines, "\n")+"\n")
 }

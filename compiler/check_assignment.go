@@ -14,7 +14,7 @@ func (c *checker) checkAssignment(assign *ast.Assignment, scope *checkScope, spe
 		c.diagnostics.AddError(assign.Pos(), assign.End(), spec.Name+" does not allow fields in "+spec.BodyMode.String()+" body")
 		return
 	}
-	fieldSpec, ok := spec.Fields[assign.Name.Name]
+	fieldSpec, ok := formFieldSpec(spec, assign.Name.Name)
 	if !ok {
 		c.diagnostics.AddError(assign.Pos(), assign.End(), `field "`+assign.Name.Name+`" is not allowed in `+spec.Name)
 		return
@@ -31,7 +31,7 @@ func (c *checker) checkScriptDecl(scope *checkScope, spec schema.FormSpec, kind 
 		c.diagnostics.AddError(value.Pos(), value.End(), spec.Name+" does not allow script statements in "+spec.BodyMode.String()+" body")
 		return
 	}
-	if _, ok := spec.Fields[name.Name]; ok {
+	if hasFormField(spec, name.Name) {
 		c.diagnostics.AddError(value.Pos(), value.End(), `binding "`+name.Name+`" conflicts with field "`+name.Name+`" in `+spec.Name)
 		return
 	}
@@ -52,12 +52,12 @@ func (c *checker) checkScriptFor(scope *checkScope, spec schema.FormSpec, stmt *
 		return
 	}
 	if stmt.Index != nil {
-		if _, ok := spec.Fields[stmt.Index.Name]; ok {
+		if hasFormField(spec, stmt.Index.Name) {
 			c.diagnostics.AddError(stmt.Pos(), stmt.End(), `loop variable "`+stmt.Index.Name+`" conflicts with field "`+stmt.Index.Name+`" in `+spec.Name)
 			return
 		}
 	}
-	if _, ok := spec.Fields[stmt.Name.Name]; ok {
+	if hasFormField(spec, stmt.Name.Name) {
 		c.diagnostics.AddError(stmt.Pos(), stmt.End(), `loop variable "`+stmt.Name.Name+`" conflicts with field "`+stmt.Name.Name+`" in `+spec.Name)
 		return
 	}
@@ -93,7 +93,7 @@ func (c *checker) checkLocalAssignment(assign *ast.Assignment, scope *checkScope
 }
 
 func (c *checker) shouldAssignLocal(spec schema.FormSpec, name string, scope *checkScope) bool {
-	if _, ok := spec.Fields[name]; ok {
+	if hasFormField(spec, name) {
 		return false
 	}
 	_, ok := findCheckLocal(scope, name)

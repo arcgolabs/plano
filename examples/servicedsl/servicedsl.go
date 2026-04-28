@@ -4,15 +4,17 @@ package servicedsl
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/compiler"
 	"github.com/arcgolabs/plano/schema"
+	"github.com/samber/lo"
 )
 
 type Stack struct {
 	Name     string
-	Services *mapping.OrderedMap[string, Service]
+	Services mapping.OrderedMap[string, Service]
 }
 
 type Service struct {
@@ -20,7 +22,7 @@ type Service struct {
 	Image     string
 	Port      int64
 	DependsOn []string
-	Env       *mapping.OrderedMap[string, string]
+	Env       mapping.OrderedMap[string, string]
 }
 
 func Register(c *compiler.Compiler) error {
@@ -33,9 +35,7 @@ func Register(c *compiler.Compiler) error {
 }
 
 func Lower(hir *compiler.HIR) (*Stack, error) {
-	stack := &Stack{
-		Services: mapping.NewOrderedMap[string, Service](),
-	}
+	stack := &Stack{}
 	for _, form := range hir.Forms {
 		if err := applyRootForm(stack, form); err != nil {
 			return nil, err
@@ -74,13 +74,13 @@ func serviceForms() []schema.FormSpec {
 			Name:      "stack",
 			LabelKind: schema.LabelNone,
 			BodyMode:  schema.BodyFieldOnly,
-			Fields: map[string]schema.FieldSpec{
-				"name": {
+			Fields: schema.Fields(
+				schema.FieldSpec{
 					Name:     "name",
 					Type:     schema.TypeString,
 					Required: true,
 				},
-			},
+			),
 		},
 		{
 			Name:         "service",
@@ -88,30 +88,30 @@ func serviceForms() []schema.FormSpec {
 			LabelRefKind: "service",
 			BodyMode:     schema.BodyFieldOnly,
 			Declares:     "service",
-			Fields: map[string]schema.FieldSpec{
-				"image": {
+			Fields: schema.Fields(
+				schema.FieldSpec{
 					Name:     "image",
 					Type:     schema.TypeString,
 					Required: true,
 				},
-				"port": {
+				schema.FieldSpec{
 					Name:     "port",
 					Type:     schema.TypeInt,
 					Required: true,
 				},
-				"depends_on": {
+				schema.FieldSpec{
 					Name:       "depends_on",
 					Type:       schema.ListType{Elem: schema.RefType{Kind: "service"}},
 					Default:    []any{},
 					HasDefault: true,
 				},
-				"env": {
+				schema.FieldSpec{
 					Name:       "env",
 					Type:       schema.MapType{Elem: schema.TypeString},
 					Default:    mapping.NewOrderedMap[string, any](),
 					HasDefault: true,
 				},
-			},
+			),
 		},
 	}
 }
@@ -182,21 +182,21 @@ func refNames(value any, kind string) ([]string, error) {
 	return names, nil
 }
 
-func stringMap(value any) (*mapping.OrderedMap[string, string], error) {
+func stringMap(value any) (mapping.OrderedMap[string, string], error) {
 	out := mapping.NewOrderedMap[string, string]()
 	switch items := value.(type) {
 	case *mapping.OrderedMap[string, any]:
 		if err := copyOrderedStringMap(out, items); err != nil {
-			return nil, err
+			return mapping.OrderedMap[string, string]{}, err
 		}
 	case map[string]any:
 		if err := copyBuiltinStringMap(out, items); err != nil {
-			return nil, err
+			return mapping.OrderedMap[string, string]{}, err
 		}
 	default:
-		return nil, fmt.Errorf("servicedsl: expected string map, got %T", value)
+		return mapping.OrderedMap[string, string]{}, fmt.Errorf("servicedsl: expected string map, got %T", value)
 	}
-	return out, nil
+	return *out, nil
 }
 
 func copyOrderedStringMap(out *mapping.OrderedMap[string, string], items *mapping.OrderedMap[string, any]) error {
@@ -212,7 +212,10 @@ func copyOrderedStringMap(out *mapping.OrderedMap[string, string], items *mappin
 }
 
 func copyBuiltinStringMap(out *mapping.OrderedMap[string, string], items map[string]any) error {
-	for key, item := range items {
+	keys := lo.Keys(items)
+	slices.Sort(keys)
+	for _, key := range keys {
+		item := items[key]
 		text, err := stringValue(item)
 		if err != nil {
 			return err

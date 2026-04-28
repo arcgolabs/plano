@@ -8,6 +8,7 @@ import (
 	goruntime "runtime"
 
 	"github.com/arcgolabs/collectionx/mapping"
+	"github.com/arcgolabs/collectionx/set"
 	"github.com/arcgolabs/plano/ast"
 	"github.com/arcgolabs/plano/diag"
 	"github.com/arcgolabs/plano/schema"
@@ -80,9 +81,9 @@ type compileState struct {
 	constValues *mapping.OrderedMap[string, any]
 	funcDecls   *mapping.OrderedMap[string, *ast.FnDecl]
 	resolving   *mapping.OrderedMap[string, bool]
-	scopeIndex  map[scopeSpanKey]string
-	fieldIndex  map[spanKey]FieldCheck
-	callIndex   map[spanKey]CallCheck
+	scopeIndex  *mapping.Map[scopeSpanKey, string]
+	fieldIndex  *mapping.Map[spanKey, FieldCheck]
+	callIndex   *mapping.Map[spanKey, CallCheck]
 }
 
 func New(opts Options) *Compiler {
@@ -167,10 +168,22 @@ func (c *Compiler) RegisterForm(spec schema.FormSpec) error {
 		return errors.New("form name cannot be empty")
 	}
 	if spec.Fields == nil {
-		spec.Fields = make(map[string]schema.FieldSpec)
+		spec.Fields = mapping.NewOrderedMap[string, schema.FieldSpec]()
+	} else {
+		fields := mapping.NewOrderedMapWithCapacity[string, schema.FieldSpec](spec.Fields.Len())
+		spec.Fields.Range(func(name string, field schema.FieldSpec) bool {
+			if field.Name == "" {
+				field.Name = name
+			}
+			fields.Set(name, field)
+			return true
+		})
+		spec.Fields = fields
 	}
 	if spec.NestedForms == nil {
-		spec.NestedForms = make(map[string]struct{})
+		spec.NestedForms = set.NewSet[string]()
+	} else {
+		spec.NestedForms = spec.NestedForms.Clone()
 	}
 	c.forms.Set(spec.Name, spec)
 	return nil

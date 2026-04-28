@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/arcgolabs/collectionx/mapping"
+	"github.com/arcgolabs/collectionx/set"
 	"github.com/arcgolabs/plano/ast"
 	"github.com/arcgolabs/plano/schema"
 )
@@ -31,7 +32,7 @@ func (s *compileState) compileForm(node *ast.FormDecl, locals *env) (*Form, *HIR
 	}
 	s.applyFormLabel(node, spec, out, hir)
 
-	fieldSeen := map[string]bool{}
+	fieldSeen := set.NewSet[string]()
 	formEnv := s.newScopeEnv(locals, ScopeForm, node.Pos(), node.End())
 	if node.Body != nil {
 		signal := s.execFormItems(&formExecState{
@@ -93,11 +94,12 @@ func (s *compileState) applyFormDefaults(
 	spec schema.FormSpec,
 	out *Form,
 	hir *HIRForm,
-	fieldSeen map[string]bool,
+	fieldSeen *set.Set[string],
 	scopeID string,
 ) {
-	for name, field := range spec.Fields {
-		if fieldSeen[name] {
+	for _, name := range spec.Fields.Keys() {
+		field, _ := spec.Fields.Get(name)
+		if fieldSeen.Contains(name) {
 			continue
 		}
 		if field.HasDefault {

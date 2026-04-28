@@ -7,16 +7,22 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/arcgolabs/collectionx/set"
 	"github.com/arcgolabs/plano/ast"
 	"github.com/arcgolabs/plano/diag"
 	planofrontend "github.com/arcgolabs/plano/frontend/plano"
 	"github.com/samber/oops"
 )
 
-func (c *Compiler) loadImports(fset *token.FileSet, unit parsedUnit, seen, stack map[string]bool) ([]parsedUnit, diag.Diagnostics) {
+func (c *Compiler) loadImports(
+	fset *token.FileSet,
+	unit parsedUnit,
+	seen *set.Set[string],
+	stack *set.Set[string],
+) ([]parsedUnit, diag.Diagnostics) {
 	var diags diag.Diagnostics
-	stack[unit.Name] = true
-	defer delete(stack, unit.Name)
+	stack.Add(unit.Name)
+	defer stack.Remove(unit.Name)
 
 	out := make([]parsedUnit, 0)
 	for _, stmt := range unit.File.Statements {
@@ -42,18 +48,18 @@ func (c *Compiler) loadImportUnit(
 	fset *token.FileSet,
 	imp *ast.ImportDecl,
 	next string,
-	seen map[string]bool,
-	stack map[string]bool,
+	seen *set.Set[string],
+	stack *set.Set[string],
 ) ([]parsedUnit, diag.Diagnostics) {
 	var diags diag.Diagnostics
-	if stack[next] {
+	if stack.Contains(next) {
 		diags.AddError(imp.Pos(), imp.End(), "import cycle detected involving "+next)
 		return nil, diags
 	}
-	if seen[next] {
+	if seen.Contains(next) {
 		return nil, diags
 	}
-	seen[next] = true
+	seen.Add(next)
 
 	src, err := c.ReadFile(next)
 	if err != nil {

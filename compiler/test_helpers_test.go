@@ -18,18 +18,18 @@ func newTestCompiler(t *testing.T) *compiler.Compiler {
 		Name:      "workspace",
 		LabelKind: schema.LabelNone,
 		BodyMode:  schema.BodyFieldOnly,
-		Fields: map[string]schema.FieldSpec{
-			"name": {
+		Fields: schema.Fields(
+			schema.FieldSpec{
 				Name:     "name",
 				Type:     schema.TypeString,
 				Required: true,
 			},
-			"default": {
+			schema.FieldSpec{
 				Name:     "default",
 				Type:     schema.RefType{Kind: "task"},
 				Required: true,
 			},
-		},
+		),
 	})
 	registerForm(t, c, schema.FormSpec{
 		Name:         "task",
@@ -37,23 +37,21 @@ func newTestCompiler(t *testing.T) *compiler.Compiler {
 		BodyMode:     schema.BodyScript,
 		LabelRefKind: "task",
 		Declares:     "task",
-		Fields: map[string]schema.FieldSpec{
-			"deps": {
+		Fields: schema.Fields(
+			schema.FieldSpec{
 				Name:       "deps",
 				Type:       schema.ListType{Elem: schema.RefType{Kind: "task"}},
 				Default:    []any{},
 				HasDefault: true,
 			},
-			"outputs": {
+			schema.FieldSpec{
 				Name:       "outputs",
 				Type:       schema.ListType{Elem: schema.TypePath},
 				Default:    []any{},
 				HasDefault: true,
 			},
-		},
-		NestedForms: map[string]struct{}{
-			"run": {},
-		},
+		),
+		NestedForms: schema.NestedForms("run"),
 	})
 	registerForm(t, c, schema.FormSpec{
 		Name:      "run",

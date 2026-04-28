@@ -5,6 +5,7 @@ import (
 	"go/token"
 
 	"github.com/arcgolabs/collectionx/mapping"
+	"github.com/arcgolabs/collectionx/set"
 	"github.com/arcgolabs/plano/ast"
 	"github.com/arcgolabs/plano/diag"
 	"github.com/arcgolabs/plano/schema"
@@ -14,7 +15,7 @@ type checkScope struct {
 	id     string
 	kind   ScopeKind
 	parent *checkScope
-	locals map[string]checkLocalBinding
+	locals *mapping.Map[string, checkLocalBinding]
 }
 
 type checkLocalBinding struct {
@@ -34,10 +35,10 @@ type checker struct {
 	binding     *Binding
 	constDecls  *mapping.OrderedMap[string, *ast.ConstDecl]
 	funcDecls   *mapping.OrderedMap[string, *ast.FnDecl]
-	scopeIndex  map[checkScopeKey]string
+	scopeIndex  *mapping.Map[checkScopeKey, string]
 	checks      *CheckInfo
-	constTypes  map[string]schema.Type
-	resolving   map[string]bool
+	constTypes  *mapping.Map[string, schema.Type]
+	resolving   *set.Set[string]
 	nextExpr    int
 	nextField   int
 	nextCall    int
@@ -97,24 +98,29 @@ func (c *Compiler) checkUnits(units []parsedUnit, index boundIndex) (*CheckInfo,
 		funcDecls:  index.funcDecls,
 		scopeIndex: buildCheckScopeIndex(index.binding),
 		checks:     checks,
-		constTypes: make(map[string]schema.Type),
-		resolving:  make(map[string]bool),
+		constTypes: mapping.NewMap[string, schema.Type](),
+		resolving:  set.NewSet[string](),
 	}
 	k.checkAllConsts()
 	k.checkAllUnits(units)
 	return checks, k.diagnostics
 }
 
-func buildCheckScopeIndex(binding *Binding) map[checkScopeKey]string {
-	index := make(map[checkScopeKey]string, binding.Scopes.Len())
+func buildCheckScopeIndex(binding *Binding) *mapping.Map[checkScopeKey, string] {
+	index := mapping.NewMapWithCapacity[checkScopeKey, string](binding.Scopes.Len())
 	binding.Scopes.Range(func(_ string, scope ScopeBinding) bool {
-		index[checkScopeKey{
+		index.Set(checkScopeKey{
 			kind:     scope.Kind,
 			parentID: scope.ParentID,
 			pos:      scope.Pos,
 			end:      scope.End,
-		}] = scope.ID
+		}, scope.ID)
 		return true
 	})
 	return index
+}
+
+func (c *checker) scopeID(key checkScopeKey) string {
+	id, _ := c.scopeIndex.Get(key)
+	return id
 }

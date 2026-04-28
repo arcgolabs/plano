@@ -183,19 +183,7 @@ func asOrderedMap(value any, name string) (*mapping.OrderedMap[string, any], err
 	case *mapping.OrderedMap[string, any]:
 		return current.Clone(), nil
 	case map[string]any:
-		items, err := iterateItems(current)
-		if err != nil {
-			return nil, err
-		}
-		ordered := mapping.NewOrderedMapWithCapacity[string, any](len(items))
-		for _, item := range items {
-			key, ok := item.Key.(string)
-			if !ok {
-				return nil, errors.New(name + " expects map arguments")
-			}
-			ordered.Set(key, item.Value)
-		}
-		return ordered, nil
+		return orderedAnyMap(current), nil
 	default:
 		return nil, errors.New(name + " expects map arguments")
 	}

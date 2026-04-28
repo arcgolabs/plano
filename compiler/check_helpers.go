@@ -6,21 +6,22 @@ import (
 
 	"github.com/arcgolabs/plano/ast"
 	"github.com/arcgolabs/plano/schema"
+	"github.com/samber/lo"
 )
 
 func (c *checker) resolveConstTypeInScope(name string, scope *checkScope) schema.Type {
-	if typ, ok := c.constTypes[name]; ok {
+	if typ, ok := c.constTypes.Get(name); ok {
 		return typ
 	}
 	decl, ok := c.constDecls.Get(name)
 	if !ok {
 		return schema.TypeAny
 	}
-	if c.resolving[name] {
+	if c.resolving.Contains(name) {
 		c.diagnostics.AddError(decl.Pos(), decl.End(), `constant cycle detected at "`+name+`"`)
 		return schema.TypeAny
 	}
-	c.resolving[name] = true
+	c.resolving.Add(name)
 	if scope == nil {
 		scope = c.newScope(ScopeFile, nil, decl.Pos(), decl.End())
 	}
@@ -32,9 +33,10 @@ func (c *checker) resolveConstTypeInScope(name string, scope *checkScope) schema
 	if declared == nil {
 		declared = actual
 	}
-	c.constTypes[name] = normalizeType(declared)
-	delete(c.resolving, name)
-	return c.constTypes[name]
+	resolved := normalizeType(declared)
+	c.constTypes.Set(name, resolved)
+	c.resolving.Remove(name)
+	return resolved
 }
 
 func signatureArgType(index int, paramTypes []schema.Type, variadicType schema.Type) schema.Type {
@@ -45,11 +47,9 @@ func signatureArgType(index int, paramTypes []schema.Type, variadicType schema.T
 }
 
 func paramTypes(params []ParamBinding) []schema.Type {
-	types := make([]schema.Type, 0, len(params))
-	for _, param := range params {
-		types = append(types, param.Type)
-	}
-	return types
+	return lo.Map(params, func(param ParamBinding, _ int) schema.Type {
+		return param.Type
+	})
 }
 
 func (c *checker) recordExpr(expr ast.Expr, kind string, scope *checkScope, typ schema.Type) schema.Type {
@@ -168,7 +168,7 @@ func accessExprKind(expr ast.Expr) (string, bool) {
 
 func findCheckLocal(scope *checkScope, name string) (checkLocalBinding, bool) {
 	for current := scope; current != nil; current = current.parent {
-		if binding, ok := current.locals[name]; ok {
+		if binding, ok := current.locals.Get(name); ok {
 			return binding, true
 		}
 	}
