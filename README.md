@@ -6,6 +6,7 @@ This repository currently contains a first usable implementation with:
 
 - hand-written lexer and parser
 - AST and diagnostics
+- a Go workspace (`go.work`) with separate core, CLI, and example modules
 - schema registration for forms and functions
 - a Cobra-based CLI under `cmd/plano`
 - a public bind API for declaration and symbol collection
@@ -150,6 +151,7 @@ The repository also ships a small `Taskfile.yml` for common local workflows:
 task fmt
 task test
 task lint
+task work:sync
 task examples
 task parse FILE=./build.plano FORMAT=yaml
 task bind FILE=./build.plano EXAMPLE=builddsl FORMAT=yaml
@@ -163,11 +165,24 @@ task example:servicedsl FORMAT=yaml
 
 ## Repo Shape
 
-This repository intentionally remains a single Go module for now.
+The repository now runs as a small Go workspace rather than a single module.
 
-- The core compiler APIs are still moving quickly.
-- Splitting into many `go.mod` files now would increase local development and testing overhead.
-- The CLI and examples already give us the separation we need without multi-module versioning friction.
+- Root module `github.com/arcgolabs/plano`: compiler core, AST, diagnostics, schema, and frontend packages
+- `cmd/plano`: standalone CLI module
+- `examples/builddsl`: example build DSL module
+- `examples/pipelinedsl`: example pipeline DSL module
+- `examples/servicedsl`: example service DSL module
+
+That split gives us cleaner boundaries:
+
+- core can evolve without dragging CLI/example dependencies into every consumer build
+- example DSLs are now visibly host-side modules instead of looking like core packages
+- future modules such as `lsp` or plugin/runtime adapters can be added without reshaping the core again
+
+Workspace note:
+
+- sibling workspace modules are resolved through `go.work`
+- child `go.mod` files only declare external dependencies, not other local workspace modules
 
 ## Current Scope
 

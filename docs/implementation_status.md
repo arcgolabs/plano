@@ -21,6 +21,7 @@ This document describes the current implementation in this repository relative t
   - arrays, objects, unary/binary expressions, selectors, indexes, and function calls
 - AST model with source positions
 - Diagnostics model
+- Go workspace layout with separate core, CLI, and example modules
 - Cobra-based CLI:
   - `plano parse`
   - `plano examples`
@@ -37,6 +38,7 @@ This document describes the current implementation in this repository relative t
   - `task fmt`
   - `task test`
   - `task lint`
+  - `task work:sync`
   - `task parse`
   - `task examples`
   - `task bind`
@@ -210,7 +212,7 @@ Current automated tests cover:
 Run with:
 
 ```bash
-go test ./...
+go test ./... ./cmd/plano/... ./examples/builddsl/... ./examples/pipelinedsl/... ./examples/servicedsl/...
 ```
 
 ## Near-Term Direction
@@ -221,3 +223,17 @@ The current implementation is already useful as an embeddable compiler core. The
 - stronger diagnostics with related spans, better import-cycle reporting, and cleaner host validation feedback
 - continued HIR stabilization so example DSL lowering patterns can be externalized later without reworking core phases
 - more example DSL scenarios that exercise imports, references, and larger script-heavy documents
+
+## Workspace Layout
+
+The repository now uses `go.work` to stitch together a few focused modules:
+
+- root module: compiler core and public language packages
+- `cmd/plano`: CLI distribution module
+- `examples/builddsl`: build-oriented example DSL module
+- `examples/pipelinedsl`: pipeline-oriented example DSL module
+- `examples/servicedsl`: service-topology example DSL module
+
+This keeps the compiler core free of CLI/example dependency drag and gives future modules such as `lsp` or plugin adapters a clear place to live.
+
+Sibling workspace modules are intentionally resolved by `go.work` rather than being duplicated as explicit local module requirements inside each child `go.mod`.
