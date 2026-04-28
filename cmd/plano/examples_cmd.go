@@ -32,7 +32,7 @@ func newExamplesCmd() *cobra.Command {
 func writeTextExamples(w io.Writer) error {
 	lines := make([]string, 0, len(exampleViews()))
 	for _, item := range exampleViews() {
-		lines = append(lines, item.Name+": "+item.Description+" ("+item.Sample+")")
+		lines = append(lines, item.Name+": "+item.Description+" ["+strings.Join(item.Samples, ", ")+"]")
 	}
 	return writeString(w, strings.Join(lines, "\n")+"\n")
 }

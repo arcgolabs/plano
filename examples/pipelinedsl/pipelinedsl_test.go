@@ -85,3 +85,16 @@ func assertStageCommands(t *testing.T, stage pipelinedsl.Stage, wantCount int, w
 		t.Fatalf("last command = %#v", stage.Commands[wantCount-1].Args)
 	}
 }
+
+func assertStageNeeds(t *testing.T, stage pipelinedsl.Stage, want []string) {
+	t.Helper()
+	got := stage.Needs.Values()
+	if len(got) != len(want) {
+		t.Fatalf("needs = %#v, want %#v", got, want)
+	}
+	for idx, item := range want {
+		if got[idx] != item {
+			t.Fatalf("needs = %#v, want %#v", got, want)
+		}
+	}
+}

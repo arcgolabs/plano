@@ -77,6 +77,7 @@ This document describes the current implementation in this repository relative t
   - `examples/pipelinedsl.Lower(...)`
   - `examples/servicedsl.Register(...)`
   - `examples/servicedsl.Lower(...)`
+  - multiple checked-in sample `.plano` files per example DSL
   - `task`, `go.test`, `go.binary`, `pipeline`, `stage`, `stack`, and `service` forms
 - Builtin compile-time functions:
   - `env`
@@ -204,9 +205,19 @@ Current automated tests cover:
 - typed HIR generation
 - example builddsl, pipelinedsl, and servicedsl lowering
 - bundled sample `.plano` scripts for each example DSL
+- smoke tests that lower every checked-in sample file under each example directory
 
 Run with:
 
 ```bash
 go test ./...
 ```
+
+## Near-Term Direction
+
+The current implementation is already useful as an embeddable compiler core. The next likely areas of work are:
+
+- richer collection transforms and data-update operations in script bodies
+- stronger diagnostics with related spans, better import-cycle reporting, and cleaner host validation feedback
+- continued HIR stabilization so example DSL lowering patterns can be externalized later without reworking core phases
+- more example DSL scenarios that exercise imports, references, and larger script-heavy documents

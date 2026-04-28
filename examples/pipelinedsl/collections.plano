@@ -1,0 +1,45 @@
+fn image_for(channel: string): string {
+  return "golang:" + get({
+    stable = "1.26",
+    next = "1.27",
+  }, channel, "tip")
+}
+
+pipeline {
+  name = "matrix"
+}
+
+stage lint {
+  image = "golangci/golangci-lint:latest"
+  run {
+    shell("golangci-lint run ./...")
+  }
+}
+
+stage unit {
+  needs = [lint]
+  let base = append(["./..."], "./cmd/...")
+  let packages = concat(base, ["./internal/..."])
+  image = image_for("stable")
+
+  for idx, pkg in packages {
+    if idx == 2 {
+      continue
+    }
+    run {
+      exec("go", "test", pkg)
+    }
+  }
+}
+
+stage package {
+  needs = concat([lint], [unit])
+  image = image_for("next")
+  let targets = slice(["./cmd/plano", "./cmd/planoctl"], 0, 1)
+
+  for target in targets {
+    run {
+      exec("go", "build", target)
+    }
+  }
+}

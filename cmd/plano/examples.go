@@ -3,6 +3,8 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/arcgolabs/collectionx/mapping"
@@ -16,6 +18,7 @@ type exampleSpec struct {
 	register    func(*compiler.Compiler) error
 	lower       func(*compiler.HIR) (any, error)
 	description string
+	dir         string
 	sample      string
 }
 
@@ -23,6 +26,7 @@ func buildExampleRegistry() *mapping.OrderedMap[string, exampleSpec] {
 	registry := mapping.NewOrderedMap[string, exampleSpec]()
 	registry.Set("builddsl", exampleSpec{
 		description: "Build graph with tasks, Go helpers, and run actions",
+		dir:         "examples/builddsl",
 		sample:      "examples/builddsl/sample.plano",
 		register:    examplebuilddsl.Register,
 		lower: func(hir *compiler.HIR) (any, error) {
@@ -31,6 +35,7 @@ func buildExampleRegistry() *mapping.OrderedMap[string, exampleSpec] {
 	})
 	registry.Set("pipelinedsl", exampleSpec{
 		description: "CI pipeline with stages, dependencies, and runner actions",
+		dir:         "examples/pipelinedsl",
 		sample:      "examples/pipelinedsl/sample.plano",
 		register:    pipelinedsl.Register,
 		lower: func(hir *compiler.HIR) (any, error) {
@@ -39,6 +44,7 @@ func buildExampleRegistry() *mapping.OrderedMap[string, exampleSpec] {
 	})
 	registry.Set("servicedsl", exampleSpec{
 		description: "Service topology with ports, refs, and env maps",
+		dir:         "examples/servicedsl",
 		sample:      "examples/servicedsl/sample.plano",
 		register:    servicedsl.Register,
 		lower: func(hir *compiler.HIR) (any, error) {
@@ -57,9 +63,10 @@ func exampleNames() string {
 }
 
 type exampleView struct {
-	Name        string `json:"name"        yaml:"name"`
-	Description string `json:"description" yaml:"description"`
-	Sample      string `json:"sample"      yaml:"sample"`
+	Name        string   `json:"name"        yaml:"name"`
+	Description string   `json:"description" yaml:"description"`
+	Sample      string   `json:"sample"      yaml:"sample"`
+	Samples     []string `json:"samples"     yaml:"samples"`
 }
 
 func exampleViews() []exampleView {
@@ -69,10 +76,61 @@ func exampleViews() []exampleView {
 			Name:        name,
 			Description: spec.description,
 			Sample:      spec.sample,
+			Samples:     exampleSamples(spec),
 		})
 		return true
 	})
 	return views
+}
+
+func exampleSamples(spec exampleSpec) []string {
+	samples := appendSamplePath(nil, nil, spec.sample)
+	entries, dir, ok := readExampleDir(spec.dir)
+	if !ok {
+		return samples
+	}
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".plano" {
+			continue
+		}
+		samples = appendSamplePath(samples, nil, filepath.Join(dir, entry.Name()))
+	}
+	return samples
+}
+
+func readExampleDir(dir string) ([]os.DirEntry, string, bool) {
+	for _, candidate := range exampleDirCandidates(dir) {
+		entries, err := os.ReadDir(candidate)
+		if err == nil {
+			return entries, dir, true
+		}
+	}
+	return nil, "", false
+}
+
+func exampleDirCandidates(dir string) []string {
+	if dir == "" {
+		return nil
+	}
+	return []string{dir, filepath.Join("..", "..", dir)}
+}
+
+func appendSamplePath(samples []string, seen map[string]struct{}, path string) []string {
+	if path == "" {
+		return samples
+	}
+	if seen == nil {
+		seen = make(map[string]struct{}, len(samples)+1)
+		for _, item := range samples {
+			seen[item] = struct{}{}
+		}
+	}
+	path = filepath.ToSlash(path)
+	if _, ok := seen[path]; ok {
+		return samples
+	}
+	seen[path] = struct{}{}
+	return append(samples, path)
 }
 
 func newCompilerForExample(name string) (*compiler.Compiler, error) {

@@ -35,6 +35,8 @@ Examples:
 - `examples/pipelinedsl`: CI pipeline lowering
 - `examples/servicedsl`: service topology lowering
 
+Each bundled example now ships with multiple `.plano` scripts so the repository exercises not only the host registration/lowering code, but also representative language features such as control flow, collection builtins, and derived field expressions.
+
 The implementation also uses:
 
 - `collectionx` for ordered compiler outputs, object values, and host-side IR structures
@@ -131,6 +133,7 @@ go run ./cmd/plano lower --example builddsl --format yaml --out ./project.yaml .
 `lower` compiles with a registered example host DSL and prints the lowered IR JSON.
 `validate` checks whether the file compiles successfully.
 `diag` prints diagnostics without failing the command on warnings.
+`examples` lists each bundled DSL together with every checked-in sample script for that example.
 
 Output controls:
 
@@ -185,3 +188,12 @@ The implementation is still narrower than the full language draft, but the main 
 - lowering from HIR to sample IRs through `examples/builddsl`, `examples/pipelinedsl`, and `examples/servicedsl`
 
 Plugin packaging and richer module/runtime integration are still pending.
+
+## Near-Term Direction
+
+The repository is now past the "parser prototype" stage and behaves more like a real compiler core. The next useful iterations are mostly semantic and tooling work:
+
+- keep extending collection and script ergonomics without collapsing host DSL boundaries into core
+- tighten diagnostics, especially related spans and richer import/reference errors
+- stabilize the HIR and example-lowering contracts before introducing a formal plugin packaging API
+- add more real-world example DSL flows so language changes are exercised against multiple host shapes

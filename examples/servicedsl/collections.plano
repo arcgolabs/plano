@@ -1,0 +1,40 @@
+const base_env: map<string> = {
+  LOG_FORMAT = "json",
+}
+
+const telemetry_env: map<string> = {
+  OTEL_EXPORTER_OTLP_ENDPOINT = "http://otel:4318",
+}
+
+stack {
+  name = "platform"
+}
+
+service db {
+  image = "postgres:16"
+  port = 5432
+  env = merge(base_env, {
+    POSTGRES_DB = "platform",
+    POSTGRES_USER = "platform",
+  })
+}
+
+service api {
+  image = "ghcr.io/acme/api:latest"
+  port = get({http = 8080}, "http", 8000)
+  depends_on = [db]
+  env = merge(base_env, telemetry_env, {
+    LOG_LEVEL = env("LOG_LEVEL", "info"),
+    DATABASE_URL = "postgres://db:5432/platform",
+  })
+}
+
+service worker {
+  image = "ghcr.io/acme/worker:latest"
+  port = 9090
+  depends_on = concat([db], [api])
+  env = merge(base_env, {
+    QUEUE = get({primary = "critical"}, "primary", "default"),
+    API_ADDR = "http://api:8080",
+  })
+}
