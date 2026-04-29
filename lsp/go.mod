@@ -3,11 +3,11 @@ module github.com/arcgolabs/plano/lsp
 go 1.26.2
 
 require (
-	github.com/arcgolabs/collectionx/interval v0.4.0
-	github.com/arcgolabs/collectionx/list v0.4.0
-	github.com/arcgolabs/collectionx/mapping v0.4.0
-	github.com/arcgolabs/collectionx/prefix v0.4.0
-	github.com/arcgolabs/collectionx/set v0.4.0
+	github.com/arcgolabs/collectionx/interval v0.5.0
+	github.com/arcgolabs/collectionx/list v0.5.0
+	github.com/arcgolabs/collectionx/mapping v0.5.0
+	github.com/arcgolabs/collectionx/prefix v0.5.0
+	github.com/arcgolabs/collectionx/set v0.5.0
 	github.com/samber/lo v1.53.0
 	go.lsp.dev/jsonrpc2 v0.10.0
 	go.lsp.dev/protocol v0.12.0
@@ -16,7 +16,7 @@ require (
 )
 
 require (
-	github.com/arcgolabs/collectionx/internal v0.2.0 // indirect
+	github.com/arcgolabs/collectionx/internal v0.5.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/samber/mo v1.16.0 // indirect
 	github.com/segmentio/asm v1.1.3 // indirect
