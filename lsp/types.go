@@ -61,6 +61,24 @@ type CompletionList struct {
 	Items list.List[CompletionItem] `json:"items" yaml:"items"`
 }
 
+type SymbolKind string
+
+const (
+	SymbolForm     SymbolKind = "form"
+	SymbolFunction SymbolKind = "function"
+	SymbolConst    SymbolKind = "const"
+	SymbolField    SymbolKind = "field"
+)
+
+type DocumentSymbol struct {
+	Name           string                    `json:"name"           yaml:"name"`
+	Detail         string                    `json:"detail"         yaml:"detail"`
+	Kind           SymbolKind                `json:"kind"           yaml:"kind"`
+	Range          Range                     `json:"range"          yaml:"range"`
+	SelectionRange Range                     `json:"selectionRange" yaml:"selectionRange"`
+	Children       list.List[DocumentSymbol] `json:"children"       yaml:"children"`
+}
+
 type Document struct {
 	URI     string `json:"uri"     yaml:"uri"`
 	Path    string `json:"path"    yaml:"path"`

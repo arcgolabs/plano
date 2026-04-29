@@ -13,9 +13,9 @@ type scopeFrame struct {
 
 func (b *binder) resolveUnits(units []parsedUnit) {
 	start, end := unitsSpan(units)
-	module := b.newScope(ScopeModule, nil, start, end)
+	module := b.newScope(ScopeModule, "", nil, start, end)
 	for _, unit := range units {
-		fileScope := b.newScope(ScopeFile, module, unit.File.Pos(), unit.File.End())
+		fileScope := b.newScope(ScopeFile, "", module, unit.File.Pos(), unit.File.End())
 		b.resolveUnit(unit, fileScope)
 	}
 }
@@ -50,7 +50,7 @@ func (b *binder) resolveStmt(stmt ast.Stmt, scope *scopeFrame) {
 }
 
 func (b *binder) resolveFunction(fn *ast.FnDecl, parent *scopeFrame) {
-	functionScope := b.newScope(ScopeFunction, parent, fn.Pos(), fn.End())
+	functionScope := b.newScope(ScopeFunction, "", parent, fn.Pos(), fn.End())
 	for _, param := range fn.Params {
 		b.bindLocal(functionScope, LocalParam, param.Name, param.Type)
 	}
@@ -63,7 +63,11 @@ func (b *binder) resolveFunction(fn *ast.FnDecl, parent *scopeFrame) {
 }
 
 func (b *binder) resolveForm(form *ast.FormDecl, parent *scopeFrame) {
-	formScope := b.newScope(ScopeForm, parent, form.Pos(), form.End())
+	formKind := ""
+	if form.Head != nil {
+		formKind = form.Head.String()
+	}
+	formScope := b.newScope(ScopeForm, formKind, parent, form.Pos(), form.End())
 	if form.Body == nil {
 		return
 	}
@@ -108,7 +112,7 @@ func (b *binder) resolveIf(stmt *ast.IfStmt, scope *scopeFrame) {
 
 func (b *binder) resolveFor(stmt *ast.ForStmt, scope *scopeFrame) {
 	b.resolveExpr(stmt.Iterable, scope)
-	loopScope := b.newScope(ScopeLoop, scope, stmt.Pos(), stmt.End())
+	loopScope := b.newScope(ScopeLoop, "", scope, stmt.Pos(), stmt.End())
 	if stmt.Index != nil {
 		b.bindLocal(loopScope, LocalLoop, stmt.Index, nil)
 	}
@@ -120,7 +124,7 @@ func (b *binder) resolveBlock(block *ast.Block, scope *scopeFrame) {
 	if block == nil {
 		return
 	}
-	blockScope := b.newScope(ScopeBlock, scope, block.Pos(), block.End())
+	blockScope := b.newScope(ScopeBlock, "", scope, block.Pos(), block.End())
 	for _, item := range block.Items {
 		b.resolveFormItem(item, blockScope)
 	}

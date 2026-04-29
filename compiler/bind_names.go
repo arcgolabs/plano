@@ -107,7 +107,7 @@ func (b *binder) recordUse(name string, kind NameUseKind, scope *scopeFrame, tar
 	})
 }
 
-func (b *binder) newScope(kind ScopeKind, parent *scopeFrame, pos, end token.Pos) *scopeFrame {
+func (b *binder) newScope(kind ScopeKind, formKind string, parent *scopeFrame, pos, end token.Pos) *scopeFrame {
 	id := b.nextScopeID()
 	parentID := ""
 	if parent != nil {
@@ -116,6 +116,7 @@ func (b *binder) newScope(kind ScopeKind, parent *scopeFrame, pos, end token.Pos
 	b.binding.Scopes.Set(id, ScopeBinding{
 		ID:       id,
 		Kind:     kind,
+		FormKind: formKind,
 		ParentID: parentID,
 		Pos:      pos,
 		End:      end,

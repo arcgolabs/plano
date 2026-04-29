@@ -59,9 +59,11 @@ func (s *Server) Initialize(_ context.Context, _ *protocol.InitializeParams) (*p
 				Change:    protocol.TextDocumentSyncKindFull,
 				Save:      &protocol.SaveOptions{},
 			},
-			HoverProvider:      true,
-			DefinitionProvider: true,
-			CompletionProvider: &protocol.CompletionOptions{},
+			HoverProvider:          true,
+			DefinitionProvider:     true,
+			ReferencesProvider:     true,
+			DocumentSymbolProvider: true,
+			CompletionProvider:     &protocol.CompletionOptions{},
 		},
 		ServerInfo: &protocol.ServerInfo{
 			Name: "plano",
@@ -170,6 +172,32 @@ func (s *Server) Completion(ctx context.Context, params *protocol.CompletionPara
 	return toProtocolCompletionList(completions), nil
 }
 
+func (s *Server) References(ctx context.Context, params *protocol.ReferenceParams) ([]protocol.Location, error) {
+	if params == nil {
+		return nil, errors.New("missing references params")
+	}
+	snapshot, err := s.workspace.Analyze(ctx, string(params.TextDocument.URI))
+	if err != nil {
+		return nil, err
+	}
+	locations, ok := snapshot.ReferencesAt(fromProtocolPosition(params.Position), params.Context.IncludeDeclaration)
+	if !ok {
+		return []protocol.Location{}, nil
+	}
+	return toProtocolLocations(locations), nil
+}
+
+func (s *Server) DocumentSymbols(ctx context.Context, params *protocol.DocumentSymbolParams) ([]any, error) {
+	if params == nil {
+		return nil, errors.New("missing document symbol params")
+	}
+	snapshot, err := s.workspace.Analyze(ctx, string(params.TextDocument.URI))
+	if err != nil {
+		return nil, err
+	}
+	return toProtocolDocumentSymbolInterfaces(snapshot.DocumentSymbols()), nil
+}
+
 func (s *Server) Handler() jsonrpc2.Handler {
 	return protocol.Handlers(s.handleRPC)
 }
@@ -205,6 +233,13 @@ func (s *Server) handleLifecycle(ctx context.Context, reply jsonrpc2.Replier, re
 }
 
 func (s *Server) handleTextDocument(ctx context.Context, reply jsonrpc2.Replier, req jsonrpc2.Request) (bool, error) {
+	if handled, err := s.handleTextDocumentSync(ctx, reply, req); handled {
+		return true, err
+	}
+	return s.handleTextDocumentQuery(ctx, reply, req)
+}
+
+func (s *Server) handleTextDocumentSync(ctx context.Context, reply jsonrpc2.Replier, req jsonrpc2.Request) (bool, error) {
 	switch req.Method() {
 	case protocol.MethodTextDocumentDidOpen:
 		var params protocol.DidOpenTextDocumentParams
@@ -218,6 +253,13 @@ func (s *Server) handleTextDocument(ctx context.Context, reply jsonrpc2.Replier,
 	case protocol.MethodTextDocumentDidSave:
 		var params protocol.DidSaveTextDocumentParams
 		return true, replyNotify(ctx, reply, req, &params, s.DidSave)
+	default:
+		return false, nil
+	}
+}
+
+func (s *Server) handleTextDocumentQuery(ctx context.Context, reply jsonrpc2.Replier, req jsonrpc2.Request) (bool, error) {
+	switch req.Method() {
 	case protocol.MethodTextDocumentHover:
 		var params protocol.HoverParams
 		return true, replyCall(ctx, reply, req, &params, s.Hover)
@@ -227,6 +269,12 @@ func (s *Server) handleTextDocument(ctx context.Context, reply jsonrpc2.Replier,
 	case protocol.MethodTextDocumentCompletion:
 		var params protocol.CompletionParams
 		return true, replyCall(ctx, reply, req, &params, s.Completion)
+	case protocol.MethodTextDocumentReferences:
+		var params protocol.ReferenceParams
+		return true, replyCall(ctx, reply, req, &params, s.References)
+	case protocol.MethodTextDocumentDocumentSymbol:
+		var params protocol.DocumentSymbolParams
+		return true, replyCall(ctx, reply, req, &params, s.DocumentSymbols)
 	default:
 		return false, nil
 	}

@@ -36,6 +36,12 @@ func toProtocolLocation(location Location) protocol.Location {
 	}
 }
 
+func toProtocolLocations(items list.List[Location]) []protocol.Location {
+	return lo.Map(items.Values(), func(item Location, _ int) protocol.Location {
+		return toProtocolLocation(item)
+	})
+}
+
 func toProtocolHover(hover Hover) *protocol.Hover {
 	rng := toProtocolRange(hover.Range)
 	return &protocol.Hover{
@@ -78,6 +84,28 @@ func toProtocolCompletionItems(items CompletionList) []protocol.CompletionItem {
 	})
 }
 
+func toProtocolDocumentSymbolInterfaces(items list.List[DocumentSymbol]) []any {
+	symbols := toProtocolDocumentSymbols(items)
+	values := make([]any, 0, len(symbols))
+	for index := range symbols {
+		values = append(values, symbols[index])
+	}
+	return values
+}
+
+func toProtocolDocumentSymbols(items list.List[DocumentSymbol]) []protocol.DocumentSymbol {
+	return lo.Map(items.Values(), func(item DocumentSymbol, _ int) protocol.DocumentSymbol {
+		return protocol.DocumentSymbol{
+			Name:           item.Name,
+			Detail:         item.Detail,
+			Kind:           protocolSymbolKind(item.Kind),
+			Range:          toProtocolRange(item.Range),
+			SelectionRange: toProtocolRange(item.SelectionRange),
+			Children:       toProtocolDocumentSymbols(item.Children),
+		}
+	})
+}
+
 func toProtocolDiagnostics(items list.List[Diagnostic]) []protocol.Diagnostic {
 	return lo.Map(items.Values(), func(item Diagnostic, _ int) protocol.Diagnostic {
 		return protocol.Diagnostic{
@@ -110,11 +138,25 @@ var completionKinds = map[CompletionKind]protocol.CompletionItemKind{
 	CompletionGlobal:   protocol.CompletionItemKindConstant,
 }
 
+var symbolKinds = map[SymbolKind]protocol.SymbolKind{
+	SymbolForm:     protocol.SymbolKindObject,
+	SymbolFunction: protocol.SymbolKindFunction,
+	SymbolConst:    protocol.SymbolKindConstant,
+	SymbolField:    protocol.SymbolKindField,
+}
+
 func protocolCompletionKind(kind CompletionKind) protocol.CompletionItemKind {
 	if itemKind, ok := completionKinds[kind]; ok {
 		return itemKind
 	}
 	return protocol.CompletionItemKindText
+}
+
+func protocolSymbolKind(kind SymbolKind) protocol.SymbolKind {
+	if itemKind, ok := symbolKinds[kind]; ok {
+		return itemKind
+	}
+	return protocol.SymbolKindObject
 }
 
 func clampUint32(value int) uint32 {

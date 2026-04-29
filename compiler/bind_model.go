@@ -34,6 +34,7 @@ const (
 type ScopeBinding struct {
 	ID       string    `json:"id"                 yaml:"id"`
 	Kind     ScopeKind `json:"kind"               yaml:"kind"`
+	FormKind string    `json:"formKind,omitempty" yaml:"formKind,omitempty"`
 	ParentID string    `json:"parentId,omitempty" yaml:"parentId,omitempty"`
 	Pos      token.Pos `json:"pos"                yaml:"pos"`
 	End      token.Pos `json:"end"                yaml:"end"`

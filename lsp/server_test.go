@@ -141,6 +141,61 @@ task build {
 	}
 }
 
+func TestServerReferencesAndDocumentSymbolsUseWorkspaceState(t *testing.T) {
+	ws := testWorkspace(t)
+	server := lsp.NewServer(lsp.ServerOptions{Workspace: ws})
+
+	path := filepath.Join(t.TempDir(), "build.plano")
+	uri := protocol.DocumentURI(lsp.FileURI(path))
+	src := `
+const project_name: string = "demo"
+
+workspace {
+  name = project_name
+  default = build
+}
+
+task build {
+  outputs = [join_path("dist", project_name)]
+}
+`
+	if err := server.DidOpen(context.Background(), &protocol.DidOpenTextDocumentParams{
+		TextDocument: protocol.TextDocumentItem{
+			URI:     uri,
+			Version: 1,
+			Text:    src,
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	references, err := server.References(context.Background(), &protocol.ReferenceParams{
+		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+			TextDocument: protocol.TextDocumentIdentifier{URI: uri},
+			Position:     toProtocolPosition(positionOf(src, "project_name")),
+		},
+		Context: protocol.ReferenceContext{
+			IncludeDeclaration: true,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(references) != 3 {
+		t.Fatalf("references = %#v", references)
+	}
+
+	symbols, err := server.DocumentSymbols(context.Background(), &protocol.DocumentSymbolParams{
+		TextDocument: protocol.TextDocumentIdentifier{URI: uri},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(symbols) < 3 {
+		t.Fatalf("document symbols = %#v", symbols)
+	}
+}
+
 type recordingClient struct {
 	diagnostics []protocol.PublishDiagnosticsParams
 }
