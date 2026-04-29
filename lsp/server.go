@@ -61,6 +61,7 @@ func (s *Server) Initialize(_ context.Context, _ *protocol.InitializeParams) (*p
 			},
 			HoverProvider:      true,
 			DefinitionProvider: true,
+			CompletionProvider: &protocol.CompletionOptions{},
 		},
 		ServerInfo: &protocol.ServerInfo{
 			Name: "plano",
@@ -154,6 +155,21 @@ func (s *Server) Definition(ctx context.Context, params *protocol.DefinitionPara
 	return []protocol.Location{toProtocolLocation(location)}, nil
 }
 
+func (s *Server) Completion(ctx context.Context, params *protocol.CompletionParams) (*protocol.CompletionList, error) {
+	if params == nil {
+		return nil, errors.New("missing completion params")
+	}
+	snapshot, err := s.workspace.Analyze(ctx, string(params.TextDocument.URI))
+	if err != nil {
+		return nil, err
+	}
+	completions, ok := snapshot.CompletionAt(fromProtocolPosition(params.Position))
+	if !ok {
+		return &protocol.CompletionList{}, nil
+	}
+	return toProtocolCompletionList(completions), nil
+}
+
 func (s *Server) Handler() jsonrpc2.Handler {
 	return protocol.Handlers(s.handleRPC)
 }
@@ -208,6 +224,9 @@ func (s *Server) handleTextDocument(ctx context.Context, reply jsonrpc2.Replier,
 	case protocol.MethodTextDocumentDefinition:
 		var params protocol.DefinitionParams
 		return true, replyCall(ctx, reply, req, &params, s.Definition)
+	case protocol.MethodTextDocumentCompletion:
+		var params protocol.CompletionParams
+		return true, replyCall(ctx, reply, req, &params, s.Completion)
 	default:
 		return false, nil
 	}

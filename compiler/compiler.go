@@ -150,6 +150,13 @@ func (c *Compiler) FormSpec(name string) (schema.FormSpec, bool) {
 	return c.forms.Get(name)
 }
 
+func (c *Compiler) FormSpecs() *mapping.OrderedMap[string, schema.FormSpec] {
+	if c == nil || c.forms == nil {
+		return mapping.NewOrderedMap[string, schema.FormSpec]()
+	}
+	return c.forms.Clone()
+}
+
 func (c *Compiler) FunctionSpec(name string) (schema.FunctionSpec, bool) {
 	if c == nil || c.funcs == nil {
 		return schema.FunctionSpec{}, false
@@ -157,11 +164,32 @@ func (c *Compiler) FunctionSpec(name string) (schema.FunctionSpec, bool) {
 	return c.funcs.Get(name)
 }
 
+func (c *Compiler) FunctionSpecs() *mapping.OrderedMap[string, schema.FunctionSpec] {
+	if c == nil || c.funcs == nil {
+		return mapping.NewOrderedMap[string, schema.FunctionSpec]()
+	}
+	return c.funcs.Clone()
+}
+
 func (c *Compiler) ActionSpec(name string) (ActionSpec, bool) {
 	if c == nil || c.actions == nil {
 		return ActionSpec{}, false
 	}
 	return c.actions.Get(name)
+}
+
+func (c *Compiler) ActionSpecs() *mapping.OrderedMap[string, ActionSpec] {
+	if c == nil || c.actions == nil {
+		return mapping.NewOrderedMap[string, ActionSpec]()
+	}
+	return c.actions.Clone()
+}
+
+func (c *Compiler) Globals() *mapping.OrderedMap[string, any] {
+	if c == nil || c.globals == nil {
+		return mapping.NewOrderedMap[string, any]()
+	}
+	return c.globals.Clone()
 }
 
 func (c *Compiler) RegisterForm(spec schema.FormSpec) error {

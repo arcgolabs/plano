@@ -97,6 +97,50 @@ task build {
 	}
 }
 
+func TestServerCompletionUsesWorkspaceState(t *testing.T) {
+	ws := testWorkspace(t)
+	server := lsp.NewServer(lsp.ServerOptions{Workspace: ws})
+
+	path := filepath.Join(t.TempDir(), "build.plano")
+	uri := protocol.DocumentURI(lsp.FileURI(path))
+	src := `
+workspace {
+  name = "demo"
+  default = build
+}
+
+task build {
+  let target = jo
+}
+`
+	if err := server.DidOpen(context.Background(), &protocol.DidOpenTextDocumentParams{
+		TextDocument: protocol.TextDocumentItem{
+			URI:     uri,
+			Version: 1,
+			Text:    src,
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	offset := strings.Index(src, "jo") + len("jo")
+	items, err := server.Completion(context.Background(), &protocol.CompletionParams{
+		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
+			TextDocument: protocol.TextDocumentIdentifier{URI: uri},
+			Position:     toProtocolPosition(positionForOffset([]byte(src), offset)),
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if items == nil || len(items.Items) == 0 {
+		t.Fatalf("completion = %#v", items)
+	}
+	if !containsProtocolCompletionLabel(items.Items, "join_path") {
+		t.Fatalf("completion items = %#v", items.Items)
+	}
+}
+
 type recordingClient struct {
 	diagnostics []protocol.PublishDiagnosticsParams
 }
@@ -168,4 +212,14 @@ func clampUint32(value int) uint32 {
 	default:
 		return uint32(value)
 	}
+}
+
+func containsProtocolCompletionLabel(items []protocol.CompletionItem, want string) bool {
+	for index := range items {
+		item := items[index]
+		if item.Label == want {
+			return true
+		}
+	}
+	return false
 }

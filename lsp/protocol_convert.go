@@ -47,6 +47,37 @@ func toProtocolHover(hover Hover) *protocol.Hover {
 	}
 }
 
+func toProtocolCompletionList(items CompletionList) *protocol.CompletionList {
+	return &protocol.CompletionList{
+		IsIncomplete: false,
+		Items:        toProtocolCompletionItems(items),
+	}
+}
+
+func toProtocolCompletionItems(items CompletionList) []protocol.CompletionItem {
+	rng := toProtocolRange(items.Range)
+	return lo.Map(items.Items.Values(), func(item CompletionItem, _ int) protocol.CompletionItem {
+		completion := protocol.CompletionItem{
+			Label:      item.Label,
+			Kind:       protocolCompletionKind(item.Kind),
+			Detail:     item.Detail,
+			SortText:   item.Label,
+			FilterText: item.Label,
+			TextEdit: &protocol.TextEdit{
+				Range:   rng,
+				NewText: item.Label,
+			},
+		}
+		if item.Documentation != "" {
+			completion.Documentation = protocol.MarkupContent{
+				Kind:  protocol.Markdown,
+				Value: item.Documentation,
+			}
+		}
+		return completion
+	})
+}
+
 func toProtocolDiagnostics(items list.List[Diagnostic]) []protocol.Diagnostic {
 	return lo.Map(items.Values(), func(item Diagnostic, _ int) protocol.Diagnostic {
 		return protocol.Diagnostic{
@@ -65,6 +96,25 @@ func protocolSeverity(severity string) protocol.DiagnosticSeverity {
 	default:
 		return protocol.DiagnosticSeverityError
 	}
+}
+
+var completionKinds = map[CompletionKind]protocol.CompletionItemKind{
+	CompletionKeyword:  protocol.CompletionItemKindKeyword,
+	CompletionForm:     protocol.CompletionItemKindClass,
+	CompletionField:    protocol.CompletionItemKindField,
+	CompletionFunction: protocol.CompletionItemKindFunction,
+	CompletionAction:   protocol.CompletionItemKindMethod,
+	CompletionLocal:    protocol.CompletionItemKindVariable,
+	CompletionConst:    protocol.CompletionItemKindConstant,
+	CompletionSymbol:   protocol.CompletionItemKindReference,
+	CompletionGlobal:   protocol.CompletionItemKindConstant,
+}
+
+func protocolCompletionKind(kind CompletionKind) protocol.CompletionItemKind {
+	if itemKind, ok := completionKinds[kind]; ok {
+		return itemKind
+	}
+	return protocol.CompletionItemKindText
 }
 
 func clampUint32(value int) uint32 {

@@ -7,7 +7,6 @@ import (
 
 	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/collectionx/mapping"
-	"github.com/arcgolabs/collectionx/set"
 	"github.com/arcgolabs/plano/ast"
 	"github.com/arcgolabs/plano/diag"
 	planofrontend "github.com/arcgolabs/plano/frontend/plano"
@@ -53,12 +52,7 @@ func (c *Compiler) prepareSource(filename string, src []byte) preparedInput {
 	fset := token.NewFileSet()
 	root, diags := planofrontend.ParseFile(fset, filename, src)
 	units := []parsedUnit{{Name: filepath.Clean(filename), File: root}}
-	imported, importDiags := c.loadImports(
-		fset,
-		units[0],
-		set.NewSet(filepath.Clean(filename)),
-		set.NewSet[string](),
-	)
+	imported, importDiags := c.loadImportedUnits(fset, units[0])
 	diags.Append(importDiags)
 	return preparedInput{
 		fileSet:     fset,
@@ -83,12 +77,7 @@ func (c *Compiler) prepareFile(filename string) preparedInput {
 
 	root, diags := planofrontend.ParseFile(fset, clean, src)
 	units := []parsedUnit{{Name: clean, File: root}}
-	imported, importDiags := c.loadImports(
-		fset,
-		units[0],
-		set.NewSet(clean),
-		set.NewSet[string](),
-	)
+	imported, importDiags := c.loadImportedUnits(fset, units[0])
 	diags.Append(importDiags)
 	return preparedInput{
 		fileSet:     fset,

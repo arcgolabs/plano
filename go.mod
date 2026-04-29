@@ -3,6 +3,7 @@ module github.com/arcgolabs/plano
 go 1.26.2
 
 require (
+	github.com/arcgolabs/collectionx/graph v0.4.0
 	github.com/arcgolabs/collectionx/list v0.4.0
 	github.com/arcgolabs/collectionx/mapping v0.4.0
 	github.com/arcgolabs/collectionx/set v0.4.0

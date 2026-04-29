@@ -124,6 +124,53 @@ task build {
 	}
 }
 
+func TestSnapshotCompletionAtSuggestsBuiltinsAndForms(t *testing.T) {
+	ws := testWorkspace(t)
+	path := filepath.Join(t.TempDir(), "build.plano")
+	uri := lsp.FileURI(path)
+	src := `
+workspace {
+  name = "demo"
+  default = build
+}
+
+task build {
+  let target = jo
+}
+
+go.
+`
+	if err := ws.Open(uri, 1, []byte(src)); err != nil {
+		t.Fatal(err)
+	}
+
+	snapshot, err := ws.Analyze(context.Background(), uri)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	builtinPos := positionForOffset([]byte(src), strings.Index(src, "jo")+len("jo"))
+	builtinItems, ok := snapshot.CompletionAt(builtinPos)
+	if !ok {
+		t.Fatal("expected builtin completions")
+	}
+	if !containsCompletionLabel(builtinItems.Items.Values(), "join_path") {
+		t.Fatalf("builtin completions = %#v", builtinItems.Items.Values())
+	}
+
+	formPos := positionForOffset([]byte(src), strings.LastIndex(src, "go.")+len("go."))
+	formItems, ok := snapshot.CompletionAt(formPos)
+	if !ok {
+		t.Fatal("expected form completions")
+	}
+	if !containsCompletionLabel(formItems.Items.Values(), "go.binary") {
+		t.Fatalf("form completions = %#v", formItems.Items.Values())
+	}
+	if !containsCompletionLabel(formItems.Items.Values(), "go.test") {
+		t.Fatalf("form completions = %#v", formItems.Items.Values())
+	}
+}
+
 func testWorkspace(t *testing.T) *lsp.Workspace {
 	t.Helper()
 	base := compiler.New(compiler.Options{})
@@ -171,4 +218,13 @@ func positionForOffset(src []byte, offset int) lsp.Position {
 		Line:      line,
 		Character: character,
 	}
+}
+
+func containsCompletionLabel(items []lsp.CompletionItem, want string) bool {
+	for _, item := range items {
+		if item.Label == want {
+			return true
+		}
+	}
+	return false
 }

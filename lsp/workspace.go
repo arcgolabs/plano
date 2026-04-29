@@ -131,6 +131,7 @@ func (w *Workspace) analyzeDocuments(
 			sources.Set(path, slices.Clone(doc.Text))
 		}
 	}
+	files, fileSpans := buildFileSetIndex(result.FileSet)
 	return Snapshot{
 		URI:         uri,
 		Path:        path,
@@ -139,6 +140,8 @@ func (w *Workspace) analyzeDocuments(
 		Diagnostics: diagnosticsFromResult(result, sources),
 		compiler:    analysisCompiler,
 		documents:   documentsByPath(docs),
+		files:       files,
+		fileSpans:   fileSpans,
 		sources:     sources,
 	}, nil
 }

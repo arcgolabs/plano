@@ -6,7 +6,10 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"strings"
 
+	collectiongraph "github.com/arcgolabs/collectionx/graph"
+	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/collectionx/set"
 	"github.com/arcgolabs/plano/ast"
 	"github.com/arcgolabs/plano/diag"
@@ -14,17 +17,52 @@ import (
 	"github.com/samber/oops"
 )
 
-func (c *Compiler) loadImports(
-	fset *token.FileSet,
-	unit parsedUnit,
-	seen *set.Set[string],
-	stack *set.Set[string],
-) ([]parsedUnit, diag.Diagnostics) {
-	var diags diag.Diagnostics
-	stack.Add(unit.Name)
-	defer stack.Remove(unit.Name)
+type importTraversal struct {
+	compiler *Compiler
+	fset     *token.FileSet
+	graph    *collectiongraph.Graph[string, struct{}]
+	units    *mapping.Map[string, parsedUnit]
+	seen     *set.Set[string]
+	stack    []string
+	diags    diag.Diagnostics
+}
 
-	out := make([]parsedUnit, 0)
+func (c *Compiler) loadImportedUnits(fset *token.FileSet, root parsedUnit) ([]parsedUnit, diag.Diagnostics) {
+	traversal := importTraversal{
+		compiler: c,
+		fset:     fset,
+		graph:    collectiongraph.NewDirectedGraph[string, struct{}](),
+		units:    mapping.NewMap[string, parsedUnit](),
+		seen:     set.NewSet[string](root.Name),
+	}
+	traversal.addUnit(root)
+	traversal.visit(root)
+
+	order, err := traversal.graph.TopologicalSort()
+	if err != nil {
+		traversal.diags.AddError(token.NoPos, token.NoPos, oops.Wrapf(err, "sort import graph").Error())
+		return nil, traversal.diags
+	}
+
+	imported := make([]parsedUnit, 0, max(len(order)-1, 0))
+	for _, name := range order {
+		if name == root.Name {
+			continue
+		}
+		unit, ok := traversal.units.Get(name)
+		if ok {
+			imported = append(imported, unit)
+		}
+	}
+	return imported, traversal.diags
+}
+
+func (t *importTraversal) visit(unit parsedUnit) {
+	t.stack = append(t.stack, unit.Name)
+	defer func() {
+		t.stack = t.stack[:len(t.stack)-1]
+	}()
+
 	for _, stmt := range unit.File.Statements {
 		imp, ok := stmt.(*ast.ImportDecl)
 		if !ok {
@@ -32,47 +70,62 @@ func (c *Compiler) loadImports(
 		}
 		paths, err := resolveImportPaths(unit.Name, imp.Path.Value)
 		if err != nil {
-			diags.AddError(imp.Pos(), imp.End(), err.Error())
+			t.diags.AddError(imp.Pos(), imp.End(), err.Error())
 			continue
 		}
 		for _, next := range paths {
-			imported, importDiags := c.loadImportUnit(fset, imp, next, seen, stack)
-			diags.Append(importDiags)
-			out = append(out, imported...)
+			t.visitImport(imp, unit.Name, next)
 		}
 	}
-	return out, diags
 }
 
-func (c *Compiler) loadImportUnit(
-	fset *token.FileSet,
-	imp *ast.ImportDecl,
-	next string,
-	seen *set.Set[string],
-	stack *set.Set[string],
-) ([]parsedUnit, diag.Diagnostics) {
-	var diags diag.Diagnostics
-	if stack.Contains(next) {
-		diags.AddError(imp.Pos(), imp.End(), "import cycle detected involving "+next)
-		return nil, diags
+func (t *importTraversal) visitImport(imp *ast.ImportDecl, importer, next string) {
+	if index := stackIndex(t.stack, next); index >= 0 {
+		t.diags.AddError(imp.Pos(), imp.End(), formatImportCycle(t.stack[index:], next))
+		return
 	}
-	if seen.Contains(next) {
-		return nil, diags
-	}
-	seen.Add(next)
 
-	src, err := c.ReadFile(next)
-	if err != nil {
-		diags.AddError(imp.Pos(), imp.End(), oops.Wrapf(err, "read import file %q", next).Error())
-		return nil, diags
+	child, ok := t.units.Get(next)
+	if !ok {
+		src, err := t.compiler.ReadFile(next)
+		if err != nil {
+			t.diags.AddError(imp.Pos(), imp.End(), oops.Wrapf(err, "read import file %q", next).Error())
+			return
+		}
+		file, parseDiags := planofrontend.ParseFile(t.fset, next, src)
+		t.diags.Append(parseDiags)
+		child = parsedUnit{Name: next, File: file}
+		t.addUnit(child)
 	}
-	file, parseDiags := planofrontend.ParseFile(fset, next, src)
-	diags.Append(parseDiags)
 
-	child := parsedUnit{Name: next, File: file}
-	nested, nestedDiags := c.loadImports(fset, child, seen, stack)
-	diags.Append(nestedDiags)
-	return append(nested, child), diags
+	if err := t.graph.AddEdge(next, importer); err != nil {
+		t.diags.AddError(imp.Pos(), imp.End(), oops.Wrapf(err, "add import edge %q -> %q", next, importer).Error())
+		return
+	}
+	if t.seen.Contains(next) {
+		return
+	}
+	t.seen.Add(next)
+	t.visit(child)
+}
+
+func (t *importTraversal) addUnit(unit parsedUnit) {
+	t.graph.AddNode(unit.Name, struct{}{})
+	t.units.Set(unit.Name, unit)
+}
+
+func stackIndex(items []string, target string) int {
+	for index, item := range items {
+		if item == target {
+			return index
+		}
+	}
+	return -1
+}
+
+func formatImportCycle(path []string, next string) string {
+	cycle := append(append([]string(nil), path...), next)
+	return "import cycle detected: " + strings.Join(cycle, " -> ")
 }
 
 func readSourceFile(path string) ([]byte, error) {

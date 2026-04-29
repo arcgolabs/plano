@@ -38,6 +38,21 @@ func findUseAt(binding *compiler.Binding, target token.Pos) (compiler.NameUse, b
 	return best, found
 }
 
+func findScopeAt(binding *compiler.Binding, target token.Pos) (compiler.ScopeBinding, bool) {
+	if binding == nil || binding.Scopes == nil {
+		return compiler.ScopeBinding{}, false
+	}
+	var best compiler.ScopeBinding
+	found := false
+	for _, item := range binding.Scopes.Values() {
+		if containsPos(item.Pos, item.End, target) && (!found || spanWidth(item.Pos, item.End) < spanWidth(best.Pos, best.End)) {
+			best = item
+			found = true
+		}
+	}
+	return best, found
+}
+
 func findExprAt(checks *compiler.CheckInfo, target token.Pos) (compiler.ExprCheck, bool) {
 	if checks == nil || checks.Exprs == nil {
 		return compiler.ExprCheck{}, false

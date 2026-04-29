@@ -1,6 +1,9 @@
 package lsp
 
 import (
+	"go/token"
+
+	"github.com/arcgolabs/collectionx/interval"
 	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/compiler"
@@ -32,6 +35,32 @@ type Hover struct {
 	Contents string `json:"contents" yaml:"contents"`
 }
 
+type CompletionKind string
+
+const (
+	CompletionKeyword  CompletionKind = "keyword"
+	CompletionForm     CompletionKind = "form"
+	CompletionField    CompletionKind = "field"
+	CompletionFunction CompletionKind = "function"
+	CompletionAction   CompletionKind = "action"
+	CompletionLocal    CompletionKind = "local"
+	CompletionConst    CompletionKind = "const"
+	CompletionSymbol   CompletionKind = "symbol"
+	CompletionGlobal   CompletionKind = "global"
+)
+
+type CompletionItem struct {
+	Label         string         `json:"label"         yaml:"label"`
+	Kind          CompletionKind `json:"kind"          yaml:"kind"`
+	Detail        string         `json:"detail"        yaml:"detail"`
+	Documentation string         `json:"documentation" yaml:"documentation"`
+}
+
+type CompletionList struct {
+	Range Range                     `json:"range" yaml:"range"`
+	Items list.List[CompletionItem] `json:"items" yaml:"items"`
+}
+
 type Document struct {
 	URI     string `json:"uri"     yaml:"uri"`
 	Path    string `json:"path"    yaml:"path"`
@@ -52,7 +81,14 @@ type Snapshot struct {
 	Diagnostics list.List[Diagnostic] `json:"diagnostics" yaml:"diagnostics"`
 	compiler    *compiler.Compiler
 	documents   *mapping.Map[string, Document]
+	files       *mapping.Map[string, *token.File]
+	fileSpans   *interval.RangeMap[int, fileSpan]
 	sources     *mapping.Map[string, []byte]
+}
+
+type fileSpan struct {
+	path string
+	file *token.File
 }
 
 func (o Options) baseCompiler() *compiler.Compiler {

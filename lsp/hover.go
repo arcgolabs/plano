@@ -147,11 +147,11 @@ func (s Snapshot) symbolHover(id string) string {
 }
 
 func formatLocalBinding(item compiler.LocalBinding) string {
-	return "```plano\n" + string(item.Kind) + " " + item.Name + ": " + item.Type.String() + "\n```"
+	return "```plano\n" + string(item.Kind) + " " + item.Name + ": " + typeString(item.Type) + "\n```"
 }
 
 func formatConstBinding(item compiler.ConstBinding) string {
-	return "```plano\nconst " + item.Name + ": " + item.Type.String() + "\n```"
+	return "```plano\nconst " + item.Name + ": " + typeString(item.Type) + "\n```"
 }
 
 func formatSymbolBinding(item compiler.Symbol) string {
@@ -159,11 +159,11 @@ func formatSymbolBinding(item compiler.Symbol) string {
 }
 
 func formatFunctionBinding(item compiler.FunctionBinding) string {
-	return "```plano\nfn " + item.Name + "(" + strings.Join(paramStrings(item.Params), ", ") + "): " + item.Result.String() + "\n```"
+	return "```plano\nfn " + item.Name + "(" + strings.Join(paramStrings(item.Params), ", ") + "): " + typeString(item.Result) + "\n```"
 }
 
 func formatFunctionSpec(spec schema.FunctionSpec) string {
-	body := "```plano\nfn " + spec.Name + "(" + strings.Join(typeStrings(spec.ParamTypes, spec.VariadicType), ", ") + "): " + spec.Result.String() + "\n```"
+	body := "```plano\nfn " + spec.Name + "(" + strings.Join(typeStrings(spec.ParamTypes, spec.VariadicType), ", ") + "): " + typeString(spec.Result) + "\n```"
 	if spec.Docs == "" {
 		return body
 	}
@@ -180,16 +180,23 @@ func formatActionSpec(spec compiler.ActionSpec) string {
 
 func paramStrings(params list.List[compiler.ParamBinding]) []string {
 	return lo.Map(params.Values(), func(param compiler.ParamBinding, _ int) string {
-		return param.Name + ": " + param.Type.String()
+		return param.Name + ": " + typeString(param.Type)
 	})
 }
 
 func typeStrings(items list.List[schema.Type], variadic schema.Type) []string {
 	out := lo.Map(items.Values(), func(item schema.Type, _ int) string {
-		return item.String()
+		return typeString(item)
 	})
 	if variadic != nil {
-		out = append(out, "..."+variadic.String())
+		out = append(out, "..."+typeString(variadic))
 	}
 	return out
+}
+
+func typeString(typ schema.Type) string {
+	if typ == nil {
+		return "any"
+	}
+	return typ.String()
 }
