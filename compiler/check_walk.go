@@ -5,6 +5,7 @@ import (
 
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/ast"
+	"github.com/arcgolabs/plano/diag"
 	"github.com/arcgolabs/plano/schema"
 )
 
@@ -111,7 +112,7 @@ func (c *checker) checkFunctionItem(item ast.FormItem, scope *checkScope, expect
 func (c *checker) checkForm(form *ast.FormDecl, parent *checkScope) {
 	spec, ok := c.compiler.forms.Get(form.Head.String())
 	if !ok {
-		c.diagnostics.AddError(form.Pos(), form.End(), `unknown form "`+form.Head.String()+`"`)
+		c.diagnostics.AddErrorCode(diag.CodeUnknownForm, form.Pos(), form.End(), `unknown form "`+form.Head.String()+`"`)
 		return
 	}
 	scope := c.newScope(ScopeForm, parent, form.Pos(), form.End())
@@ -143,7 +144,7 @@ func (c *checker) checkFormItem(item ast.FormItem, scope *checkScope, spec schem
 func (c *checker) checkIf(stmt *ast.IfStmt, scope *checkScope, expectedReturn schema.Type, formSpec *schema.FormSpec) {
 	condition := c.checkExpr(stmt.Condition, scope)
 	if !isTypeAssignable(schema.TypeBool, condition) {
-		c.diagnostics.AddError(stmt.Condition.Pos(), stmt.Condition.End(), typeMismatchError("if condition", schema.TypeBool, condition).Error())
+		c.diagnostics.AddErrorCode(diag.CodeTypeMismatch, stmt.Condition.Pos(), stmt.Condition.End(), typeMismatchError("if condition", schema.TypeBool, condition).Error())
 	}
 	c.checkBlock(stmt.Then, scope, expectedReturn, formSpec)
 	c.checkBlock(stmt.Else, scope, expectedReturn, formSpec)

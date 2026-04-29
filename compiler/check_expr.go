@@ -6,6 +6,7 @@ import (
 
 	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/plano/ast"
+	"github.com/arcgolabs/plano/diag"
 	"github.com/arcgolabs/plano/schema"
 )
 
@@ -47,7 +48,7 @@ func (c *checker) inferIdent(name *ast.Ident, scope *checkScope) schema.Type {
 	if symbol, ok := c.binding.Symbols.Get(name.Name); ok {
 		return schema.RefType{Kind: symbol.Kind}
 	}
-	c.diagnostics.AddError(name.Pos(), name.End(), `undefined symbol "`+name.Name+`"`)
+	c.diagnostics.AddErrorCode(diag.CodeUndefinedName, name.Pos(), name.End(), `undefined symbol "`+name.Name+`"`)
 	return schema.TypeAny
 }
 
@@ -72,7 +73,7 @@ func (c *checker) checkUnaryExpr(expr *ast.UnaryExpr, scope *checkScope) schema.
 	switch expr.Op {
 	case "!":
 		if !isTypeAssignable(schema.TypeBool, operand) {
-			c.diagnostics.AddError(expr.Pos(), expr.End(), typeMismatchError("operator !", schema.TypeBool, operand).Error())
+			c.diagnostics.AddErrorCode(diag.CodeTypeMismatch, expr.Pos(), expr.End(), typeMismatchError("operator !", schema.TypeBool, operand).Error())
 		}
 		return schema.TypeBool
 	case "-":
@@ -180,12 +181,12 @@ func (c *checker) checkIndexExpr(expr *ast.IndexExpr, scope *checkScope) schema.
 	switch current := normalizeType(base).(type) {
 	case schema.ListType:
 		if !isTypeAssignable(schema.TypeInt, index) {
-			c.diagnostics.AddError(expr.Index.Pos(), expr.Index.End(), typeMismatchError("array index", schema.TypeInt, index).Error())
+			c.diagnostics.AddErrorCode(diag.CodeTypeMismatch, expr.Index.Pos(), expr.Index.End(), typeMismatchError("array index", schema.TypeInt, index).Error())
 		}
 		return normalizeType(current.Elem)
 	case schema.MapType:
 		if !isTypeAssignable(schema.TypeString, index) {
-			c.diagnostics.AddError(expr.Index.Pos(), expr.Index.End(), typeMismatchError("object index", schema.TypeString, index).Error())
+			c.diagnostics.AddErrorCode(diag.CodeTypeMismatch, expr.Index.Pos(), expr.Index.End(), typeMismatchError("object index", schema.TypeString, index).Error())
 		}
 		return normalizeType(current.Elem)
 	default:
@@ -216,7 +217,7 @@ func (c *checker) checkCallExpr(expr *ast.CallExpr, scope *checkScope) schema.Ty
 			result = builtinResultType(name, argTypes, spec.Result)
 		}
 	default:
-		c.diagnostics.AddError(expr.Pos(), expr.End(), `unknown function "`+name+`"`)
+		c.diagnostics.AddErrorCode(diag.CodeUnknownFunction, expr.Pos(), expr.End(), `unknown function "`+name+`"`)
 	}
 
 	c.recordCall(name, scope.id, argTypes, result, expr.Pos(), expr.End())
@@ -268,7 +269,7 @@ func (c *checker) checkActionCall(call *ast.CallStmt, scope *checkScope) {
 	}
 	spec, ok := c.compiler.actions.Get(call.Callee.String())
 	if !ok {
-		c.diagnostics.AddError(call.Pos(), call.End(), `unknown action "`+call.Callee.String()+`"`)
+		c.diagnostics.AddErrorCode(diag.CodeUnknownAction, call.Pos(), call.End(), `unknown action "`+call.Callee.String()+`"`)
 		c.recordCall(call.Callee.String(), scope.id, argTypes, schema.TypeAny, call.Pos(), call.End())
 		return
 	}
@@ -287,7 +288,7 @@ func (c *checker) checkSignature(kind, name string, minArgs, maxArgs int, paramT
 			continue
 		}
 		if !isTypeAssignable(want, argType) {
-			c.diagnostics.AddError(pos, end, typeMismatchError(kind+" argument "+strconv.Itoa(idx+1), want, argType).Error())
+			c.diagnostics.AddErrorCode(diag.CodeTypeMismatch, pos, end, typeMismatchError(kind+" argument "+strconv.Itoa(idx+1), want, argType).Error())
 		}
 	}
 }

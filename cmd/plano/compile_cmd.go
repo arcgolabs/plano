@@ -283,7 +283,8 @@ func writeDiagnosticsText(w io.Writer, fset *token.FileSet, items diag.Diagnosti
 		return writeString(w, "no diagnostics\n")
 	}
 	lines := make([]string, 0, len(items))
-	for _, item := range items {
+	for index := range items {
+		item := items[index]
 		lines = append(lines, item.Format(fset))
 	}
 	return writeString(w, strings.Join(lines, "\n")+"\n")

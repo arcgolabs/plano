@@ -4,6 +4,7 @@ import (
 	"go/token"
 
 	"github.com/arcgolabs/plano/ast"
+	"github.com/arcgolabs/plano/diag"
 	"github.com/arcgolabs/plano/schema"
 )
 
@@ -52,7 +53,7 @@ func (c *checker) checkFunctionControlItem(item ast.FormItem, scope *checkScope,
 	case *ast.ReturnStmt:
 		actual := c.checkExpr(current.Value, scope)
 		if expectedReturn != schema.TypeAny && !isTypeAssignable(expectedReturn, actual) {
-			c.diagnostics.AddError(current.Pos(), current.End(), typeMismatchError("return", expectedReturn, actual).Error())
+			c.diagnostics.AddErrorCode(diag.CodeTypeMismatch, current.Pos(), current.End(), typeMismatchError("return", expectedReturn, actual).Error())
 		}
 	case *ast.BreakStmt:
 		c.checkLoopControl(current.Pos(), current.End(), "break", scope)

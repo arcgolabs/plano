@@ -78,7 +78,7 @@ func (c *Compiler) prepareFile(filename string) preparedInput {
 	src, err := c.ReadFile(clean)
 	if err != nil {
 		var diags diag.Diagnostics
-		diags.AddError(token.NoPos, token.NoPos, oops.Wrapf(err, "read source file %q", clean).Error())
+		diags.AddErrorCode(diag.CodeReadFailure, token.NoPos, token.NoPos, oops.Wrapf(err, "read source file %q", clean).Error())
 		return preparedInput{
 			fileSet:     fset,
 			diagnostics: diags,
@@ -145,7 +145,7 @@ func (b *binder) bindUnit(unit parsedUnit) {
 func (b *binder) bindConst(decl *ast.ConstDecl) {
 	name := decl.Name.Name
 	if b.hasDefinition(name) {
-		b.diags.AddError(decl.Pos(), decl.End(), `duplicate definition "`+name+`"`)
+		b.addDuplicateDefinition(decl.Pos(), decl.End(), name)
 		return
 	}
 	b.constDecls.Set(name, decl)
@@ -160,7 +160,7 @@ func (b *binder) bindConst(decl *ast.ConstDecl) {
 func (b *binder) bindFunction(decl *ast.FnDecl) {
 	name := decl.Name.Name
 	if b.hasDefinition(name) {
-		b.diags.AddError(decl.Pos(), decl.End(), `duplicate definition "`+name+`"`)
+		b.addDuplicateDefinition(decl.Pos(), decl.End(), name)
 		return
 	}
 	b.funcDecls.Set(name, decl)
@@ -178,7 +178,7 @@ func (b *binder) bindFormSymbols(form *ast.FormDecl) {
 	if ok && spec.Declares != "" && form.Label != nil && !form.Label.Quoted {
 		name := form.Label.Value
 		if b.hasDefinition(name) {
-			b.diags.AddError(form.Pos(), form.End(), `duplicate definition "`+name+`"`)
+			b.addDuplicateDefinition(form.Pos(), form.End(), name)
 		} else {
 			symbol := Symbol{
 				Name: name,
@@ -215,6 +215,40 @@ func (b *binder) hasDefinition(name string) bool {
 		return true
 	}
 	return false
+}
+
+func (b *binder) addDuplicateDefinition(pos, end token.Pos, name string) {
+	message := `duplicate definition "` + name + `"`
+	if related, ok := b.definitionRelated(name); ok {
+		b.diags.AddErrorRelated(diag.CodeDuplicateDefinition, pos, end, message, related)
+		return
+	}
+	b.diags.AddErrorCode(diag.CodeDuplicateDefinition, pos, end, message)
+}
+
+func (b *binder) definitionRelated(name string) (diag.RelatedInformation, bool) {
+	if symbol, ok := b.symbols.Get(name); ok {
+		return diag.RelatedInformation{
+			Message: `previous definition of "` + name + `" is here`,
+			Pos:     symbol.Pos,
+			End:     symbol.End,
+		}, true
+	}
+	if item, ok := b.binding.Consts.Get(name); ok {
+		return diag.RelatedInformation{
+			Message: `previous definition of "` + name + `" is here`,
+			Pos:     item.Pos,
+			End:     item.End,
+		}, true
+	}
+	if item, ok := b.binding.Functions.Get(name); ok {
+		return diag.RelatedInformation{
+			Message: `previous definition of "` + name + `" is here`,
+			Pos:     item.Pos,
+			End:     item.End,
+		}, true
+	}
+	return diag.RelatedInformation{}, false
 }
 
 func bindParams(params []*ast.Param) list.List[ParamBinding] {

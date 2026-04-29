@@ -1,6 +1,9 @@
 package compiler
 
-import "github.com/arcgolabs/plano/schema"
+import (
+	"github.com/arcgolabs/plano/diag"
+	"github.com/arcgolabs/plano/schema"
+)
 
 type artifactEntry[T any] struct {
 	Key   string `json:"key"`
@@ -8,11 +11,25 @@ type artifactEntry[T any] struct {
 }
 
 type artifactWire struct {
-	Document    *artifactDocumentWire `json:"document,omitempty"`
-	Binding     *artifactBindingWire  `json:"binding,omitempty"`
-	Checks      *artifactChecksWire   `json:"checks,omitempty"`
-	HIR         *artifactHIRWire      `json:"hir,omitempty"`
-	Diagnostics []ArtifactDiagnostic  `json:"diagnostics"`
+	SchemaVersion string                   `json:"schemaVersion"`
+	Document      *artifactDocumentWire    `json:"document,omitempty"`
+	Binding       *artifactBindingWire     `json:"binding,omitempty"`
+	Checks        *artifactChecksWire      `json:"checks,omitempty"`
+	HIR           *artifactHIRWire         `json:"hir,omitempty"`
+	Diagnostics   []artifactDiagnosticWire `json:"diagnostics"`
+}
+
+type artifactDiagnosticWire struct {
+	Severity diag.Severity                    `json:"severity"`
+	Code     diag.Code                        `json:"code,omitempty"`
+	Message  string                           `json:"message"`
+	Span     ArtifactSpan                     `json:"span"`
+	Related  []artifactRelatedInformationWire `json:"related"`
+}
+
+type artifactRelatedInformationWire struct {
+	Message string       `json:"message"`
+	Span    ArtifactSpan `json:"span"`
 }
 
 type artifactDocumentWire struct {

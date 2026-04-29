@@ -53,6 +53,26 @@ func toProtocolHover(hover Hover) *protocol.Hover {
 	}
 }
 
+func toProtocolWorkspaceEdit(edit WorkspaceEdit) *protocol.WorkspaceEdit {
+	changes := make(map[protocol.DocumentURI][]protocol.TextEdit)
+	if edit.Changes != nil {
+		edit.Changes.Range(func(uri string, items list.List[TextEdit]) bool {
+			changes[protocol.DocumentURI(uri)] = toProtocolTextEdits(items)
+			return true
+		})
+	}
+	return &protocol.WorkspaceEdit{Changes: changes}
+}
+
+func toProtocolTextEdits(items list.List[TextEdit]) []protocol.TextEdit {
+	return lo.Map(items.Values(), func(item TextEdit, _ int) protocol.TextEdit {
+		return protocol.TextEdit{
+			Range:   toProtocolRange(item.Range),
+			NewText: item.NewText,
+		}
+	})
+}
+
 func toProtocolCompletionList(items CompletionList) *protocol.CompletionList {
 	return &protocol.CompletionList{
 		IsIncomplete: false,
@@ -108,11 +128,30 @@ func toProtocolDocumentSymbols(items list.List[DocumentSymbol]) []protocol.Docum
 
 func toProtocolDiagnostics(items list.List[Diagnostic]) []protocol.Diagnostic {
 	return lo.Map(items.Values(), func(item Diagnostic, _ int) protocol.Diagnostic {
-		return protocol.Diagnostic{
+		diagnostic := protocol.Diagnostic{
 			Range:    toProtocolRange(item.Range),
 			Severity: protocolSeverity(item.Severity),
 			Source:   "plano",
 			Message:  item.Message,
+		}
+		if item.Code != "" {
+			diagnostic.Code = item.Code
+		}
+		if item.Related.Len() > 0 {
+			diagnostic.RelatedInformation = toProtocolDiagnosticRelated(item.Related)
+		}
+		return diagnostic
+	})
+}
+
+func toProtocolDiagnosticRelated(items list.List[DiagnosticRelatedInformation]) []protocol.DiagnosticRelatedInformation {
+	return lo.Map(items.Values(), func(item DiagnosticRelatedInformation, _ int) protocol.DiagnosticRelatedInformation {
+		return protocol.DiagnosticRelatedInformation{
+			Location: protocol.Location{
+				URI:   protocol.DocumentURI(item.Location.URI),
+				Range: toProtocolRange(item.Location.Range),
+			},
+			Message: item.Message,
 		}
 	})
 }

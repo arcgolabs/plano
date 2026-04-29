@@ -43,7 +43,7 @@ func (c *Compiler) loadImportedUnits(fset *token.FileSet, root parsedUnit) ([]pa
 
 	order, err := traversal.graph.TopologicalSort()
 	if err != nil {
-		traversal.diags.AddError(token.NoPos, token.NoPos, oops.Wrapf(err, "sort import graph").Error())
+		traversal.diags.AddErrorCode(diag.CodeImportCycle, token.NoPos, token.NoPos, oops.Wrapf(err, "sort import graph").Error())
 		return nil, nil, traversal.diags
 	}
 
@@ -89,7 +89,7 @@ func (t *importTraversal) visit(unit parsedUnit) {
 
 func (t *importTraversal) visitImport(imp *ast.ImportDecl, importer, next string) {
 	if index := stackIndex(t.stack, next); index >= 0 {
-		t.diags.AddError(imp.Pos(), imp.End(), formatImportCycle(t.stack[index:], next))
+		t.diags.AddErrorCode(diag.CodeImportCycle, imp.Pos(), imp.End(), formatImportCycle(t.stack[index:], next))
 		return
 	}
 
@@ -97,7 +97,7 @@ func (t *importTraversal) visitImport(imp *ast.ImportDecl, importer, next string
 	if !ok {
 		src, err := t.compiler.ReadFile(next)
 		if err != nil {
-			t.diags.AddError(imp.Pos(), imp.End(), oops.Wrapf(err, "read import file %q", next).Error())
+			t.diags.AddErrorCode(diag.CodeReadFailure, imp.Pos(), imp.End(), oops.Wrapf(err, "read import file %q", next).Error())
 			return
 		}
 		t.digests.Set(next, sourceDigest{Name: next, Digest: digestSource(src)})

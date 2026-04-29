@@ -6,13 +6,14 @@ import (
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/collectionx/set"
 	"github.com/arcgolabs/plano/ast"
+	"github.com/arcgolabs/plano/diag"
 	"github.com/arcgolabs/plano/schema"
 )
 
 func (s *compileState) compileForm(node *ast.FormDecl, locals *env) (*Form, *HIRForm) {
 	spec, ok := s.compiler.forms.Get(node.Head.String())
 	if !ok {
-		s.diags.AddError(node.Pos(), node.End(), fmt.Sprintf("unknown form %q", node.Head.String()))
+		s.diags.AddErrorCode(diag.CodeUnknownForm, node.Pos(), node.End(), fmt.Sprintf("unknown form %q", node.Head.String()))
 		return nil, nil
 	}
 

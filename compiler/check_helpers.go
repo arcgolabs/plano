@@ -6,6 +6,7 @@ import (
 
 	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/plano/ast"
+	"github.com/arcgolabs/plano/diag"
 	"github.com/arcgolabs/plano/schema"
 	"github.com/samber/lo"
 )
@@ -29,7 +30,7 @@ func (c *checker) resolveConstTypeInScope(name string, scope *checkScope) schema
 	actual := c.checkExpr(decl.Value, scope)
 	declared := convertTypeExpr(decl.Type)
 	if declared != nil && !isTypeAssignable(declared, actual) {
-		c.diagnostics.AddError(decl.Pos(), decl.End(), typeMismatchError(`const "`+name+`"`, declared, actual).Error())
+		c.diagnostics.AddErrorCode(diag.CodeTypeMismatch, decl.Pos(), decl.End(), typeMismatchError(`const "`+name+`"`, declared, actual).Error())
 	}
 	if declared == nil {
 		declared = actual

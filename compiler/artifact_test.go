@@ -7,6 +7,7 @@ import (
 	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/compiler"
+	"github.com/arcgolabs/plano/diag"
 	"github.com/arcgolabs/plano/schema"
 )
 
@@ -98,6 +99,9 @@ func assertArtifactDiagnosticsEmpty(t *testing.T, artifact *compiler.Artifact) {
 
 func assertArtifactSections(t *testing.T, artifact *compiler.Artifact) {
 	t.Helper()
+	if artifact.SchemaVersion != compiler.ArtifactSchemaVersion {
+		t.Fatalf("artifact schema version = %q, want %q", artifact.SchemaVersion, compiler.ArtifactSchemaVersion)
+	}
 	if artifact.Document == nil || artifact.Binding == nil || artifact.Checks == nil || artifact.HIR == nil {
 		t.Fatalf("artifact sections missing: %#v", artifact)
 	}
@@ -145,6 +149,9 @@ func decodeArtifactResult(t *testing.T, artifact *compiler.Artifact) compiler.Re
 	if decodeErr != nil {
 		t.Fatal(decodeErr)
 	}
+	if decoded.SchemaVersion != compiler.ArtifactSchemaVersion {
+		t.Fatalf("decoded artifact schema version = %q, want %q", decoded.SchemaVersion, compiler.ArtifactSchemaVersion)
+	}
 	result, err := decoded.Result()
 	if err != nil {
 		t.Fatal(err)
@@ -188,7 +195,7 @@ func assertArtifactDiagnostic(t *testing.T, artifact *compiler.Artifact) {
 		t.Fatal("expected artifact diagnostics")
 	}
 	item, _ := artifact.Diagnostics.Get(0)
-	if item.Message == "" || item.Span.Path != "invalid.plano" || item.Span.Start.Line == 0 {
+	if item.Code != diag.CodeTypeMismatch || item.Message == "" || item.Span.Path != "invalid.plano" || item.Span.Start.Line == 0 {
 		t.Fatalf("artifact diagnostic = %#v", item)
 	}
 }
@@ -197,6 +204,9 @@ func assertRoundTripDiagnostic(t *testing.T, roundTrip compiler.Result) {
 	t.Helper()
 	if !roundTrip.Diagnostics.HasError() {
 		t.Fatal("expected round-tripped diagnostics")
+	}
+	if roundTrip.Diagnostics[0].Code != diag.CodeTypeMismatch {
+		t.Fatalf("round-trip diagnostic code = %q", roundTrip.Diagnostics[0].Code)
 	}
 	if roundTrip.Diagnostics[0].Pos.IsValid() || roundTrip.Diagnostics[0].End.IsValid() {
 		t.Fatalf("expected zeroed diagnostic positions, got %#v", roundTrip.Diagnostics[0])

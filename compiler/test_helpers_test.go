@@ -11,11 +11,15 @@ import (
 
 func newTestCompiler(t *testing.T) *compiler.Compiler {
 	t.Helper()
+	return newRegisteredCompiler(t)
+}
 
+func newRegisteredCompiler(tb testing.TB) *compiler.Compiler {
+	tb.Helper()
 	c := compiler.New(compiler.Options{
 		LookupEnv: func(string) (string, bool) { return "", false },
 	})
-	registerForms(t, c, schema.FormSpecs(
+	registerForms(tb, c, schema.FormSpecs(
 		schema.FormSpec{
 			Name:      "workspace",
 			LabelKind: schema.LabelNone,
@@ -61,7 +65,7 @@ func newTestCompiler(t *testing.T) *compiler.Compiler {
 			BodyMode:  schema.BodyCallOnly,
 		},
 	))
-	registerActions(t, c, compiler.ActionSpecs(
+	registerActions(tb, c, compiler.ActionSpecs(
 		compiler.ActionSpec{
 			Name:         "exec",
 			MinArgs:      1,
@@ -81,16 +85,16 @@ func newTestCompiler(t *testing.T) *compiler.Compiler {
 	return c
 }
 
-func registerForms(t *testing.T, c *compiler.Compiler, specs list.List[schema.FormSpec]) {
-	t.Helper()
+func registerForms(tb testing.TB, c *compiler.Compiler, specs list.List[schema.FormSpec]) {
+	tb.Helper()
 	if err := c.RegisterForms(specs); err != nil {
-		t.Fatal(err)
+		tb.Fatal(err)
 	}
 }
 
-func registerActions(t *testing.T, c *compiler.Compiler, specs list.List[compiler.ActionSpec]) {
-	t.Helper()
+func registerActions(tb testing.TB, c *compiler.Compiler, specs list.List[compiler.ActionSpec]) {
+	tb.Helper()
 	if err := c.RegisterActions(specs); err != nil {
-		t.Fatal(err)
+		tb.Fatal(err)
 	}
 }

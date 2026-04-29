@@ -2,6 +2,12 @@
 
 `plano` is an embeddable, schema-driven DSL runtime written in Go.
 
+Current baseline:
+
+- release: `v0.1.0`
+- public API generation: `v1`
+- artifact schema: `plano.artifact/v1`
+
 This repository currently contains a first usable implementation with:
 
 - hand-written lexer and parser
@@ -65,13 +71,13 @@ func main() {
         Name:      "workspace",
         LabelKind: schema.LabelNone,
         BodyMode:  schema.BodyFieldOnly,
-        Fields: map[string]schema.FieldSpec{
-            "name": {
+        Fields: schema.Fields(
+            schema.FieldSpec{
                 Name:     "name",
                 Type:     schema.TypeString,
                 Required: true,
             },
-        },
+        ),
     })
 
     _, _ = c.CompileSource(context.Background(), "build.plano", []byte(`
@@ -126,7 +132,10 @@ _ = lsp.ServeStdio(context.Background(), lsp.ServerOptions{
 ## Docs
 
 - Language draft: [plano_language_definition.md](./plano_language_definition.md)
+- Changelog: [CHANGELOG.md](./CHANGELOG.md)
 - Implementation status: [docs/implementation_status.md](./docs/implementation_status.md)
+- Public API policy: [docs/public_api.md](./docs/public_api.md)
+- Artifact schema: [docs/artifact_schema.md](./docs/artifact_schema.md)
 
 ## CLI
 
@@ -134,6 +143,7 @@ Build and run:
 
 ```bash
 go run ./cmd/plano examples
+go run ./cmd/plano version
 go run ./cmd/plano parse ./build.plano
 go run ./cmd/plano bind --example builddsl ./build.plano
 go run ./cmd/plano check --example builddsl ./build.plano
@@ -154,6 +164,7 @@ go run ./cmd/plano lower --example builddsl --format yaml --out ./project.yaml .
 `validate` checks whether the file compiles successfully.
 `diag` prints diagnostics without failing the command on warnings.
 `examples` lists each bundled DSL together with every checked-in sample script for that example.
+`version` prints the release version, public API generation, and artifact schema generation.
 
 Output controls:
 
@@ -170,6 +181,9 @@ The repository also ships a small `Taskfile.yml` for common local workflows:
 task fmt
 task test
 task lint
+task bench
+task bench:compiler
+task bench:lsp
 task work:sync
 task examples
 task parse FILE=./build.plano FORMAT=yaml

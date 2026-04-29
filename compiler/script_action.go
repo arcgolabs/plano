@@ -5,6 +5,7 @@ import (
 
 	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/plano/ast"
+	"github.com/arcgolabs/plano/diag"
 	"github.com/arcgolabs/plano/schema"
 )
 
@@ -17,7 +18,7 @@ func (s *compileState) buildActionCall(current *ast.CallStmt, locals *env) (Call
 	call.Args = *list.NewList(args...)
 	spec, ok := s.compiler.actions.Get(call.Name)
 	if !ok {
-		s.diags.AddError(current.Pos(), current.End(), fmt.Sprintf("unknown action %q", call.Name))
+		s.diags.AddErrorCode(diag.CodeUnknownAction, current.Pos(), current.End(), fmt.Sprintf("unknown action %q", call.Name))
 		return Call{}, ActionSpec{}, false
 	}
 	if err := validateArity("action", call.Name, spec.MinArgs, spec.MaxArgs, call.Args.Len()); err != nil {

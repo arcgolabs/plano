@@ -31,6 +31,26 @@ const target: string = "dist/demo"
 	}
 }
 
+func TestVersionCommand(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	cmd := newRootCmd()
+	cmd.SetOut(&stdout)
+	cmd.SetErr(&stderr)
+	cmd.SetArgs([]string{"version"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(stdout.String(), `"artifactSchemaVersion": "plano.artifact/v1"`) {
+		t.Fatalf("stdout = %s", stdout.String())
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %s", stderr.String())
+	}
+}
+
 func TestParseCommandYAMLOutputToFile(t *testing.T) {
 	file := writeTempPlano(t, `
 const target: string = "dist/demo"

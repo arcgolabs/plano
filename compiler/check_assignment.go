@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"github.com/arcgolabs/plano/ast"
+	"github.com/arcgolabs/plano/diag"
 	"github.com/arcgolabs/plano/schema"
 )
 
@@ -22,7 +23,7 @@ func (c *checker) checkAssignment(assign *ast.Assignment, scope *checkScope, spe
 	actual := c.checkExpr(assign.Value, scope)
 	c.recordField(spec.Name, fieldSpec.Name, scope.id, fieldSpec.Type, actual, assign.Pos(), assign.End())
 	if !isTypeAssignable(fieldSpec.Type, actual) {
-		c.diagnostics.AddError(assign.Pos(), assign.End(), typeMismatchError(`field "`+fieldSpec.Name+`"`, fieldSpec.Type, actual).Error())
+		c.diagnostics.AddErrorCode(diag.CodeTypeMismatch, assign.Pos(), assign.End(), typeMismatchError(`field "`+fieldSpec.Name+`"`, fieldSpec.Type, actual).Error())
 	}
 }
 
@@ -68,7 +69,7 @@ func (c *checker) checkLocalDecl(scope *checkScope, kind LocalBindingKind, name 
 	actual := c.checkExpr(value, scope)
 	declared := convertTypeExpr(typeExpr)
 	if declared != nil && !isTypeAssignable(declared, actual) {
-		c.diagnostics.AddError(value.Pos(), value.End(), typeMismatchError(`binding "`+name.Name+`"`, declared, actual).Error())
+		c.diagnostics.AddErrorCode(diag.CodeTypeMismatch, value.Pos(), value.End(), typeMismatchError(`binding "`+name.Name+`"`, declared, actual).Error())
 	}
 	if declared == nil {
 		declared = actual
@@ -88,7 +89,7 @@ func (c *checker) checkLocalAssignment(assign *ast.Assignment, scope *checkScope
 		return
 	}
 	if !isTypeAssignable(binding.typ, actual) {
-		c.diagnostics.AddError(assign.Pos(), assign.End(), typeMismatchError(`assignment "`+assign.Name.Name+`"`, binding.typ, actual).Error())
+		c.diagnostics.AddErrorCode(diag.CodeTypeMismatch, assign.Pos(), assign.End(), typeMismatchError(`assignment "`+assign.Name.Name+`"`, binding.typ, actual).Error())
 	}
 }
 

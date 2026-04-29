@@ -19,3 +19,10 @@ var (
 func errWrapArtifactJSON(message string, err error) error {
 	return fmt.Errorf("%s: %w", message, err)
 }
+
+func validateArtifactSchemaVersion(version string) error {
+	if version == "" || version == ArtifactSchemaVersion {
+		return nil
+	}
+	return fmt.Errorf("artifact schema version %q is not supported", version)
+}

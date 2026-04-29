@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"github.com/arcgolabs/plano/ast"
+	"github.com/arcgolabs/plano/diag"
 	"github.com/arcgolabs/plano/schema"
 )
 
@@ -26,11 +27,11 @@ func (c *checker) checkGetCall(argTypes []schema.Type, expr *ast.CallExpr) {
 	case schema.ListType:
 		_ = current
 		if !isTypeAssignable(schema.TypeInt, key) {
-			c.diagnostics.AddError(expr.Args[1].Pos(), expr.Args[1].End(), typeMismatchError("get index", schema.TypeInt, key).Error())
+			c.diagnostics.AddErrorCode(diag.CodeTypeMismatch, expr.Args[1].Pos(), expr.Args[1].End(), typeMismatchError("get index", schema.TypeInt, key).Error())
 		}
 	case schema.MapType:
 		if !isTypeAssignable(schema.TypeString, key) {
-			c.diagnostics.AddError(expr.Args[1].Pos(), expr.Args[1].End(), typeMismatchError("get key", schema.TypeString, key).Error())
+			c.diagnostics.AddErrorCode(diag.CodeTypeMismatch, expr.Args[1].Pos(), expr.Args[1].End(), typeMismatchError("get key", schema.TypeString, key).Error())
 		}
 	default:
 		if base != schema.TypeAny {
@@ -49,7 +50,7 @@ func (c *checker) checkSliceCall(argTypes []schema.Type, expr *ast.CallExpr) {
 	}
 	for idx := 1; idx < len(argTypes); idx++ {
 		if !isTypeAssignable(schema.TypeInt, argTypes[idx]) {
-			c.diagnostics.AddError(expr.Args[idx].Pos(), expr.Args[idx].End(), typeMismatchError("slice index", schema.TypeInt, argTypes[idx]).Error())
+			c.diagnostics.AddErrorCode(diag.CodeTypeMismatch, expr.Args[idx].Pos(), expr.Args[idx].End(), typeMismatchError("slice index", schema.TypeInt, argTypes[idx]).Error())
 		}
 	}
 }
@@ -65,7 +66,7 @@ func (c *checker) checkHasCall(argTypes []schema.Type, expr *ast.CallExpr) {
 		return
 	case schema.MapType:
 		if !isTypeAssignable(schema.TypeString, key) {
-			c.diagnostics.AddError(expr.Args[1].Pos(), expr.Args[1].End(), typeMismatchError("has key", schema.TypeString, key).Error())
+			c.diagnostics.AddErrorCode(diag.CodeTypeMismatch, expr.Args[1].Pos(), expr.Args[1].End(), typeMismatchError("has key", schema.TypeString, key).Error())
 		}
 	default:
 		if base != schema.TypeAny {

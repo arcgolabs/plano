@@ -149,7 +149,8 @@ task build {
 
 func assertContainsDiagnostic(t *testing.T, diags diag.Diagnostics, want string) {
 	t.Helper()
-	for _, item := range diags {
+	for index := range diags {
+		item := diags[index]
 		if strings.Contains(item.Message, want) {
 			return
 		}

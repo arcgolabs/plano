@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sync"
 
+	planomodule "github.com/arcgolabs/plano"
 	"github.com/arcgolabs/plano/compiler"
 	"go.lsp.dev/jsonrpc2"
 	"go.lsp.dev/protocol"
@@ -64,9 +65,11 @@ func (s *Server) Initialize(_ context.Context, _ *protocol.InitializeParams) (*p
 			ReferencesProvider:     true,
 			DocumentSymbolProvider: true,
 			CompletionProvider:     &protocol.CompletionOptions{},
+			RenameProvider:         true,
 		},
 		ServerInfo: &protocol.ServerInfo{
-			Name: "plano",
+			Name:    "plano",
+			Version: planomodule.Version,
 		},
 	}, nil
 }
@@ -127,77 +130,6 @@ func (s *Server) DidSave(ctx context.Context, params *protocol.DidSaveTextDocume
 	return s.publishSnapshotDiagnostics(ctx, params.TextDocument.URI)
 }
 
-func (s *Server) Hover(ctx context.Context, params *protocol.HoverParams) (*protocol.Hover, error) {
-	if params == nil {
-		return nil, errors.New("missing hover params")
-	}
-	snapshot, err := s.workspace.Analyze(ctx, string(params.TextDocument.URI))
-	if err != nil {
-		return nil, err
-	}
-	hover, ok := snapshot.HoverAt(fromProtocolPosition(params.Position))
-	if !ok {
-		return &protocol.Hover{}, nil
-	}
-	return toProtocolHover(hover), nil
-}
-
-func (s *Server) Definition(ctx context.Context, params *protocol.DefinitionParams) ([]protocol.Location, error) {
-	if params == nil {
-		return nil, errors.New("missing definition params")
-	}
-	snapshot, err := s.workspace.Analyze(ctx, string(params.TextDocument.URI))
-	if err != nil {
-		return nil, err
-	}
-	location, ok := snapshot.DefinitionAt(fromProtocolPosition(params.Position))
-	if !ok {
-		return []protocol.Location{}, nil
-	}
-	return []protocol.Location{toProtocolLocation(location)}, nil
-}
-
-func (s *Server) Completion(ctx context.Context, params *protocol.CompletionParams) (*protocol.CompletionList, error) {
-	if params == nil {
-		return nil, errors.New("missing completion params")
-	}
-	snapshot, err := s.workspace.Analyze(ctx, string(params.TextDocument.URI))
-	if err != nil {
-		return nil, err
-	}
-	completions, ok := snapshot.CompletionAt(fromProtocolPosition(params.Position))
-	if !ok {
-		return &protocol.CompletionList{}, nil
-	}
-	return toProtocolCompletionList(completions), nil
-}
-
-func (s *Server) References(ctx context.Context, params *protocol.ReferenceParams) ([]protocol.Location, error) {
-	if params == nil {
-		return nil, errors.New("missing references params")
-	}
-	snapshot, err := s.workspace.Analyze(ctx, string(params.TextDocument.URI))
-	if err != nil {
-		return nil, err
-	}
-	locations, ok := snapshot.ReferencesAt(fromProtocolPosition(params.Position), params.Context.IncludeDeclaration)
-	if !ok {
-		return []protocol.Location{}, nil
-	}
-	return toProtocolLocations(locations), nil
-}
-
-func (s *Server) DocumentSymbols(ctx context.Context, params *protocol.DocumentSymbolParams) ([]any, error) {
-	if params == nil {
-		return nil, errors.New("missing document symbol params")
-	}
-	snapshot, err := s.workspace.Analyze(ctx, string(params.TextDocument.URI))
-	if err != nil {
-		return nil, err
-	}
-	return toProtocolDocumentSymbolInterfaces(snapshot.DocumentSymbols()), nil
-}
-
 func (s *Server) Handler() jsonrpc2.Handler {
 	return protocol.Handlers(s.handleRPC)
 }
@@ -253,28 +185,6 @@ func (s *Server) handleTextDocumentSync(ctx context.Context, reply jsonrpc2.Repl
 	case protocol.MethodTextDocumentDidSave:
 		var params protocol.DidSaveTextDocumentParams
 		return true, replyNotify(ctx, reply, req, &params, s.DidSave)
-	default:
-		return false, nil
-	}
-}
-
-func (s *Server) handleTextDocumentQuery(ctx context.Context, reply jsonrpc2.Replier, req jsonrpc2.Request) (bool, error) {
-	switch req.Method() {
-	case protocol.MethodTextDocumentHover:
-		var params protocol.HoverParams
-		return true, replyCall(ctx, reply, req, &params, s.Hover)
-	case protocol.MethodTextDocumentDefinition:
-		var params protocol.DefinitionParams
-		return true, replyCall(ctx, reply, req, &params, s.Definition)
-	case protocol.MethodTextDocumentCompletion:
-		var params protocol.CompletionParams
-		return true, replyCall(ctx, reply, req, &params, s.Completion)
-	case protocol.MethodTextDocumentReferences:
-		var params protocol.ReferenceParams
-		return true, replyCall(ctx, reply, req, &params, s.References)
-	case protocol.MethodTextDocumentDocumentSymbol:
-		var params protocol.DocumentSymbolParams
-		return true, replyCall(ctx, reply, req, &params, s.DocumentSymbols)
 	default:
 		return false, nil
 	}

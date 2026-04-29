@@ -37,6 +37,8 @@ func TestServerDidOpenPublishesDiagnostics(t *testing.T) {
 	}
 	if got := client.diagnostics[0]; len(got.Diagnostics) == 0 {
 		t.Fatalf("diagnostics = %#v", got.Diagnostics)
+	} else if got.Diagnostics[0].Code == nil {
+		t.Fatalf("expected diagnostic code, got %#v", got.Diagnostics[0])
 	}
 }
 

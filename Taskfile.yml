@@ -20,6 +20,22 @@ tasks:
     cmds:
       - /Users/daiyuang/.go/bin/golangci-lint run ./... ./cmd/plano/... ./examples/builddsl/... ./examples/pipelinedsl/... ./examples/servicedsl/... ./lsp/...
 
+  bench:
+    desc: Run compiler and LSP benchmarks
+    cmds:
+      - task: bench:compiler
+      - task: bench:lsp
+
+  bench:compiler:
+    desc: Run compiler benchmarks
+    cmds:
+      - go test -run=^$ -bench=. ./compiler
+
+  bench:lsp:
+    desc: Run LSP benchmarks
+    cmds:
+      - go test -run=^$ -bench=. ./lsp/...
+
   fmt:
     desc: Format all Go sources in the workspace
     cmds:

@@ -12,11 +12,11 @@ import (
 	"github.com/arcgolabs/plano/lsp"
 )
 
-func testWorkspace(t *testing.T) *lsp.Workspace {
-	t.Helper()
+func testWorkspace(tb testing.TB) *lsp.Workspace {
+	tb.Helper()
 	base := compiler.New(compiler.Options{})
 	if err := builddsl.Register(base); err != nil {
-		t.Fatal(err)
+		tb.Fatal(err)
 	}
 	return lsp.NewWorkspace(lsp.Options{Compiler: base})
 }

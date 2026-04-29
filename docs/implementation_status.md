@@ -2,6 +2,12 @@
 
 This document describes the current implementation in this repository relative to [the language draft](../plano_language_definition.md).
 
+Compatibility baseline:
+
+- release: `v0.1.0`
+- public API generation: `v1`
+- artifact schema: `plano.artifact/v1`
+
 ## Implemented
 
 - Lexer for identifiers, strings, ints, floats, durations, sizes, operators, comments, and punctuation
@@ -26,6 +32,7 @@ This document describes the current implementation in this repository relative t
 - Cobra-based CLI:
   - `plano parse`
   - `plano examples`
+  - `plano version`
   - `plano bind --example builddsl`
   - `plano check --example builddsl`
   - `plano hir --example builddsl`
@@ -39,6 +46,9 @@ This document describes the current implementation in this repository relative t
   - `task fmt`
   - `task test`
   - `task lint`
+  - `task bench`
+  - `task bench:compiler`
+  - `task bench:lsp`
   - `task work:sync`
   - `task parse`
   - `task examples`
@@ -73,14 +83,23 @@ This document describes the current implementation in this repository relative t
   - `let`, local reassignment, `if`, `else if`, single- and dual-variable `for`, `break`, and `continue` execution inside script bodies
   - user-defined function execution with typed parameters and returns
   - typed document output
+  - serializable `compiler.Artifact` output with explicit schema versioning
+  - bounded parse cache for repeated compile requests
 - LSP support module:
   - in-memory workspace document tracking
   - source-based analysis helpers for bytes and strings
   - basic `go.lsp.dev/protocol` server wiring
   - stdio server entrypoint
-  - LSP-friendly diagnostics
+  - LSP-friendly diagnostics with codes and related information
   - definition lookup
   - hover content generation
+  - references
+  - document symbols
+  - completion
+  - prepare rename and rename
+- Benchmarks:
+  - compiler compile-string, compile-artifact, and warm-cache compile-file benchmarks
+  - LSP analyze, hover, completion, and rename benchmarks
 - Example host lowering packages:
   - `examples/builddsl.Register(...)`
   - `examples/builddsl.Lower(...)`
@@ -194,6 +213,14 @@ result := c.CompileSourceDetailed(ctx, "build.plano", src)
 _ = result.Binding
 _ = result.Checks
 _ = result.HIR
+```
+
+Artifact API:
+
+```go
+c := compiler.New(compiler.Options{})
+artifact, err := c.CompileSourceArtifact(ctx, "build.plano", src)
+data, err := artifact.MarshalJSON()
 ```
 
 Build lowering API:

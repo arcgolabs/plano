@@ -27,7 +27,18 @@ type outputOptions struct {
 }
 
 type diagnosticView struct {
-	Severity  string `json:"severity"            yaml:"severity"`
+	Severity  string                           `json:"severity"            yaml:"severity"`
+	Code      string                           `json:"code,omitempty"      yaml:"code,omitempty"`
+	Message   string                           `json:"message"             yaml:"message"`
+	File      string                           `json:"file,omitempty"      yaml:"file,omitempty"`
+	Line      int                              `json:"line,omitempty"      yaml:"line,omitempty"`
+	Column    int                              `json:"column,omitempty"    yaml:"column,omitempty"`
+	EndLine   int                              `json:"endLine,omitempty"   yaml:"endLine,omitempty"`
+	EndColumn int                              `json:"endColumn,omitempty" yaml:"endColumn,omitempty"`
+	Related   list.List[diagnosticRelatedView] `json:"related"             yaml:"related"`
+}
+
+type diagnosticRelatedView struct {
 	Message   string `json:"message"             yaml:"message"`
 	File      string `json:"file,omitempty"      yaml:"file,omitempty"`
 	Line      int    `json:"line,omitempty"      yaml:"line,omitempty"`
@@ -126,7 +137,8 @@ func withOutput(defaultWriter io.Writer, path string, fn func(w io.Writer) error
 }
 
 func printDiagnostics(w io.Writer, fset *token.FileSet, diags diag.Diagnostics) error {
-	for _, item := range diags {
+	for index := range diags {
+		item := diags[index]
 		if err := writeString(w, item.Format(fset)+"\n"); err != nil {
 			return err
 		}
@@ -136,9 +148,11 @@ func printDiagnostics(w io.Writer, fset *token.FileSet, diags diag.Diagnostics) 
 
 func diagnosticsToView(fset *token.FileSet, items diag.Diagnostics) *list.List[diagnosticView] {
 	views := list.NewListWithCapacity[diagnosticView](len(items))
-	for _, item := range items {
+	for index := range items {
+		item := items[index]
 		view := diagnosticView{
 			Severity: string(item.Severity),
+			Code:     string(item.Code),
 			Message:  item.Message,
 		}
 		if fset != nil && item.Pos.IsValid() {
@@ -150,7 +164,27 @@ func diagnosticsToView(fset *token.FileSet, items diag.Diagnostics) *list.List[d
 			view.EndLine = end.Line
 			view.EndColumn = end.Column
 		}
+		view.Related = relatedDiagnosticsToView(fset, item.Related)
 		views.Add(view)
 	}
 	return views
+}
+
+func relatedDiagnosticsToView(fset *token.FileSet, items list.List[diag.RelatedInformation]) list.List[diagnosticRelatedView] {
+	views := list.NewListWithCapacity[diagnosticRelatedView](items.Len())
+	for index := range items.Len() {
+		item, _ := items.Get(index)
+		view := diagnosticRelatedView{Message: item.Message}
+		if fset != nil && item.Pos.IsValid() {
+			start := fset.Position(item.Pos)
+			end := fset.Position(item.End)
+			view.File = start.Filename
+			view.Line = start.Line
+			view.Column = start.Column
+			view.EndLine = end.Line
+			view.EndColumn = end.Column
+		}
+		views.Add(view)
+	}
+	return *views
 }

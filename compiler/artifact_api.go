@@ -112,9 +112,16 @@ func (a Artifact) DiagnosticsValue() diag.Diagnostics {
 	out := make(diag.Diagnostics, 0, a.Diagnostics.Len())
 	for index := range a.Diagnostics.Len() {
 		item, _ := a.Diagnostics.Get(index)
+		related := list.NewListWithCapacity[diag.RelatedInformation](item.Related.Len())
+		for relatedIndex := range item.Related.Len() {
+			note, _ := item.Related.Get(relatedIndex)
+			related.Add(diag.RelatedInformation{Message: note.Message})
+		}
 		out = append(out, diag.Diagnostic{
 			Severity: item.Severity,
+			Code:     item.Code,
 			Message:  item.Message,
+			Related:  *related,
 		})
 	}
 	return out

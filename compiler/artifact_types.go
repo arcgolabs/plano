@@ -8,11 +8,12 @@ import (
 )
 
 type Artifact struct {
-	Document    *ArtifactDocument             `json:"document,omitempty"`
-	Binding     *ArtifactBinding              `json:"binding,omitempty"`
-	Checks      *ArtifactChecks               `json:"checks,omitempty"`
-	HIR         *ArtifactHIR                  `json:"hir,omitempty"`
-	Diagnostics list.List[ArtifactDiagnostic] `json:"diagnostics"`
+	SchemaVersion string                        `json:"schemaVersion"`
+	Document      *ArtifactDocument             `json:"document,omitempty"`
+	Binding       *ArtifactBinding              `json:"binding,omitempty"`
+	Checks        *ArtifactChecks               `json:"checks,omitempty"`
+	HIR           *ArtifactHIR                  `json:"hir,omitempty"`
+	Diagnostics   list.List[ArtifactDiagnostic] `json:"diagnostics"`
 }
 
 type ArtifactDocument struct {
@@ -56,9 +57,16 @@ type ArtifactSpan struct {
 }
 
 type ArtifactDiagnostic struct {
-	Severity diag.Severity `json:"severity"`
-	Message  string        `json:"message"`
-	Span     ArtifactSpan  `json:"span"`
+	Severity diag.Severity                         `json:"severity"`
+	Code     diag.Code                             `json:"code,omitempty"`
+	Message  string                                `json:"message"`
+	Span     ArtifactSpan                          `json:"span"`
+	Related  list.List[ArtifactRelatedInformation] `json:"related"`
+}
+
+type ArtifactRelatedInformation struct {
+	Message string       `json:"message"`
+	Span    ArtifactSpan `json:"span"`
 }
 
 type ArtifactSymbol struct {

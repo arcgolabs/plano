@@ -25,9 +25,16 @@ type Location struct {
 }
 
 type Diagnostic struct {
-	Severity string `json:"severity" yaml:"severity"`
-	Message  string `json:"message"  yaml:"message"`
-	Range    Range  `json:"range"    yaml:"range"`
+	Severity string                                  `json:"severity"       yaml:"severity"`
+	Code     string                                  `json:"code,omitempty" yaml:"code,omitempty"`
+	Message  string                                  `json:"message"        yaml:"message"`
+	Range    Range                                   `json:"range"          yaml:"range"`
+	Related  list.List[DiagnosticRelatedInformation] `json:"related"        yaml:"related"`
+}
+
+type DiagnosticRelatedInformation struct {
+	Message  string   `json:"message"  yaml:"message"`
+	Location Location `json:"location" yaml:"location"`
 }
 
 type Hover struct {
@@ -59,6 +66,15 @@ type CompletionItem struct {
 type CompletionList struct {
 	Range Range                     `json:"range" yaml:"range"`
 	Items list.List[CompletionItem] `json:"items" yaml:"items"`
+}
+
+type TextEdit struct {
+	Range   Range  `json:"range"   yaml:"range"`
+	NewText string `json:"newText" yaml:"newText"`
+}
+
+type WorkspaceEdit struct {
+	Changes *mapping.OrderedMap[string, list.List[TextEdit]] `json:"changes" yaml:"changes"`
 }
 
 type SymbolKind string

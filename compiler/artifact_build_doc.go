@@ -28,21 +28,37 @@ func (b artifactBuilder) build(result Result) (*Artifact, error) {
 		return nil, err
 	}
 	return &Artifact{
-		Document:    document,
-		Binding:     binding,
-		Checks:      checks,
-		HIR:         hir,
-		Diagnostics: b.diagnostics(result.Diagnostics),
+		SchemaVersion: ArtifactSchemaVersion,
+		Document:      document,
+		Binding:       binding,
+		Checks:        checks,
+		HIR:           hir,
+		Diagnostics:   b.diagnostics(result.Diagnostics),
 	}, nil
 }
 
 func (b artifactBuilder) diagnostics(items diag.Diagnostics) list.List[ArtifactDiagnostic] {
 	out := list.NewListWithCapacity[ArtifactDiagnostic](len(items))
-	for _, item := range items {
+	for index := range items {
+		item := items[index]
 		out.Add(ArtifactDiagnostic{
 			Severity: item.Severity,
+			Code:     item.Code,
 			Message:  item.Message,
 			Span:     b.span(item.Pos, item.End),
+			Related:  b.relatedDiagnostics(item.Related),
+		})
+	}
+	return *out
+}
+
+func (b artifactBuilder) relatedDiagnostics(items list.List[diag.RelatedInformation]) list.List[ArtifactRelatedInformation] {
+	out := list.NewListWithCapacity[ArtifactRelatedInformation](items.Len())
+	for index := range items.Len() {
+		item, _ := items.Get(index)
+		out.Add(ArtifactRelatedInformation{
+			Message: item.Message,
+			Span:    b.span(item.Pos, item.End),
 		})
 	}
 	return *out

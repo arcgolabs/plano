@@ -20,15 +20,19 @@ func (a Artifact) wire() (artifactWire, error) {
 		return artifactWire{}, err
 	}
 	return artifactWire{
-		Document:    document,
-		Binding:     binding,
-		Checks:      checks,
-		HIR:         hir,
-		Diagnostics: a.Diagnostics.Values(),
+		SchemaVersion: canonicalArtifactSchemaVersion(a.SchemaVersion),
+		Document:      document,
+		Binding:       binding,
+		Checks:        checks,
+		HIR:           hir,
+		Diagnostics:   artifactDiagnosticsToWire(a.Diagnostics),
 	}, nil
 }
 
 func (w artifactWire) artifact() (Artifact, error) {
+	if err := validateArtifactSchemaVersion(w.SchemaVersion); err != nil {
+		return Artifact{}, err
+	}
 	document, err := w.Document.artifact()
 	if err != nil {
 		return Artifact{}, err
@@ -45,14 +49,70 @@ func (w artifactWire) artifact() (Artifact, error) {
 	if err != nil {
 		return Artifact{}, err
 	}
-	diagnostics := list.NewListWithCapacity[ArtifactDiagnostic](len(w.Diagnostics), w.Diagnostics...)
+	diagnostics := artifactDiagnosticsFromWire(w.Diagnostics)
 	return Artifact{
-		Document:    document,
-		Binding:     binding,
-		Checks:      checks,
-		HIR:         hir,
-		Diagnostics: *diagnostics,
+		SchemaVersion: canonicalArtifactSchemaVersion(w.SchemaVersion),
+		Document:      document,
+		Binding:       binding,
+		Checks:        checks,
+		HIR:           hir,
+		Diagnostics:   diagnostics,
 	}, nil
+}
+
+func canonicalArtifactSchemaVersion(version string) string {
+	if version == "" {
+		return ArtifactSchemaVersion
+	}
+	return version
+}
+
+func artifactDiagnosticsToWire(items list.List[ArtifactDiagnostic]) []artifactDiagnosticWire {
+	out := make([]artifactDiagnosticWire, 0, items.Len())
+	for index := range items.Len() {
+		item, _ := items.Get(index)
+		out = append(out, artifactDiagnosticWire{
+			Severity: item.Severity,
+			Code:     item.Code,
+			Message:  item.Message,
+			Span:     item.Span,
+			Related:  artifactRelatedToWire(item.Related),
+		})
+	}
+	return out
+}
+
+func artifactRelatedToWire(items list.List[ArtifactRelatedInformation]) []artifactRelatedInformationWire {
+	out := make([]artifactRelatedInformationWire, 0, items.Len())
+	for index := range items.Len() {
+		item, _ := items.Get(index)
+		out = append(out, artifactRelatedInformationWire(item))
+	}
+	return out
+}
+
+func artifactDiagnosticsFromWire(items []artifactDiagnosticWire) list.List[ArtifactDiagnostic] {
+	out := list.NewListWithCapacity[ArtifactDiagnostic](len(items))
+	for index := range items {
+		item := items[index]
+		related := artifactRelatedFromWire(item.Related)
+		out.Add(ArtifactDiagnostic{
+			Severity: item.Severity,
+			Code:     item.Code,
+			Message:  item.Message,
+			Span:     item.Span,
+			Related:  related,
+		})
+	}
+	return *out
+}
+
+func artifactRelatedFromWire(items []artifactRelatedInformationWire) list.List[ArtifactRelatedInformation] {
+	out := list.NewListWithCapacity[ArtifactRelatedInformation](len(items))
+	for _, item := range items {
+		out.Add(ArtifactRelatedInformation(item))
+	}
+	return *out
 }
 
 func artifactDocumentToWire(value *ArtifactDocument) (*artifactDocumentWire, error) {

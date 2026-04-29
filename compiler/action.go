@@ -1,4 +1,3 @@
-// Package compiler provides plano's typed-document compiler and host extension points.
 package compiler
 
 import (
