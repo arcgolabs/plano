@@ -117,6 +117,7 @@ type Snapshot struct {
 	documents   *mapping.Map[string, Document]
 	files       *mapping.Map[string, *token.File]
 	fileSpans   *interval.RangeMap[int, fileSpan]
+	queries     *snapshotQueryCache
 	sources     *mapping.Map[string, []byte]
 }
 

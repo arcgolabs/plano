@@ -240,6 +240,7 @@ func buildSnapshot(
 		documents:   documentsByPath(docs),
 		files:       files,
 		fileSpans:   fileSpans,
+		queries:     newSnapshotQueryCache(),
 		sources:     sources,
 	}
 }

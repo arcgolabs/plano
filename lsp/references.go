@@ -1,10 +1,7 @@
 package lsp
 
 import (
-	"strconv"
-
 	"github.com/arcgolabs/collectionx/list"
-	"github.com/arcgolabs/collectionx/set"
 	"github.com/arcgolabs/plano/compiler"
 )
 
@@ -13,56 +10,12 @@ func (s Snapshot) ReferencesAt(pos Position, includeDeclaration bool) (list.List
 	if !ok {
 		return list.List[Location]{}, false
 	}
-
-	seen := set.NewSet[string]()
-	locations := list.NewList[Location]()
-	s.addReferenceDeclaration(locations, seen, target, includeDeclaration)
-	s.addReferenceUses(locations, seen, target)
-	return *locations, locations.Len() > 0
+	return s.cachedReferences(target, includeDeclaration)
 }
 
 type referenceTarget struct {
 	kind compiler.NameUseKind
 	id   string
-}
-
-func (s Snapshot) addReferenceDeclaration(
-	locations *list.List[Location],
-	seen *set.Set[string],
-	target referenceTarget,
-	includeDeclaration bool,
-) {
-	if !includeDeclaration {
-		return
-	}
-	location, ok := s.referenceDeclarationLocation(target)
-	if ok {
-		addReferenceLocation(locations, seen, location)
-	}
-}
-
-func (s Snapshot) addReferenceUses(
-	locations *list.List[Location],
-	seen *set.Set[string],
-	target referenceTarget,
-) {
-	if s.Result.Binding == nil || s.Result.Binding.Uses == nil {
-		return
-	}
-	s.Result.Binding.Uses.Range(func(_ string, use compiler.NameUse) bool {
-		location, ok := s.referenceUseLocation(use, target)
-		if ok {
-			addReferenceLocation(locations, seen, location)
-		}
-		return true
-	})
-}
-
-func (s Snapshot) referenceUseLocation(use compiler.NameUse, target referenceTarget) (Location, bool) {
-	if use.Kind != target.kind || use.TargetID != target.id {
-		return Location{}, false
-	}
-	return s.locationForSpan(use.Pos, use.End)
 }
 
 func (s Snapshot) referenceTargetAt(pos Position) (referenceTarget, bool) {
@@ -106,23 +59,4 @@ func (s Snapshot) referenceDeclarationLocation(target referenceTarget) (Location
 	default:
 		return Location{}, false
 	}
-}
-
-func addReferenceLocation(items *list.List[Location], seen *set.Set[string], location Location) {
-	key := referenceLocationKey(location)
-	if seen.Contains(key) {
-		return
-	}
-	seen.Add(key)
-	items.Add(location)
-}
-
-func referenceLocationKey(location Location) string {
-	return location.URI +
-		":" + positionKey(location.Range.Start) +
-		":" + positionKey(location.Range.End)
-}
-
-func positionKey(pos Position) string {
-	return strconv.Itoa(pos.Line) + ":" + strconv.Itoa(pos.Character)
 }

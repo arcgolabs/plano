@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.2.0
+
+Performance and benchmark expansion release.
+
+Highlights:
+
+- added larger benchmark scenarios for parser, compiler, and LSP query paths
+- optimized LSP reference queries with snapshot-level lazy caching
+- optimized repeated LSP document symbol queries with snapshot-level result reuse
+- kept public API generation at `v1`
+- kept artifact schema at `plano.artifact/v1`
+
 ## v0.1.0
 
 Initial baseline release.

@@ -1,6 +1,6 @@
 # Artifact Schema
 
-`compiler.Artifact` is the stable serialized compiler output contract for `plano` `v0.1.0`.
+`compiler.Artifact` is the stable serialized compiler output contract for `plano` `v0.2.0`.
 
 Current schema version:
 

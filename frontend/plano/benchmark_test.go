@@ -41,6 +41,22 @@ func BenchmarkParseLargeFile(b *testing.B) {
 	}
 }
 
+func BenchmarkParseControlFlowFile(b *testing.B) {
+	src := []byte(benchmarkParseControlFlowSource(18))
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for range b.N {
+		file, diags := plano.ParseFile(token.NewFileSet(), "control_flow.plano", src)
+		if diags.HasError() {
+			b.Fatalf("unexpected diagnostics: %v", diags)
+		}
+		if file == nil {
+			b.Fatal("expected parsed file")
+		}
+	}
+}
+
 func benchmarkParseSource(tasks int) string {
 	var builder strings.Builder
 	mustWriteString(&builder, `
@@ -62,6 +78,62 @@ task build_%02d {
   }
 }
 `, index, index)
+	}
+	return builder.String()
+}
+
+func benchmarkParseControlFlowSource(tasks int) string {
+	var builder strings.Builder
+	mustWriteString(&builder, `
+fn packages(): list<string> {
+  let base = append(["./..."], "./cmd/...")
+  if has(merge({unit = "./..."}, {cli = "./cmd/..."}), "cli") {
+    base = concat(base, ["./internal/..."])
+  }
+  return base
+}
+
+workspace {
+  name = "demo"
+  default = build_00
+}
+`)
+	for index := range tasks {
+		deps := "[]"
+		if index > 0 {
+			deps = fmt.Sprintf("[build_%02d]", index-1)
+		}
+		mustFprintf(&builder, `
+task build_%02d {
+  deps = %s
+  let outputs_map = merge(
+    {primary = join_path("dist", "artifact_%02d")},
+    {backup = join_path("dist", "artifact_%02d_backup")},
+  )
+  outputs = values(outputs_map)
+
+  for idx, pkg in packages() {
+    if idx == 1 {
+      continue
+    }
+    if has(["./internal/..."], pkg) {
+      break
+    }
+    run {
+      exec("go", "test", pkg)
+    }
+  }
+
+  for name, output in outputs_map {
+    if name == "backup" {
+      break
+    }
+    run {
+      exec("echo", output)
+    }
+  }
+}
+`, index, deps, index, index)
 	}
 	return builder.String()
 }

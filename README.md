@@ -4,7 +4,7 @@
 
 Current baseline:
 
-- release: `v0.1.0`
+- release: `v0.2.0`
 - public API generation: `v1`
 - artifact schema: `plano.artifact/v1`
 

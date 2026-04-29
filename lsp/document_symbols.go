@@ -9,10 +9,7 @@ import (
 )
 
 func (s Snapshot) DocumentSymbols() list.List[DocumentSymbol] {
-	if s.Result.Binding == nil {
-		return list.List[DocumentSymbol]{}
-	}
-	return documentSymbolsFromEntries(s.topLevelDocumentSymbolEntries())
+	return s.cachedDocumentSymbols()
 }
 
 type documentSymbolEntry struct {
