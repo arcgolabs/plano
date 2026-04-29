@@ -4,6 +4,7 @@ import (
 	"context"
 	"go/token"
 	"path/filepath"
+	"slices"
 
 	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/collectionx/mapping"
@@ -49,21 +50,30 @@ func (c *Compiler) BindFileDetailed(ctx context.Context, filename string) BindRe
 }
 
 func (c *Compiler) prepareSource(filename string, src []byte) preparedInput {
+	clean := filepath.Clean(filename)
+	if input, ok := c.cachedSourceInput(clean, src); ok {
+		return input
+	}
 	fset := token.NewFileSet()
-	root, diags := planofrontend.ParseFile(fset, filename, src)
-	units := []parsedUnit{{Name: filepath.Clean(filename), File: root}}
-	imported, importDiags := c.loadImportedUnits(fset, units[0])
+	root, diags := planofrontend.ParseFile(fset, clean, src)
+	units := []parsedUnit{{Name: clean, File: root}}
+	imported, digests, importDiags := c.loadImportedUnits(fset, units[0])
 	diags.Append(importDiags)
-	return preparedInput{
+	input := preparedInput{
 		fileSet:     fset,
 		units:       append(imported, units...),
 		diagnostics: diags,
 	}
+	c.storeSourceInput(clean, input, append(digests, sourceDigest{Name: clean, Digest: digestSource(src), Inline: true}))
+	return input
 }
 
 func (c *Compiler) prepareFile(filename string) preparedInput {
-	fset := token.NewFileSet()
 	clean := filepath.Clean(filename)
+	if input, ok := c.cachedFileInput(clean); ok {
+		return input
+	}
+	fset := token.NewFileSet()
 
 	src, err := c.ReadFile(clean)
 	if err != nil {
@@ -77,13 +87,15 @@ func (c *Compiler) prepareFile(filename string) preparedInput {
 
 	root, diags := planofrontend.ParseFile(fset, clean, src)
 	units := []parsedUnit{{Name: clean, File: root}}
-	imported, importDiags := c.loadImportedUnits(fset, units[0])
+	imported, digests, importDiags := c.loadImportedUnits(fset, units[0])
 	diags.Append(importDiags)
-	return preparedInput{
+	input := preparedInput{
 		fileSet:     fset,
 		units:       append(imported, units...),
 		diagnostics: diags,
 	}
+	c.storeFileInput(clean, input, append(digests, sourceDigest{Name: clean, Digest: digestSource(src)}))
+	return input
 }
 
 func (c *Compiler) bindUnits(units []parsedUnit) boundIndex {
@@ -222,4 +234,12 @@ func unitNames(units []parsedUnit) list.List[string] {
 		return unit.Name
 	})
 	return *list.NewList(items...)
+}
+
+func clonePreparedInput(input preparedInput) preparedInput {
+	return preparedInput{
+		fileSet:     input.fileSet,
+		units:       slices.Clone(input.units),
+		diagnostics: slices.Clone(input.diagnostics),
+	}
 }

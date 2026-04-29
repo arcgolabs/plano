@@ -1,6 +1,7 @@
 package compiler
 
 import (
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"go/token"
@@ -22,17 +23,19 @@ type importTraversal struct {
 	fset     *token.FileSet
 	graph    *collectiongraph.Graph[string, struct{}]
 	units    *mapping.Map[string, parsedUnit]
+	digests  *mapping.Map[string, sourceDigest]
 	seen     *set.Set[string]
 	stack    []string
 	diags    diag.Diagnostics
 }
 
-func (c *Compiler) loadImportedUnits(fset *token.FileSet, root parsedUnit) ([]parsedUnit, diag.Diagnostics) {
+func (c *Compiler) loadImportedUnits(fset *token.FileSet, root parsedUnit) ([]parsedUnit, []sourceDigest, diag.Diagnostics) {
 	traversal := importTraversal{
 		compiler: c,
 		fset:     fset,
 		graph:    collectiongraph.NewDirectedGraph[string, struct{}](),
 		units:    mapping.NewMap[string, parsedUnit](),
+		digests:  mapping.NewMap[string, sourceDigest](),
 		seen:     set.NewSet[string](root.Name),
 	}
 	traversal.addUnit(root)
@@ -41,10 +44,11 @@ func (c *Compiler) loadImportedUnits(fset *token.FileSet, root parsedUnit) ([]pa
 	order, err := traversal.graph.TopologicalSort()
 	if err != nil {
 		traversal.diags.AddError(token.NoPos, token.NoPos, oops.Wrapf(err, "sort import graph").Error())
-		return nil, traversal.diags
+		return nil, nil, traversal.diags
 	}
 
 	imported := make([]parsedUnit, 0, max(len(order)-1, 0))
+	digests := make([]sourceDigest, 0, max(len(order)-1, 0))
 	for _, name := range order {
 		if name == root.Name {
 			continue
@@ -53,8 +57,12 @@ func (c *Compiler) loadImportedUnits(fset *token.FileSet, root parsedUnit) ([]pa
 		if ok {
 			imported = append(imported, unit)
 		}
+		digest, ok := traversal.digests.Get(name)
+		if ok {
+			digests = append(digests, digest)
+		}
 	}
-	return imported, traversal.diags
+	return imported, digests, traversal.diags
 }
 
 func (t *importTraversal) visit(unit parsedUnit) {
@@ -92,6 +100,7 @@ func (t *importTraversal) visitImport(imp *ast.ImportDecl, importer, next string
 			t.diags.AddError(imp.Pos(), imp.End(), oops.Wrapf(err, "read import file %q", next).Error())
 			return
 		}
+		t.digests.Set(next, sourceDigest{Name: next, Digest: digestSource(src)})
 		file, parseDiags := planofrontend.ParseFile(t.fset, next, src)
 		t.diags.Append(parseDiags)
 		child = parsedUnit{Name: next, File: file}
@@ -157,4 +166,14 @@ func openSourceRoot(path string) (*os.Root, string, error) {
 		return nil, "", fmt.Errorf("open root for %q: %w", path, err)
 	}
 	return root, filepath.Base(abs), nil
+}
+
+type sourceDigest struct {
+	Name   string
+	Digest [32]byte
+	Inline bool
+}
+
+func digestSource(src []byte) [32]byte {
+	return sha256.Sum256(src)
 }

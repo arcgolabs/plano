@@ -16,17 +16,20 @@ import (
 )
 
 type Options struct {
-	LookupEnv func(string) (string, bool)
-	ReadFile  func(string) ([]byte, error)
+	LookupEnv         func(string) (string, bool)
+	ReadFile          func(string) ([]byte, error)
+	ParseCacheEntries int
 }
 
 type Compiler struct {
-	forms     *mapping.OrderedMap[string, schema.FormSpec]
-	funcs     *mapping.OrderedMap[string, schema.FunctionSpec]
-	actions   *mapping.OrderedMap[string, ActionSpec]
-	globals   *mapping.OrderedMap[string, any]
-	lookupEnv func(string) (string, bool)
-	readFile  func(string) ([]byte, error)
+	forms             *mapping.OrderedMap[string, schema.FormSpec]
+	funcs             *mapping.OrderedMap[string, schema.FunctionSpec]
+	actions           *mapping.OrderedMap[string, ActionSpec]
+	globals           *mapping.OrderedMap[string, any]
+	lookupEnv         func(string) (string, bool)
+	readFile          func(string) ([]byte, error)
+	parseCache        *parseCache
+	parseCacheEntries int
 }
 
 type Document struct {
@@ -98,13 +101,15 @@ func New(opts Options) *Compiler {
 	}
 
 	c := &Compiler{
-		forms:     mapping.NewOrderedMap[string, schema.FormSpec](),
-		funcs:     mapping.NewOrderedMap[string, schema.FunctionSpec](),
-		actions:   mapping.NewOrderedMap[string, ActionSpec](),
-		globals:   mapping.NewOrderedMap[string, any](),
-		lookupEnv: lookupEnv,
-		readFile:  readFile,
+		forms:             mapping.NewOrderedMap[string, schema.FormSpec](),
+		funcs:             mapping.NewOrderedMap[string, schema.FunctionSpec](),
+		actions:           mapping.NewOrderedMap[string, ActionSpec](),
+		globals:           mapping.NewOrderedMap[string, any](),
+		lookupEnv:         lookupEnv,
+		readFile:          readFile,
+		parseCacheEntries: normalizeParseCacheEntries(opts.ParseCacheEntries),
 	}
+	c.parseCache = newParseCache(c.parseCacheEntries)
 	c.RegisterConst("os", goruntime.GOOS)
 	c.RegisterConst("arch", goruntime.GOARCH)
 	c.registerBuiltins()
@@ -116,12 +121,14 @@ func (c *Compiler) Clone() *Compiler {
 		return New(Options{})
 	}
 	return &Compiler{
-		forms:     c.forms.Clone(),
-		funcs:     c.funcs.Clone(),
-		actions:   c.actions.Clone(),
-		globals:   c.globals.Clone(),
-		lookupEnv: c.lookupEnv,
-		readFile:  c.readFile,
+		forms:             c.forms.Clone(),
+		funcs:             c.funcs.Clone(),
+		actions:           c.actions.Clone(),
+		globals:           c.globals.Clone(),
+		lookupEnv:         c.lookupEnv,
+		readFile:          c.readFile,
+		parseCacheEntries: c.parseCacheEntries,
+		parseCache:        newParseCache(c.parseCacheEntries),
 	}
 }
 
@@ -131,9 +138,11 @@ func (c *Compiler) SetReadFile(fn func(string) ([]byte, error)) {
 	}
 	if fn == nil {
 		c.readFile = readSourceFile
+		c.clearParseCache()
 		return
 	}
 	c.readFile = fn
+	c.clearParseCache()
 }
 
 func (c *Compiler) ReadFile(path string) ([]byte, error) {
@@ -141,6 +150,13 @@ func (c *Compiler) ReadFile(path string) ([]byte, error) {
 		return readSourceFile(path)
 	}
 	return c.readFile(path)
+}
+
+func (c *Compiler) clearParseCache() {
+	if c == nil || c.parseCache == nil {
+		return
+	}
+	c.parseCache.Clear()
 }
 
 func (c *Compiler) FormSpec(name string) (schema.FormSpec, bool) {
