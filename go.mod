@@ -8,6 +8,7 @@ require (
 	github.com/arcgolabs/collectionx/mapping v0.5.0
 	github.com/arcgolabs/collectionx/set v0.5.0
 	github.com/bmatcuk/doublestar/v4 v4.10.0
+	github.com/expr-lang/expr v1.17.8
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/samber/lo v1.53.0
 	github.com/samber/mo v1.16.0

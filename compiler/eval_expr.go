@@ -184,19 +184,34 @@ func (s *compileState) evalCallExpr(node *ast.CallExpr, locals *env) (any, error
 		return nil, err
 	}
 	if spec, ok := s.compiler.funcs.Get(name); ok {
-		if err := validateArity("function", name, spec.MinArgs, spec.MaxArgs, len(args)); err != nil {
-			return nil, err
-		}
-		value, err := spec.Eval(*list.NewList(args...))
-		if err != nil {
-			return nil, fmt.Errorf("evaluate function %q: %w", name, err)
-		}
-		return value, nil
+		return s.evalRegisteredFunctionCall(name, spec, args, locals)
 	}
 	if decl, ok := s.funcDecls.Get(name); ok {
 		return s.callUserFunction(name, decl, args)
 	}
 	return nil, fmt.Errorf("unknown function %q", name)
+}
+
+func (s *compileState) evalRegisteredFunctionCall(
+	name string,
+	spec schema.FunctionSpec,
+	args []any,
+	locals *env,
+) (any, error) {
+	if err := validateArity("function", name, spec.MinArgs, spec.MaxArgs, len(args)); err != nil {
+		return nil, err
+	}
+	if value, handled, err := s.evalExprLangCall(name, args, locals); handled {
+		if err != nil {
+			return nil, fmt.Errorf("evaluate function %q: %w", name, err)
+		}
+		return value, nil
+	}
+	value, err := spec.Eval(*list.NewList(args...))
+	if err != nil {
+		return nil, fmt.Errorf("evaluate function %q: %w", name, err)
+	}
+	return value, nil
 }
 
 func (s *compileState) evalCallArgs(args []ast.Expr, locals *env) ([]any, error) {

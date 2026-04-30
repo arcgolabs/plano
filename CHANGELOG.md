@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.3.0
+
+Expr integration release.
+
+Highlights:
+
+- added `github.com/expr-lang/expr` as an opt-in expression evaluator
+- added `expr(...)` and `expr_eval(...)` builtins for dynamic expression strings
+- added host APIs for expr-lang variables and functions through `RegisterExprVar`, `RegisterExprFunc`, and `RegisterExprFunction`
+- kept public API generation at `v1`
+- kept artifact schema at `plano.artifact/v1`
+
 ## v0.2.0
 
 Performance and benchmark expansion release.

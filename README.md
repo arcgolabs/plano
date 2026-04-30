@@ -4,7 +4,7 @@
 
 Current baseline:
 
-- release: `v0.2.0`
+- release: `v0.3.0`
 - public API generation: `v1`
 - artifact schema: `plano.artifact/v1`
 
@@ -21,6 +21,7 @@ This repository currently contains a first usable implementation with:
 - a compiler that produces a typed document
 - script-body execution with lexical scope and user-defined functions
 - script control flow with `else if`, `break`, and `continue`
+- expr-lang backed expression evaluation with host-registered variables and functions
 - bundled example host DSLs under `examples/`
 - validated action registry for call statements
 - glob imports via `**`
@@ -48,6 +49,7 @@ Each bundled example now ships with multiple `.plano` scripts so the repository 
 The implementation also uses:
 
 - `collectionx` for ordered compiler outputs, object values, and host-side IR structures
+- `expr-lang/expr` for opt-in dynamic expression evaluation through `expr(...)`
 - `mo` for optional values in lowered IR
 - `lo` for concise lowering transforms
 - `oops` for internal error wrapping on loader and lowering boundaries
@@ -102,6 +104,17 @@ The compiler also exposes string helpers when you already have in-memory source 
 result := c.CompileStringDetailed(ctx, "build.plano", src)
 _ = result.Document
 ```
+
+Hosts can expose additional variables and functions to expr-lang expressions:
+
+```go
+_ = c.RegisterExprVar("branch", "main")
+_ = c.RegisterExprFunc("slug", func(params ...any) (any, error) {
+    return strings.ReplaceAll(params[0].(string), "/", "-"), nil
+}, func(string) string { return "" })
+```
+
+Those values are available from `expr(...)` and `expr_eval(...)` in `.plano` scripts, together with current script locals and top-level constants.
 
 And the static typecheck phase:
 
@@ -227,6 +240,7 @@ The implementation is still narrower than the full language draft, but the main 
 - top-level `const`
 - top-level user-defined `fn`
 - builtins such as `len`, `keys`, `values`, `range`, `get`, `slice`, `has`, `append`, `concat`, and `merge`
+- expr-lang backed `expr(...)` and `expr_eval(...)` calls with host-registered variables and functions
 - static typechecking for expressions, fields, returns, and registered function/action signatures
 - validated call statements through host-registered actions
 - typed HIR output for stable lowering

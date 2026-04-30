@@ -499,6 +499,24 @@ env("GO_VERSION", "1.26.2")
 replicas > 1 && env("CI", "false") == "true"
 ```
 
+### 7.1 Expr-lang 桥接表达式
+
+实现层还提供一个显式的 expr-lang 桥接入口：
+
+```plano
+expr("slug(prefix + '/' + branch)")
+expr_eval("dir + '/' + name", { dir = "dist", name = "app" })
+```
+
+这不是替换 plano 自身表达式语法，而是给宿主和用户一个 opt-in 的动态表达式入口。`expr(...)` / `expr_eval(...)` 的运行环境包含：
+
+- 宿主通过 `RegisterExprVar` 注册的变量
+- 宿主通过 `RegisterExprFunc` / `RegisterExprFunction` 注册的函数
+- plano 全局常量
+- 已解析的顶层 `const`
+- 当前 script 作用域里的局部变量
+- 第二个参数传入的 object override
+
 ---
 
 ## 8. Form 模型
@@ -959,6 +977,7 @@ AST -> Symbol Table
 
 - 字符串拼接
 - 函数调用
+- expr-lang 桥接表达式
 - 数组
 - 对象
 - 运行时常量

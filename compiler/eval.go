@@ -42,6 +42,8 @@ func (c *Compiler) registerBuiltins() {
 	c.mustRegisterFunc(builtinFunction("append", "Append one or more values to a list.", 1, -1, schema.Types(schema.ListType{Elem: schema.TypeAny}), schema.TypeAny, schema.ListType{Elem: schema.TypeAny}, evalAppend))
 	c.mustRegisterFunc(builtinFunction("concat", "Concatenate multiple lists into one list.", 1, -1, schema.Types(schema.ListType{Elem: schema.TypeAny}), schema.ListType{Elem: schema.TypeAny}, schema.ListType{Elem: schema.TypeAny}, evalConcat))
 	c.mustRegisterFunc(builtinFunction("merge", "Merge one or more maps from left to right.", 1, -1, schema.Types(schema.MapType{Elem: schema.TypeAny}), schema.MapType{Elem: schema.TypeAny}, schema.MapType{Elem: schema.TypeAny}, evalMerge))
+	c.mustRegisterFunc(builtinFunction("expr", "Evaluate an expr-lang expression string with the current plano evaluation environment.", 1, 2, schema.Types(schema.TypeString, schema.MapType{Elem: schema.TypeAny}), nil, schema.TypeAny, evalExprPlaceholder))
+	c.mustRegisterFunc(builtinFunction("expr_eval", "Evaluate an expr-lang expression string with the current plano evaluation environment.", 1, 2, schema.Types(schema.TypeString, schema.MapType{Elem: schema.TypeAny}), nil, schema.TypeAny, evalExprPlaceholder))
 }
 
 func (c *Compiler) mustRegisterFunc(spec schema.FunctionSpec) {
@@ -205,4 +207,8 @@ func buildRange(start, end, step int64) []any {
 		values = append(values, value)
 	}
 	return values
+}
+
+func evalExprPlaceholder([]any) (any, error) {
+	return nil, errors.New("expr evaluation requires compiler runtime context")
 }

@@ -26,6 +26,8 @@ type Compiler struct {
 	funcs             *mapping.OrderedMap[string, schema.FunctionSpec]
 	actions           *mapping.OrderedMap[string, ActionSpec]
 	globals           *mapping.OrderedMap[string, any]
+	exprVars          *mapping.OrderedMap[string, any]
+	exprFuncs         *mapping.OrderedMap[string, ExprFunctionSpec]
 	lookupEnv         func(string) (string, bool)
 	readFile          func(string) ([]byte, error)
 	parseCache        *parseCache
@@ -105,6 +107,8 @@ func New(opts Options) *Compiler {
 		funcs:             mapping.NewOrderedMap[string, schema.FunctionSpec](),
 		actions:           mapping.NewOrderedMap[string, ActionSpec](),
 		globals:           mapping.NewOrderedMap[string, any](),
+		exprVars:          mapping.NewOrderedMap[string, any](),
+		exprFuncs:         mapping.NewOrderedMap[string, ExprFunctionSpec](),
 		lookupEnv:         lookupEnv,
 		readFile:          readFile,
 		parseCacheEntries: normalizeParseCacheEntries(opts.ParseCacheEntries),
@@ -125,6 +129,8 @@ func (c *Compiler) Clone() *Compiler {
 		funcs:             c.funcs.Clone(),
 		actions:           c.actions.Clone(),
 		globals:           c.globals.Clone(),
+		exprVars:          c.exprVars.Clone(),
+		exprFuncs:         c.exprFuncs.Clone(),
 		lookupEnv:         c.lookupEnv,
 		readFile:          c.readFile,
 		parseCacheEntries: c.parseCacheEntries,

@@ -4,7 +4,7 @@ This document describes the current implementation in this repository relative t
 
 Compatibility baseline:
 
-- release: `v0.2.0`
+- release: `v0.3.0`
 - public API generation: `v1`
 - artifact schema: `plano.artifact/v1`
 
@@ -66,6 +66,7 @@ Compatibility baseline:
   - label mode
   - function signatures
   - function result and argument types
+  - expr-lang variables and functions exposed by the host
 - Compiler support for:
   - explicit bind phase for constants, functions, and declared symbols
   - explicit check phase for expression types, field assignment types, returns, and call signatures
@@ -85,6 +86,7 @@ Compatibility baseline:
   - typed document output
   - serializable `compiler.Artifact` output with explicit schema versioning
   - bounded parse cache for repeated compile requests
+  - `expr(...)` and `expr_eval(...)` backed by `github.com/expr-lang/expr`
 - LSP support module:
   - in-memory workspace document tracking
   - source-based analysis helpers for bytes and strings

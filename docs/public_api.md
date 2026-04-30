@@ -1,6 +1,6 @@
 # Public API
 
-As of `plano` `v0.2.0`, the repository treats the following packages as the supported public surface:
+As of `plano` `v0.3.0`, the repository treats the following packages as the supported public surface:
 
 - `github.com/arcgolabs/plano`
   - module and compatibility metadata
@@ -17,7 +17,7 @@ As of `plano` `v0.2.0`, the repository treats the following packages as the supp
 
 Compatibility baseline:
 
-- Module release: `v0.2.0`
+- Module release: `v0.3.0`
 - Public API generation: `v1`
 - Artifact schema generation: `plano.artifact/v1`
 
@@ -31,5 +31,6 @@ Compatibility rules:
 Extension guidance:
 
 - Register forms and functions through `schema.FormSpec`, `schema.FunctionSpec`, and `compiler.ActionSpec`.
+- Register expr-lang variables and functions through `compiler.RegisterExprVar`, `compiler.RegisterExprFunc`, and `compiler.RegisterExprFunction`.
 - Prefer `collectionx`-backed helpers such as `schema.Fields`, `schema.NestedForms`, and `schema.Types` when constructing specs.
 - Persist compiler outputs through `compiler.Artifact`, not raw `compiler.Result`.
