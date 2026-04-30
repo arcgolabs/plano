@@ -19,6 +19,7 @@ type Options struct {
 	LookupEnv         func(string) (string, bool)
 	ReadFile          func(string) ([]byte, error)
 	ParseCacheEntries int
+	ExprCacheEntries  int
 }
 
 type Compiler struct {
@@ -28,10 +29,13 @@ type Compiler struct {
 	globals           *mapping.OrderedMap[string, any]
 	exprVars          *mapping.OrderedMap[string, any]
 	exprFuncs         *mapping.OrderedMap[string, ExprFunctionSpec]
+	exprFuncSignature string
 	lookupEnv         func(string) (string, bool)
 	readFile          func(string) ([]byte, error)
 	parseCache        *parseCache
 	parseCacheEntries int
+	exprCache         *exprCache
+	exprCacheEntries  int
 }
 
 type Document struct {
@@ -112,8 +116,10 @@ func New(opts Options) *Compiler {
 		lookupEnv:         lookupEnv,
 		readFile:          readFile,
 		parseCacheEntries: normalizeParseCacheEntries(opts.ParseCacheEntries),
+		exprCacheEntries:  normalizeExprCacheEntries(opts.ExprCacheEntries),
 	}
 	c.parseCache = newParseCache(c.parseCacheEntries)
+	c.exprCache = newExprCache(c.exprCacheEntries)
 	c.RegisterConst("os", goruntime.GOOS)
 	c.RegisterConst("arch", goruntime.GOARCH)
 	c.registerBuiltins()
@@ -131,10 +137,13 @@ func (c *Compiler) Clone() *Compiler {
 		globals:           c.globals.Clone(),
 		exprVars:          c.exprVars.Clone(),
 		exprFuncs:         c.exprFuncs.Clone(),
+		exprFuncSignature: c.exprFuncSignature,
 		lookupEnv:         c.lookupEnv,
 		readFile:          c.readFile,
 		parseCacheEntries: c.parseCacheEntries,
 		parseCache:        newParseCache(c.parseCacheEntries),
+		exprCacheEntries:  c.exprCacheEntries,
+		exprCache:         newExprCache(c.exprCacheEntries),
 	}
 }
 

@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.4.0
+
+Expression tooling and cache release.
+
+Highlights:
+
+- added bounded expr-lang program caching through `compiler.Options.ExprCacheEntries`
+- added expr-lang host variable/function completion and hover support in the `lsp` module
+- added compiler benchmarks for warm, cold, and disabled expr cache scenarios
+- added LSP benchmarks for expr-lang completion and hover
+- optimized repeated expr cache-key construction by caching registered function signatures
+- kept public API generation at `v1`
+- kept artifact schema at `plano.artifact/v1`
+
 ## v0.3.0
 
 Expr integration release.

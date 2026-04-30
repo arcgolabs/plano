@@ -174,6 +174,33 @@ wor
 	}
 }
 
+func BenchmarkSnapshotExprCompletion(b *testing.B) {
+	snapshot, src := benchmarkExprSnapshot(b)
+	pos := positionForOffset([]byte(src), strings.Index(src, `"br"`)+len(`"br`))
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for range b.N {
+		items, ok := snapshot.CompletionAt(pos)
+		if !ok || items.Items.Len() == 0 {
+			b.Fatal("expected expr completion results")
+		}
+	}
+}
+
+func BenchmarkSnapshotExprHover(b *testing.B) {
+	snapshot, src := benchmarkExprSnapshot(b)
+	pos := positionOf(src, "branch")
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for range b.N {
+		if _, ok := snapshot.HoverAt(pos); !ok {
+			b.Fatal("expected expr hover result")
+		}
+	}
+}
+
 func BenchmarkSnapshotRename(b *testing.B) {
 	snapshot, src := benchmarkSnapshot(b)
 	pos := positionOf(src, "target")
@@ -195,7 +222,11 @@ func benchmarkSnapshot(tb testing.TB) (lsp.Snapshot, string) {
 
 func benchmarkSnapshotWithSource(tb testing.TB, src string) (lsp.Snapshot, string) {
 	tb.Helper()
-	ws := testWorkspace(tb)
+	return benchmarkSnapshotWithWorkspace(tb, testWorkspace(tb), src)
+}
+
+func benchmarkSnapshotWithWorkspace(tb testing.TB, ws *lsp.Workspace, src string) (lsp.Snapshot, string) {
+	tb.Helper()
 	uri, _ := benchmarkWorkspaceDocument(tb)
 	if err := ws.Open(uri, 1, []byte(src)); err != nil {
 		tb.Fatal(err)
@@ -205,6 +236,11 @@ func benchmarkSnapshotWithSource(tb testing.TB, src string) (lsp.Snapshot, strin
 		tb.Fatal(err)
 	}
 	return snapshot, src
+}
+
+func benchmarkExprSnapshot(tb testing.TB) (lsp.Snapshot, string) {
+	tb.Helper()
+	return benchmarkSnapshotWithWorkspace(tb, testExprWorkspace(tb), benchmarkExprWorkspaceSource())
 }
 
 func benchmarkWorkspaceDocument(tb testing.TB) (string, string) {
@@ -228,6 +264,21 @@ task build {
   run {
     exec("go", "test", "./...")
   }
+}
+`
+}
+
+func benchmarkExprWorkspaceSource() string {
+	return `
+workspace {
+  name = "demo"
+  default = build
+}
+
+task build {
+  outputs = [expr("branch")]
+  let next = expr("slug(branch)")
+  outputs = [expr("br")]
 }
 `
 }

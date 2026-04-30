@@ -175,6 +175,8 @@ var completionKinds = map[CompletionKind]protocol.CompletionItemKind{
 	CompletionConst:    protocol.CompletionItemKindConstant,
 	CompletionSymbol:   protocol.CompletionItemKindReference,
 	CompletionGlobal:   protocol.CompletionItemKindConstant,
+	CompletionExprVar:  protocol.CompletionItemKindVariable,
+	CompletionExprFunc: protocol.CompletionItemKindFunction,
 }
 
 var symbolKinds = map[SymbolKind]protocol.SymbolKind{

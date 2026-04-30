@@ -11,6 +11,9 @@ import (
 )
 
 func (s Snapshot) HoverAt(pos Position) (Hover, bool) {
+	if hover, ok := s.exprLangHoverAt(pos); ok {
+		return hover, true
+	}
 	target, ok := s.tokenPos(pos)
 	if !ok {
 		return Hover{}, false

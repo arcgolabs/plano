@@ -41,6 +41,7 @@ func (c *Compiler) RegisterExprVar(name string, value any) error {
 		return errors.New("expr variable name cannot be empty")
 	}
 	c.exprVars.Set(name, value)
+	c.clearExprCache()
 	return nil
 }
 
@@ -60,5 +61,7 @@ func (c *Compiler) RegisterExprFunction(spec ExprFunctionSpec) error {
 		return fmt.Errorf("expr function %q has nil evaluator", spec.Name)
 	}
 	c.exprFuncs.Set(spec.Name, spec)
+	c.exprFuncSignature = ""
+	c.clearExprCache()
 	return nil
 }

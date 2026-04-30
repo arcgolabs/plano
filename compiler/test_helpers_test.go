@@ -16,9 +16,15 @@ func newTestCompiler(t *testing.T) *compiler.Compiler {
 
 func newRegisteredCompiler(tb testing.TB) *compiler.Compiler {
 	tb.Helper()
-	c := compiler.New(compiler.Options{
-		LookupEnv: func(string) (string, bool) { return "", false },
-	})
+	return newRegisteredCompilerWithOptions(tb, compiler.Options{})
+}
+
+func newRegisteredCompilerWithOptions(tb testing.TB, opts compiler.Options) *compiler.Compiler {
+	tb.Helper()
+	if opts.LookupEnv == nil {
+		opts.LookupEnv = func(string) (string, bool) { return "", false }
+	}
+	c := compiler.New(opts)
 	registerForms(tb, c, schema.FormSpecs(
 		schema.FormSpec{
 			Name:      "workspace",

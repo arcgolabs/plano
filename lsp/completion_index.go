@@ -162,6 +162,29 @@ func (s Snapshot) addGlobalCompletions(index *completionIndex) {
 	})
 }
 
+func (s Snapshot) addExprLangCompletions(index *completionIndex) {
+	if s.compiler == nil {
+		return
+	}
+	s.compiler.ExprVars().Range(func(name string, value any) bool {
+		index.add(CompletionItem{
+			Label:  name,
+			Kind:   CompletionExprVar,
+			Detail: exprLangVarDetail(value),
+		})
+		return true
+	})
+	s.compiler.ExprFunctionSpecs().Range(func(_ string, spec compiler.ExprFunctionSpec) bool {
+		index.add(CompletionItem{
+			Label:         spec.Name,
+			Kind:          CompletionExprFunc,
+			Detail:        "expr fn",
+			Documentation: formatExprFunctionSpec(spec),
+		})
+		return true
+	})
+}
+
 func (s Snapshot) addTopLevelKeywords(index *completionIndex) {
 	for _, item := range keywordCompletions {
 		switch item.Label {

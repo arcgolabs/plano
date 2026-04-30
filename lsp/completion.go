@@ -52,6 +52,14 @@ type completionIndex struct {
 }
 
 func (s Snapshot) CompletionAt(pos Position) (CompletionList, bool) {
+	if ctx, ok := s.exprLangCompletionContext(pos); ok {
+		index := newCompletionIndex()
+		s.addExprLangCompletions(index)
+		return CompletionList{
+			Range: ctx.rng,
+			Items: index.match(ctx.prefix),
+		}, true
+	}
 	ctx, ok := s.completionContext(pos)
 	if !ok {
 		return CompletionList{}, false

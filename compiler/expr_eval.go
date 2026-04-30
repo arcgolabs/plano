@@ -11,6 +11,7 @@ import (
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/schema"
 	exprlang "github.com/expr-lang/expr"
+	"github.com/expr-lang/expr/vm"
 )
 
 func (s *compileState) evalExprLangCall(name string, args []any, locals *env) (any, bool, error) {
@@ -36,15 +37,32 @@ func (s *compileState) evalExprLangCall(name string, args []any, locals *env) (a
 		options = append(options, exprlang.Function(spec.Name, spec.Fn, spec.Types.Values()...))
 		return true
 	})
-	program, err := exprlang.Compile(source, options...)
+	cacheKey := s.compiler.exprCacheKey(source, env)
+	program, err := s.compileExprLangProgram(cacheKey, source, options)
 	if err != nil {
-		return nil, true, fmt.Errorf("compile expr expression: %w", err)
+		return nil, true, err
 	}
 	value, err := exprlang.Run(program, env)
 	if err != nil {
 		return nil, true, fmt.Errorf("run expr expression: %w", err)
 	}
 	return normalizeExprLangValue(value), true, nil
+}
+
+func (s *compileState) compileExprLangProgram(
+	cacheKey string,
+	source string,
+	options []exprlang.Option,
+) (*vm.Program, error) {
+	if program, ok := s.compiler.exprCache.get(cacheKey); ok {
+		return program, nil
+	}
+	program, err := exprlang.Compile(source, options...)
+	if err != nil {
+		return nil, fmt.Errorf("compile expr expression: %w", err)
+	}
+	s.compiler.exprCache.add(cacheKey, program)
+	return program, nil
 }
 
 func (s *compileState) exprLangEnv(locals *env, overrides []any) (map[string]any, error) {

@@ -4,7 +4,7 @@
 
 Current baseline:
 
-- release: `v0.3.0`
+- release: `v0.4.0`
 - public API generation: `v1`
 - artifact schema: `plano.artifact/v1`
 
@@ -22,6 +22,7 @@ This repository currently contains a first usable implementation with:
 - script-body execution with lexical scope and user-defined functions
 - script control flow with `else if`, `break`, and `continue`
 - expr-lang backed expression evaluation with host-registered variables and functions
+- bounded parse and expr-lang program caches for repeated compile requests
 - bundled example host DSLs under `examples/`
 - validated action registry for call statements
 - glob imports via `**`
@@ -33,7 +34,7 @@ This repository currently contains a first usable implementation with:
 - `cmd/plano`: CLI for parsing, compiling, and lowering `.plano` files
 - `frontend/plano`: `ParseFile` API for `.plano` source to AST
 - `compiler`: structured compile API from source bytes, strings, or files to typed documents
-- `lsp`: workspace analysis plus a basic `go.lsp.dev/protocol` LSP server with hover, definition, and diagnostics
+- `lsp`: workspace analysis plus a basic `go.lsp.dev/protocol` LSP server with hover, definition, diagnostics, and expr-lang host binding hints
 - `schema`: form specs, field specs, types, refs, and builtin scalar types
 - `ast`: parser output nodes
 - `diag`: diagnostics model
@@ -115,6 +116,7 @@ _ = c.RegisterExprFunc("slug", func(params ...any) (any, error) {
 ```
 
 Those values are available from `expr(...)` and `expr_eval(...)` in `.plano` scripts, together with current script locals and top-level constants.
+Repeated expr-lang program compilation is cached by default. Set `compiler.Options.ExprCacheEntries` to a positive entry count to tune the bounded cache, or `-1` to disable it.
 
 And the static typecheck phase:
 
@@ -241,6 +243,7 @@ The implementation is still narrower than the full language draft, but the main 
 - top-level user-defined `fn`
 - builtins such as `len`, `keys`, `values`, `range`, `get`, `slice`, `has`, `append`, `concat`, and `merge`
 - expr-lang backed `expr(...)` and `expr_eval(...)` calls with host-registered variables and functions
+- LSP completion and hover for expr-lang host variables and functions inside `expr(...)` strings
 - static typechecking for expressions, fields, returns, and registered function/action signatures
 - validated call statements through host-registered actions
 - typed HIR output for stable lowering

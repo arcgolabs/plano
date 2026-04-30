@@ -4,7 +4,7 @@ This document describes the current implementation in this repository relative t
 
 Compatibility baseline:
 
-- release: `v0.3.0`
+- release: `v0.4.0`
 - public API generation: `v1`
 - artifact schema: `plano.artifact/v1`
 
@@ -87,6 +87,7 @@ Compatibility baseline:
   - serializable `compiler.Artifact` output with explicit schema versioning
   - bounded parse cache for repeated compile requests
   - `expr(...)` and `expr_eval(...)` backed by `github.com/expr-lang/expr`
+  - bounded expr-lang program cache for repeated expression compilation
 - LSP support module:
   - in-memory workspace document tracking
   - source-based analysis helpers for bytes and strings
@@ -95,13 +96,15 @@ Compatibility baseline:
   - LSP-friendly diagnostics with codes and related information
   - definition lookup
   - hover content generation
+  - expr-lang host variable/function hover inside `expr(...)` strings
   - references
   - document symbols
   - completion
+  - expr-lang host variable/function completion inside `expr(...)` strings
   - prepare rename and rename
 - Benchmarks:
-  - compiler compile-string, compile-artifact, and warm-cache compile-file benchmarks
-  - LSP analyze, hover, completion, and rename benchmarks
+  - compiler compile-string, compile-artifact, expr-cache, and warm-cache compile-file benchmarks
+  - LSP analyze, hover, completion, expr-lang query, and rename benchmarks
 - Example host lowering packages:
   - `examples/builddsl.Register(...)`
   - `examples/builddsl.Lower(...)`

@@ -54,6 +54,8 @@ const (
 	CompletionConst    CompletionKind = "const"
 	CompletionSymbol   CompletionKind = "symbol"
 	CompletionGlobal   CompletionKind = "global"
+	CompletionExprVar  CompletionKind = "expr-var"
+	CompletionExprFunc CompletionKind = "expr-function"
 )
 
 type CompletionItem struct {

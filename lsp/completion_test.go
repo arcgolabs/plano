@@ -97,6 +97,70 @@ task build {
 	)
 }
 
+func TestSnapshotCompletionAtSuggestsExprLangHostBindings(t *testing.T) {
+	ws := testExprWorkspace(t)
+	path := filepath.Join(t.TempDir(), "build.plano")
+	uri := fileURI(path)
+	src := `
+workspace {
+  name = "demo"
+  default = build
+}
+
+task build {
+  outputs = [expr("br")]
+}
+`
+	if err := ws.Open(uri, 1, []byte(src)); err != nil {
+		t.Fatal(err)
+	}
+
+	snapshot, err := ws.Analyze(context.Background(), uri)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pos := positionForOffset([]byte(src), strings.Index(src, `"br"`)+len(`"br`))
+	items, ok := snapshot.CompletionAt(pos)
+	if !ok {
+		t.Fatal("expected expr completions")
+	}
+	assertCompletionContains(t, items.Items.Values(), "branch")
+	assertCompletionExcludes(t, items.Items.Values(), "join_path")
+}
+
+func TestSnapshotHoverAtShowsExprLangHostBinding(t *testing.T) {
+	ws := testExprWorkspace(t)
+	path := filepath.Join(t.TempDir(), "build.plano")
+	uri := fileURI(path)
+	src := `
+workspace {
+  name = "demo"
+  default = build
+}
+
+task build {
+  outputs = [expr("branch")]
+}
+`
+	if err := ws.Open(uri, 1, []byte(src)); err != nil {
+		t.Fatal(err)
+	}
+
+	snapshot, err := ws.Analyze(context.Background(), uri)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hover, ok := snapshot.HoverAt(positionForOffset([]byte(src), strings.Index(src, "branch")))
+	if !ok {
+		t.Fatal("expected expr hover")
+	}
+	if !strings.Contains(hover.Contents, "expr var branch: string") {
+		t.Fatalf("hover = %q", hover.Contents)
+	}
+}
+
 func assertCompletionMatch(
 	t *testing.T,
 	snapshot lsp.Snapshot,

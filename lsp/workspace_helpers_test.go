@@ -1,6 +1,7 @@
 package lsp_test
 
 import (
+	"errors"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -19,6 +20,32 @@ func testWorkspace(tb testing.TB) *lsp.Workspace {
 		tb.Fatal(err)
 	}
 	return lsp.NewWorkspace(lsp.Options{Compiler: base})
+}
+
+func testExprWorkspace(tb testing.TB) *lsp.Workspace {
+	tb.Helper()
+	base := compiler.New(compiler.Options{})
+	if err := builddsl.Register(base); err != nil {
+		tb.Fatal(err)
+	}
+	if err := base.RegisterExprVar("branch", "main"); err != nil {
+		tb.Fatal(err)
+	}
+	if err := base.RegisterExprFunc("slug", testSlug, func(string) string { return "" }); err != nil {
+		tb.Fatal(err)
+	}
+	return lsp.NewWorkspace(lsp.Options{Compiler: base})
+}
+
+func testSlug(params ...any) (any, error) {
+	if len(params) != 1 {
+		return nil, errors.New("slug expects one argument")
+	}
+	value, ok := params[0].(string)
+	if !ok {
+		return nil, errors.New("slug expects string")
+	}
+	return value, nil
 }
 
 func fileURI(path string) string {

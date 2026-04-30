@@ -2,6 +2,7 @@ package compiler_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	compilerpkg "github.com/arcgolabs/plano/compiler"
@@ -86,6 +87,56 @@ func BenchmarkCompileStringDetailedWithDiagnostics(b *testing.B) {
 	}
 }
 
+func BenchmarkCompileStringDetailedExprWarmCache(b *testing.B) {
+	compiler := newExprBenchmarkCompiler(b, compilerpkg.Options{})
+	src := benchmarkExprSource(24)
+	ctx := context.Background()
+
+	warm := compiler.CompileStringDetailed(ctx, "expr.plano", src)
+	if warm.Diagnostics.HasError() {
+		b.Fatalf("unexpected diagnostics: %v", warm.Diagnostics)
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for range b.N {
+		result := compiler.CompileStringDetailed(ctx, "expr.plano", src)
+		if result.Diagnostics.HasError() {
+			b.Fatalf("unexpected diagnostics: %v", result.Diagnostics)
+		}
+	}
+}
+
+func BenchmarkCompileStringDetailedExprCacheDisabled(b *testing.B) {
+	compiler := newExprBenchmarkCompiler(b, compilerpkg.Options{ExprCacheEntries: -1})
+	src := benchmarkExprSource(24)
+	ctx := context.Background()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for range b.N {
+		result := compiler.CompileStringDetailed(ctx, "expr.plano", src)
+		if result.Diagnostics.HasError() {
+			b.Fatalf("unexpected diagnostics: %v", result.Diagnostics)
+		}
+	}
+}
+
+func BenchmarkCompileStringDetailedExprColdCache(b *testing.B) {
+	src := benchmarkExprSource(24)
+	ctx := context.Background()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for range b.N {
+		compiler := newExprBenchmarkCompiler(b, compilerpkg.Options{})
+		result := compiler.CompileStringDetailed(ctx, "expr.plano", src)
+		if result.Diagnostics.HasError() {
+			b.Fatalf("unexpected diagnostics: %v", result.Diagnostics)
+		}
+	}
+}
+
 func BenchmarkCompileFileDetailedWarmCache(b *testing.B) {
 	root, imported := benchmarkFiles(b)
 	compiler := newRegisteredCompiler(b)
@@ -163,6 +214,29 @@ func BenchmarkBuilddslLower(b *testing.B) {
 			b.Fatal("expected lowered project")
 		}
 	}
+}
+
+func newExprBenchmarkCompiler(tb testing.TB, opts compilerpkg.Options) *compilerpkg.Compiler {
+	tb.Helper()
+	compiler := newRegisteredCompilerWithOptions(tb, opts)
+	if err := compiler.RegisterExprVar("branch", "main"); err != nil {
+		tb.Fatal(err)
+	}
+	if err := compiler.RegisterExprFunc("slug", benchmarkSlug, func(string) string { return "" }); err != nil {
+		tb.Fatal(err)
+	}
+	return compiler
+}
+
+func benchmarkSlug(params ...any) (any, error) {
+	if len(params) != 1 {
+		return nil, errors.New("slug expects one argument")
+	}
+	value, ok := params[0].(string)
+	if !ok {
+		return nil, errors.New("slug expects string")
+	}
+	return value, nil
 }
 
 func BenchmarkArtifactMarshalBinary(b *testing.B) {
