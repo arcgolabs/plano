@@ -83,6 +83,18 @@ func toProtocolCodeActions(items list.List[CodeAction]) []protocol.CodeAction {
 	})
 }
 
+func toProtocolFoldingRanges(items list.List[FoldingRange]) []protocol.FoldingRange {
+	return lo.Map(items.Values(), func(item FoldingRange, _ int) protocol.FoldingRange {
+		return protocol.FoldingRange{
+			StartLine:      clampUint32(item.Range.Start.Line),
+			StartCharacter: clampUint32(item.Range.Start.Character),
+			EndLine:        clampUint32(item.Range.End.Line),
+			EndCharacter:   clampUint32(item.Range.End.Character),
+			Kind:           protocol.FoldingRangeKind(item.Kind),
+		}
+	})
+}
+
 func toProtocolTextEdits(items list.List[TextEdit]) []protocol.TextEdit {
 	return lo.Map(items.Values(), func(item TextEdit, _ int) protocol.TextEdit {
 		return protocol.TextEdit{

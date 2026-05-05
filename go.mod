@@ -3,10 +3,10 @@ module github.com/arcgolabs/plano
 go 1.26.2
 
 require (
-	github.com/arcgolabs/collectionx/graph v0.5.0
-	github.com/arcgolabs/collectionx/list v0.5.0
-	github.com/arcgolabs/collectionx/mapping v0.5.0
-	github.com/arcgolabs/collectionx/set v0.5.0
+	github.com/arcgolabs/collectionx/graph v0.7.0
+	github.com/arcgolabs/collectionx/list v0.7.0
+	github.com/arcgolabs/collectionx/mapping v0.7.0
+	github.com/arcgolabs/collectionx/set v0.7.0
 	github.com/bmatcuk/doublestar/v4 v4.10.0
 	github.com/expr-lang/expr v1.17.8
 	github.com/hashicorp/golang-lru/v2 v2.0.7
@@ -16,7 +16,7 @@ require (
 )
 
 require (
-	github.com/arcgolabs/collectionx/internal v0.5.0 // indirect
+	github.com/arcgolabs/collectionx/internal v0.6.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/oklog/ulid/v2 v2.1.1 // indirect
 	go.opentelemetry.io/otel v1.43.0 // indirect

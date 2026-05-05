@@ -1,6 +1,6 @@
 # Public API
 
-As of `plano` `v0.4.0`, the repository treats the following packages as the supported public surface:
+As of `plano` `v0.5.0`, the repository treats the following packages as the supported public surface:
 
 - `github.com/arcgolabs/plano`
   - module and compatibility metadata
@@ -17,7 +17,7 @@ As of `plano` `v0.4.0`, the repository treats the following packages as the supp
 
 Compatibility baseline:
 
-- Module release: `v0.4.0`
+- Module release: `v0.5.0`
 - Public API generation: `v1`
 - Artifact schema generation: `plano.artifact/v1`
 
@@ -33,6 +33,7 @@ Extension guidance:
 - Register forms and functions through `schema.FormSpec`, `schema.FunctionSpec`, and `compiler.ActionSpec`.
 - Register expr-lang variables and functions through `compiler.RegisterExprVar`, `compiler.RegisterExprFunc`, and `compiler.RegisterExprFunction`.
 - Tune repeated expr-lang compilation through `compiler.Options.ExprCacheEntries`; `0` uses the default bounded cache and `-1` disables it.
+- Use `lsp.Snapshot.FoldingRanges` for editor folding support.
 - Use `lsp.Snapshot.CodeActions` for diagnostic-driven editor quick fixes.
 - Prefer `collectionx`-backed helpers such as `schema.Fields`, `schema.NestedForms`, and `schema.Types` when constructing specs.
 - Persist compiler outputs through `compiler.Artifact`, not raw `compiler.Result`.

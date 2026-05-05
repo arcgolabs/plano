@@ -67,8 +67,9 @@ func (s *Server) Initialize(_ context.Context, _ *protocol.InitializeParams) (*p
 			CodeActionProvider: &protocol.CodeActionOptions{
 				CodeActionKinds: []protocol.CodeActionKind{protocol.QuickFix},
 			},
-			CompletionProvider: &protocol.CompletionOptions{},
-			RenameProvider:     true,
+			CompletionProvider:   &protocol.CompletionOptions{},
+			FoldingRangeProvider: &protocol.FoldingRangeOptions{},
+			RenameProvider:       true,
 		},
 		ServerInfo: &protocol.ServerInfo{
 			Name:    "plano",

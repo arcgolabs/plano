@@ -84,6 +84,17 @@ type CodeAction struct {
 	IsPreferred bool                  `json:"isPreferred" yaml:"isPreferred"`
 }
 
+type FoldingRangeKind string
+
+const (
+	FoldingRangeRegion FoldingRangeKind = "region"
+)
+
+type FoldingRange struct {
+	Range Range            `json:"range" yaml:"range"`
+	Kind  FoldingRangeKind `json:"kind"  yaml:"kind"`
+}
+
 type TextEdit struct {
 	Range   Range  `json:"range"   yaml:"range"`
 	NewText string `json:"newText" yaml:"newText"`

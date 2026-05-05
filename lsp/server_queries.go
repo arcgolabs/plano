@@ -125,7 +125,29 @@ func (s *Server) CodeAction(ctx context.Context, params *protocol.CodeActionPara
 	return toProtocolCodeActions(snapshot.CodeActions(fromProtocolRange(params.Range))), nil
 }
 
+func (s *Server) FoldingRanges(ctx context.Context, params *protocol.FoldingRangeParams) ([]protocol.FoldingRange, error) {
+	if params == nil {
+		return nil, errors.New("missing foldingRange params")
+	}
+	snapshot, err := s.workspace.Analyze(ctx, string(params.TextDocument.URI))
+	if err != nil {
+		return nil, err
+	}
+	return toProtocolFoldingRanges(snapshot.FoldingRanges()), nil
+}
+
 func (s *Server) handleTextDocumentQuery(ctx context.Context, reply jsonrpc2.Replier, req jsonrpc2.Request) (bool, error) {
+	if handled, err := s.handleTextDocumentNavigationQuery(ctx, reply, req); handled {
+		return true, err
+	}
+	return s.handleTextDocumentUtilityQuery(ctx, reply, req)
+}
+
+func (s *Server) handleTextDocumentNavigationQuery(
+	ctx context.Context,
+	reply jsonrpc2.Replier,
+	req jsonrpc2.Request,
+) (bool, error) {
 	switch req.Method() {
 	case protocol.MethodTextDocumentHover:
 		var params protocol.HoverParams
@@ -145,12 +167,26 @@ func (s *Server) handleTextDocumentQuery(ctx context.Context, reply jsonrpc2.Rep
 	case protocol.MethodTextDocumentRename:
 		var params protocol.RenameParams
 		return true, replyCall(ctx, reply, req, &params, s.Rename)
+	default:
+		return false, nil
+	}
+}
+
+func (s *Server) handleTextDocumentUtilityQuery(
+	ctx context.Context,
+	reply jsonrpc2.Replier,
+	req jsonrpc2.Request,
+) (bool, error) {
+	switch req.Method() {
 	case protocol.MethodTextDocumentDocumentSymbol:
 		var params protocol.DocumentSymbolParams
 		return true, replyCall(ctx, reply, req, &params, s.DocumentSymbols)
 	case protocol.MethodTextDocumentCodeAction:
 		var params protocol.CodeActionParams
 		return true, replyCall(ctx, reply, req, &params, s.CodeAction)
+	case protocol.MethodTextDocumentFoldingRange:
+		var params protocol.FoldingRangeParams
+		return true, replyCall(ctx, reply, req, &params, s.FoldingRanges)
 	default:
 		return false, nil
 	}

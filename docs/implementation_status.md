@@ -4,7 +4,7 @@ This document describes the current implementation in this repository relative t
 
 Compatibility baseline:
 
-- release: `v0.4.0`
+- release: `v0.5.0`
 - public API generation: `v1`
 - artifact schema: `plano.artifact/v1`
 
@@ -100,13 +100,15 @@ Compatibility baseline:
   - expr-lang host variable/function hover inside `expr(...)` strings
   - references
   - document symbols
+  - folding ranges
   - completion
   - expr-lang host variable/function completion inside `expr(...)` strings
   - prepare rename and rename
   - protocol `textDocument/codeAction` server handling
+  - protocol `textDocument/foldingRange` server handling
 - Benchmarks:
   - compiler compile-string, compile-artifact, expr-cache, and warm-cache compile-file benchmarks
-  - LSP analyze, hover, completion, code action, expr-lang query, and rename benchmarks
+  - LSP analyze, hover, completion, code action, folding range, expr-lang query, and rename benchmarks
 - Example host lowering packages:
   - `examples/builddsl.Register(...)`
   - `examples/builddsl.Lower(...)`

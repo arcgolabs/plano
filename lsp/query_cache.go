@@ -13,6 +13,9 @@ type snapshotQueryCache struct {
 	documentSymbolsOnce sync.Once
 	documentSymbols     list.List[DocumentSymbol]
 
+	foldingRangesOnce sync.Once
+	foldingRanges     list.List[FoldingRange]
+
 	referencesMu      sync.RWMutex
 	referenceComputed *set.Set[string]
 	referenceUses     *mapping.MultiMap[string, Location]
@@ -35,6 +38,16 @@ func (s Snapshot) cachedDocumentSymbols() list.List[DocumentSymbol] {
 		s.queries.documentSymbols = s.buildDocumentSymbols()
 	})
 	return *s.queries.documentSymbols.Clone()
+}
+
+func (s Snapshot) cachedFoldingRanges() list.List[FoldingRange] {
+	if s.queries == nil {
+		return s.buildFoldingRanges()
+	}
+	s.queries.foldingRangesOnce.Do(func() {
+		s.queries.foldingRanges = s.buildFoldingRanges()
+	})
+	return *s.queries.foldingRanges.Clone()
 }
 
 func (s Snapshot) cachedReferences(target referenceTarget, includeDeclaration bool) (list.List[Location], bool) {

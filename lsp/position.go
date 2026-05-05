@@ -1,6 +1,7 @@
 package lsp
 
 import (
+	"go/token"
 	"unicode/utf16"
 	"unicode/utf8"
 )
@@ -31,12 +32,56 @@ func positionFromOffset(src []byte, offset int) Position {
 	}
 }
 
+func positionFromFileOffset(src []byte, file *token.File, offset int) Position {
+	if file == nil {
+		return positionFromOffset(src, offset)
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	if offset > len(src) {
+		offset = len(src)
+	}
+	pos := file.Pos(offset)
+	tokenPosition := file.Position(pos)
+	if tokenPosition.Line <= 0 {
+		return positionFromOffset(src, offset)
+	}
+	lineStart := file.Offset(file.LineStart(tokenPosition.Line))
+	if lineStart < 0 || lineStart > offset || lineStart > len(src) {
+		return positionFromOffset(src, offset)
+	}
+	return Position{
+		Line:      tokenPosition.Line - 1,
+		Character: utf16WidthBetween(src, lineStart, offset),
+	}
+}
+
 func offsetFromPosition(src []byte, pos Position) (int, bool) {
 	lineStart, ok := lineStartOffset(src, pos.Line)
 	if !ok {
 		return 0, false
 	}
 	return advanceOffsetByUTF16(src, lineStart, lineEndOffset(src, lineStart), pos.Character), true
+}
+
+func utf16WidthBetween(src []byte, start, end int) int {
+	if start < 0 {
+		start = 0
+	}
+	if end > len(src) {
+		end = len(src)
+	}
+	if end < start {
+		end = start
+	}
+	width := 0
+	for offset := start; offset < end; {
+		r, size := utf8.DecodeRune(src[offset:end])
+		width += utf16Width(r)
+		offset += size
+	}
+	return width
 }
 
 func utf16Width(r rune) int {

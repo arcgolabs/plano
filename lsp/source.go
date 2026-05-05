@@ -61,8 +61,8 @@ func (s Snapshot) spanLocation(pos, end token.Pos) (string, Range, bool) {
 	endOffset := min(file.Offset(end), len(src))
 	endOffset = max(endOffset, startOffset)
 	return path, Range{
-		Start: positionFromOffset(src, startOffset),
-		End:   positionFromOffset(src, endOffset),
+		Start: positionFromFileOffset(src, file, startOffset),
+		End:   positionFromFileOffset(src, file, endOffset),
 	}, true
 }
 

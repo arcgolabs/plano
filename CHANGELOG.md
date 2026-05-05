@@ -1,13 +1,20 @@
 # Changelog
 
-## Unreleased
+## v0.5.0
+
+LSP tooling and dependency refresh release.
 
 Highlights:
 
 - added `lsp.Snapshot.CodeActions` for diagnostic-driven quick fixes
 - added `textDocument/codeAction` support to the protocol server
 - added spelling-based replacement quick fixes for unknown forms, functions, actions, and unresolved names
-- added LSP code action tests and benchmark coverage
+- added `lsp.Snapshot.FoldingRanges` and protocol `textDocument/foldingRange` support
+- optimized LSP span-to-position conversion and cached folding range queries
+- updated arcgolabs `collectionx` dependencies to their latest valid versions
+- added LSP code action and folding range tests plus benchmark coverage
+- kept public API generation at `v1`
+- kept artifact schema at `plano.artifact/v1`
 
 ## v0.4.0
 
