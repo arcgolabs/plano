@@ -34,7 +34,7 @@ This repository currently contains a first usable implementation with:
 - `cmd/plano`: CLI for parsing, compiling, and lowering `.plano` files
 - `frontend/plano`: `ParseFile` API for `.plano` source to AST
 - `compiler`: structured compile API from source bytes, strings, or files to typed documents
-- `lsp`: workspace analysis plus a basic `go.lsp.dev/protocol` LSP server with hover, definition, diagnostics, and expr-lang host binding hints
+- `lsp`: workspace analysis plus a basic `go.lsp.dev/protocol` LSP server with hover, definition, diagnostics, code actions, and expr-lang host binding hints
 - `schema`: form specs, field specs, types, refs, and builtin scalar types
 - `ast`: parser output nodes
 - `diag`: diagnostics model
@@ -143,6 +143,8 @@ _ = lsp.ServeStdio(context.Background(), lsp.ServerOptions{
     Compiler: configuredCompiler,
 })
 ```
+
+The LSP module also exposes diagnostic-driven quick fixes through `Snapshot.CodeActions(...)` and the protocol server's `textDocument/codeAction` handler.
 
 ## Docs
 

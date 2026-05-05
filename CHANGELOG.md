@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+Highlights:
+
+- added `lsp.Snapshot.CodeActions` for diagnostic-driven quick fixes
+- added `textDocument/codeAction` support to the protocol server
+- added spelling-based replacement quick fixes for unknown forms, functions, actions, and unresolved names
+- added LSP code action tests and benchmark coverage
+
 ## v0.4.0
 
 Expression tooling and cache release.

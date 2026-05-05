@@ -64,8 +64,11 @@ func (s *Server) Initialize(_ context.Context, _ *protocol.InitializeParams) (*p
 			DefinitionProvider:     true,
 			ReferencesProvider:     true,
 			DocumentSymbolProvider: true,
-			CompletionProvider:     &protocol.CompletionOptions{},
-			RenameProvider:         true,
+			CodeActionProvider: &protocol.CodeActionOptions{
+				CodeActionKinds: []protocol.CodeActionKind{protocol.QuickFix},
+			},
+			CompletionProvider: &protocol.CompletionOptions{},
+			RenameProvider:     true,
 		},
 		ServerInfo: &protocol.ServerInfo{
 			Name:    "plano",

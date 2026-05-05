@@ -15,6 +15,13 @@ func fromProtocolPosition(pos protocol.Position) Position {
 	}
 }
 
+func fromProtocolRange(rng protocol.Range) Range {
+	return Range{
+		Start: fromProtocolPosition(rng.Start),
+		End:   fromProtocolPosition(rng.End),
+	}
+}
+
 func toProtocolPosition(pos Position) protocol.Position {
 	return protocol.Position{
 		Line:      clampUint32(pos.Line),
@@ -62,6 +69,18 @@ func toProtocolWorkspaceEdit(edit WorkspaceEdit) *protocol.WorkspaceEdit {
 		})
 	}
 	return &protocol.WorkspaceEdit{Changes: changes}
+}
+
+func toProtocolCodeActions(items list.List[CodeAction]) []protocol.CodeAction {
+	return lo.Map(items.Values(), func(item CodeAction, _ int) protocol.CodeAction {
+		return protocol.CodeAction{
+			Title:       item.Title,
+			Kind:        protocol.CodeActionKind(item.Kind),
+			Diagnostics: toProtocolDiagnostics(item.Diagnostics),
+			Edit:        toProtocolWorkspaceEdit(item.Edit),
+			IsPreferred: item.IsPreferred,
+		}
+	})
 }
 
 func toProtocolTextEdits(items list.List[TextEdit]) []protocol.TextEdit {

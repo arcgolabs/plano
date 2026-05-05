@@ -70,6 +70,20 @@ type CompletionList struct {
 	Items list.List[CompletionItem] `json:"items" yaml:"items"`
 }
 
+type CodeActionKind string
+
+const (
+	CodeActionQuickFix CodeActionKind = "quickfix"
+)
+
+type CodeAction struct {
+	Title       string                `json:"title"       yaml:"title"`
+	Kind        CodeActionKind        `json:"kind"        yaml:"kind"`
+	Diagnostics list.List[Diagnostic] `json:"diagnostics" yaml:"diagnostics"`
+	Edit        WorkspaceEdit         `json:"edit"        yaml:"edit"`
+	IsPreferred bool                  `json:"isPreferred" yaml:"isPreferred"`
+}
+
 type TextEdit struct {
 	Range   Range  `json:"range"   yaml:"range"`
 	NewText string `json:"newText" yaml:"newText"`

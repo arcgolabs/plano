@@ -94,6 +94,7 @@ Compatibility baseline:
   - basic `go.lsp.dev/protocol` server wiring
   - stdio server entrypoint
   - LSP-friendly diagnostics with codes and related information
+  - diagnostic-driven quick fixes through code actions
   - definition lookup
   - hover content generation
   - expr-lang host variable/function hover inside `expr(...)` strings
@@ -102,9 +103,10 @@ Compatibility baseline:
   - completion
   - expr-lang host variable/function completion inside `expr(...)` strings
   - prepare rename and rename
+  - protocol `textDocument/codeAction` server handling
 - Benchmarks:
   - compiler compile-string, compile-artifact, expr-cache, and warm-cache compile-file benchmarks
-  - LSP analyze, hover, completion, expr-lang query, and rename benchmarks
+  - LSP analyze, hover, completion, code action, expr-lang query, and rename benchmarks
 - Example host lowering packages:
   - `examples/builddsl.Register(...)`
   - `examples/builddsl.Lower(...)`

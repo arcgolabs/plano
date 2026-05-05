@@ -3,6 +3,7 @@ package lsp
 import (
 	"context"
 	"errors"
+	"slices"
 
 	"go.lsp.dev/jsonrpc2"
 	"go.lsp.dev/protocol"
@@ -110,6 +111,20 @@ func (s *Server) DocumentSymbols(ctx context.Context, params *protocol.DocumentS
 	return toProtocolDocumentSymbolInterfaces(snapshot.DocumentSymbols()), nil
 }
 
+func (s *Server) CodeAction(ctx context.Context, params *protocol.CodeActionParams) ([]protocol.CodeAction, error) {
+	if params == nil {
+		return nil, errors.New("missing codeAction params")
+	}
+	if !allowsQuickFix(params.Context.Only) {
+		return []protocol.CodeAction{}, nil
+	}
+	snapshot, err := s.workspace.Analyze(ctx, string(params.TextDocument.URI))
+	if err != nil {
+		return nil, err
+	}
+	return toProtocolCodeActions(snapshot.CodeActions(fromProtocolRange(params.Range))), nil
+}
+
 func (s *Server) handleTextDocumentQuery(ctx context.Context, reply jsonrpc2.Replier, req jsonrpc2.Request) (bool, error) {
 	switch req.Method() {
 	case protocol.MethodTextDocumentHover:
@@ -133,7 +148,17 @@ func (s *Server) handleTextDocumentQuery(ctx context.Context, reply jsonrpc2.Rep
 	case protocol.MethodTextDocumentDocumentSymbol:
 		var params protocol.DocumentSymbolParams
 		return true, replyCall(ctx, reply, req, &params, s.DocumentSymbols)
+	case protocol.MethodTextDocumentCodeAction:
+		var params protocol.CodeActionParams
+		return true, replyCall(ctx, reply, req, &params, s.CodeAction)
 	default:
 		return false, nil
 	}
+}
+
+func allowsQuickFix(only []protocol.CodeActionKind) bool {
+	if len(only) == 0 {
+		return true
+	}
+	return slices.Contains(only, protocol.QuickFix)
 }

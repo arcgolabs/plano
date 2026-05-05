@@ -33,5 +33,6 @@ Extension guidance:
 - Register forms and functions through `schema.FormSpec`, `schema.FunctionSpec`, and `compiler.ActionSpec`.
 - Register expr-lang variables and functions through `compiler.RegisterExprVar`, `compiler.RegisterExprFunc`, and `compiler.RegisterExprFunction`.
 - Tune repeated expr-lang compilation through `compiler.Options.ExprCacheEntries`; `0` uses the default bounded cache and `-1` disables it.
+- Use `lsp.Snapshot.CodeActions` for diagnostic-driven editor quick fixes.
 - Prefer `collectionx`-backed helpers such as `schema.Fields`, `schema.NestedForms`, and `schema.Types` when constructing specs.
 - Persist compiler outputs through `compiler.Artifact`, not raw `compiler.Result`.
