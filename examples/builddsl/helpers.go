@@ -1,8 +1,6 @@
 package builddsl
 
 import (
-	"fmt"
-
 	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/plano/compiler"
 	"github.com/arcgolabs/plano/schema"
@@ -47,16 +45,16 @@ func callsToCommands(calls list.List[compiler.HIRCall]) (list.List[Command], err
 func refNames(value any, kind string) (list.List[string], error) {
 	items, ok := value.([]any)
 	if !ok {
-		return list.List[string]{}, fmt.Errorf("builddsl: expected list of refs, got %T", value)
+		return list.List[string]{}, buildDSLErrorf("expected list of refs, got %T", value)
 	}
 	refs := make([]schema.Ref, 0, len(items))
 	for _, item := range items {
 		ref, ok := item.(schema.Ref)
 		if !ok {
-			return list.List[string]{}, fmt.Errorf("builddsl: expected ref<%s>, got %T", kind, item)
+			return list.List[string]{}, buildDSLErrorf("expected ref<%s>, got %T", kind, item)
 		}
 		if ref.Kind != kind {
-			return list.List[string]{}, fmt.Errorf("builddsl: expected ref<%s>, got ref<%s>", kind, ref.Kind)
+			return list.List[string]{}, buildDSLErrorf("expected ref<%s>, got ref<%s>", kind, ref.Kind)
 		}
 		refs = append(refs, ref)
 	}
@@ -68,13 +66,13 @@ func refNames(value any, kind string) (list.List[string], error) {
 func stringList(value any) (list.List[string], error) {
 	items, ok := value.([]any)
 	if !ok {
-		return list.List[string]{}, fmt.Errorf("builddsl: expected list of strings, got %T", value)
+		return list.List[string]{}, buildDSLErrorf("expected list of strings, got %T", value)
 	}
 	values := make([]string, 0, len(items))
 	for _, item := range items {
 		text, ok := item.(string)
 		if !ok {
-			return list.List[string]{}, fmt.Errorf("builddsl: expected string, got %T", item)
+			return list.List[string]{}, buildDSLErrorf("expected string, got %T", item)
 		}
 		values = append(values, text)
 	}
@@ -86,7 +84,7 @@ func stringList(value any) (list.List[string], error) {
 func validateStringArgs(name string, args list.List[any]) error {
 	for _, arg := range args.Values() {
 		if _, ok := arg.(string); !ok {
-			return fmt.Errorf("builddsl: action %q expects string arguments, got %T", name, arg)
+			return buildDSLErrorf("action %q expects string arguments, got %T", name, arg)
 		}
 	}
 	return nil

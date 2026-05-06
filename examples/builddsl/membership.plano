@@ -1,0 +1,22 @@
+const enabled: list<string> = ["unit", "lint"]
+
+workspace {
+  name = "membership-build"
+  default = unit
+}
+
+task unit {
+  outputs = "unit" in enabled ? ["dist/unit"] : []
+
+  run {
+    exec("go", "test", "./...")
+  }
+}
+
+task lint {
+  outputs = "lint" in enabled ? ["dist/lint"] : []
+
+  run {
+    exec("go", "vet", "./...")
+  }
+}

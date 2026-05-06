@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.7.0
+
+Membership expressions and oops error wrapping release.
+
+Highlights:
+
+- added `in` membership expressions for list item and map key checks
+- added membership-expression samples for the CLI and bundled example DSL modules
+- routed compiler, CLI, and example DSL boundary errors through `oops` wrappers
+- kept public API generation at `v1`
+- kept artifact schema at `plano.artifact/v2`
+
 ## v0.6.0
 
 Compiler diagnostics, CLI boundary, and syntax iteration release.

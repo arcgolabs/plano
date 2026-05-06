@@ -1,8 +1,6 @@
 package compiler
 
 import (
-	"fmt"
-
 	"github.com/arcgolabs/plano/ast"
 	"github.com/arcgolabs/plano/schema"
 )
@@ -11,7 +9,7 @@ func (s *compileState) bindLocalValue(locals *env, kind LocalBindingKind, name s
 	typ := normalizeType(convertTypeExpr(typeExpr))
 	if typeExpr != nil {
 		if err := schema.CheckAssignable(typ, value); err != nil {
-			return fmt.Errorf("binding %q: %w", name, err)
+			return wrapCompilerErrorf(err, "binding %q", name)
 		}
 	} else {
 		typ = staticTypeOfValue(value)

@@ -2,8 +2,6 @@ package compiler
 
 import (
 	"cmp"
-	"errors"
-	"fmt"
 	"math"
 	"reflect"
 	"slices"
@@ -19,11 +17,11 @@ func (s *compileState) evalExprLangCall(name string, args []any, locals *env) (a
 		return nil, false, nil
 	}
 	if len(args) == 0 {
-		return nil, true, errors.New("expr expects expression string")
+		return nil, true, compilerErrorf("expr expects expression string")
 	}
 	source, ok := args[0].(string)
 	if !ok {
-		return nil, true, errors.New("expr expects expression string")
+		return nil, true, compilerErrorf("expr expects expression string")
 	}
 	env, err := s.exprLangEnv(locals, args[1:])
 	if err != nil {
@@ -44,7 +42,7 @@ func (s *compileState) evalExprLangCall(name string, args []any, locals *env) (a
 	}
 	value, err := exprlang.Run(program, env)
 	if err != nil {
-		return nil, true, fmt.Errorf("run expr expression: %w", err)
+		return nil, true, wrapCompilerErrorf(err, "run expr expression")
 	}
 	return normalizeExprLangValue(value), true, nil
 }
@@ -59,7 +57,7 @@ func (s *compileState) compileExprLangProgram(
 	}
 	program, err := exprlang.Compile(source, options...)
 	if err != nil {
-		return nil, fmt.Errorf("compile expr expression: %w", err)
+		return nil, wrapCompilerErrorf(err, "compile expr expression")
 	}
 	s.compiler.exprCache.add(cacheKey, program)
 	return program, nil
@@ -122,7 +120,7 @@ func exprLangOverrideMap(value any) (*mapping.OrderedMap[string, any], error) {
 	case map[string]any:
 		return orderedAnyMap(current), nil
 	default:
-		return nil, fmt.Errorf("expr override expects map, got %T", value)
+		return nil, compilerErrorf("expr override expects map, got %T", value)
 	}
 }
 

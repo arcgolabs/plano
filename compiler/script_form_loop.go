@@ -88,11 +88,11 @@ func (s *compileState) evalLoopFilter(current *ast.ForStmt, locals *env) (bool, 
 func validateFormLoopVars(spec schema.FormSpec, stmt *ast.ForStmt) error {
 	if stmt.Index != nil {
 		if hasFormField(spec, stmt.Index.Name) {
-			return fmt.Errorf("loop variable %q conflicts with field %q in %s", stmt.Index.Name, stmt.Index.Name, spec.Name)
+			return compilerErrorf("loop variable %q conflicts with field %q in %s", stmt.Index.Name, stmt.Index.Name, spec.Name)
 		}
 	}
 	if hasFormField(spec, stmt.Name.Name) {
-		return fmt.Errorf("loop variable %q conflicts with field %q in %s", stmt.Name.Name, stmt.Name.Name, spec.Name)
+		return compilerErrorf("loop variable %q conflicts with field %q in %s", stmt.Name.Name, stmt.Name.Name, spec.Name)
 	}
 	return nil
 }

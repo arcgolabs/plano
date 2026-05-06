@@ -1,7 +1,6 @@
 package compiler
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -25,7 +24,7 @@ func resolveImportPaths(from, spec string) ([]string, error) {
 		return nil, oops.Wrapf(err, "resolve import pattern %q", spec)
 	}
 	if len(matches) == 0 {
-		return nil, fmt.Errorf("import pattern %q matched no files", spec)
+		return nil, compilerErrorf("import pattern %q matched no files", spec)
 	}
 
 	paths := lo.Map(matches, func(match string, _ int) string {
@@ -45,7 +44,7 @@ func resolveImportPaths(from, spec string) ([]string, error) {
 	}
 	sort.Strings(files)
 	if len(files) == 0 {
-		return nil, fmt.Errorf("import pattern %q matched no files", spec)
+		return nil, compilerErrorf("import pattern %q matched no files", spec)
 	}
 	return files, nil
 }

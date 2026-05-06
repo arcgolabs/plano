@@ -1,8 +1,6 @@
 package builddsl
 
 import (
-	"fmt"
-
 	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/plano/compiler"
 	"github.com/arcgolabs/plano/schema"
@@ -10,10 +8,10 @@ import (
 
 func Register(c *compiler.Compiler) error {
 	if err := c.RegisterForms(formSpecs()); err != nil {
-		return fmt.Errorf("register builddsl forms: %w", err)
+		return wrapBuildDSLErrorf(err, "register forms")
 	}
 	if err := c.RegisterActions(actionSpecs()); err != nil {
-		return fmt.Errorf("register builddsl actions: %w", err)
+		return wrapBuildDSLErrorf(err, "register actions")
 	}
 	return nil
 }

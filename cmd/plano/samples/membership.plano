@@ -1,0 +1,10 @@
+const selected: string = "cli"
+const enabled: list<string> = ["build", "cli"]
+
+task inspect {
+  outputs = selected in enabled ? ["dist/" + selected] : []
+
+  run {
+    exec("echo", selected in enabled ? "enabled" : "disabled")
+  }
+}

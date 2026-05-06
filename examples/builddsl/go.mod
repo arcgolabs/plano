@@ -7,6 +7,7 @@ require (
 	github.com/arcgolabs/collectionx/mapping v0.7.0
 	github.com/samber/lo v1.53.0
 	github.com/samber/mo v1.16.0
+	github.com/samber/oops v1.21.0
 )
 
 require (

@@ -1,8 +1,6 @@
 package compiler
 
 import (
-	"errors"
-	"fmt"
 	"go/token"
 	"os"
 	goruntime "runtime"
@@ -225,7 +223,7 @@ func (c *Compiler) Globals() *mapping.OrderedMap[string, any] {
 
 func (c *Compiler) RegisterForm(spec schema.FormSpec) error {
 	if spec.Name == "" {
-		return errors.New("form name cannot be empty")
+		return compilerErrorf("form name cannot be empty")
 	}
 	if spec.Fields == nil {
 		spec.Fields = mapping.NewOrderedMap[string, schema.FieldSpec]()
@@ -253,7 +251,7 @@ func (c *Compiler) RegisterForms(specs list.List[schema.FormSpec]) error {
 	for idx := range specs.Len() {
 		spec, _ := specs.Get(idx)
 		if err := c.RegisterForm(spec); err != nil {
-			return fmt.Errorf("register form %q: %w", spec.Name, err)
+			return wrapCompilerErrorf(err, "register form %q", spec.Name)
 		}
 	}
 	return nil
@@ -261,10 +259,10 @@ func (c *Compiler) RegisterForms(specs list.List[schema.FormSpec]) error {
 
 func (c *Compiler) RegisterFunc(spec schema.FunctionSpec) error {
 	if spec.Name == "" {
-		return errors.New("function name cannot be empty")
+		return compilerErrorf("function name cannot be empty")
 	}
 	if spec.Eval == nil {
-		return fmt.Errorf("function %q has nil evaluator", spec.Name)
+		return compilerErrorf("function %q has nil evaluator", spec.Name)
 	}
 	c.funcs.Set(spec.Name, spec)
 	return nil

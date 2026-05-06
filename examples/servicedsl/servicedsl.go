@@ -2,8 +2,6 @@
 package servicedsl
 
 import (
-	"errors"
-	"fmt"
 	"slices"
 
 	"github.com/arcgolabs/collectionx/list"
@@ -28,7 +26,7 @@ type Service struct {
 
 func Register(c *compiler.Compiler) error {
 	if err := c.RegisterForms(serviceForms()); err != nil {
-		return fmt.Errorf("register servicedsl forms: %w", err)
+		return wrapServiceDSLErrorf(err, "register forms")
 	}
 	return nil
 }
@@ -42,7 +40,7 @@ func Lower(hir *compiler.HIR) (*Stack, error) {
 		}
 	}
 	if stack.Name == "" {
-		return nil, errors.New("servicedsl: stack form is required")
+		return nil, serviceDSLErrorf("stack form is required")
 	}
 	return stack, nil
 }
@@ -55,7 +53,7 @@ func applyRootForm(stack *Stack, form compiler.HIRForm) error {
 			return err
 		}
 		if stack.Name != "" {
-			return errors.New("servicedsl: only one stack form is allowed")
+			return serviceDSLErrorf("only one stack form is allowed")
 		}
 		stack.Name = name
 	case "service":
@@ -118,7 +116,7 @@ func serviceForms() list.List[schema.FormSpec] {
 
 func lowerService(form compiler.HIRForm) (Service, error) {
 	if form.Symbol == nil {
-		return Service{}, errors.New("servicedsl: service form requires symbol label")
+		return Service{}, serviceDSLErrorf("service form requires symbol label")
 	}
 	image, err := requiredStringField(form, "image")
 	if err != nil {
@@ -126,11 +124,11 @@ func lowerService(form compiler.HIRForm) (Service, error) {
 	}
 	portValue, ok := form.Field("port")
 	if !ok {
-		return Service{}, errors.New("servicedsl: service.port is required")
+		return Service{}, serviceDSLErrorf("service.port is required")
 	}
 	port, ok := portValue.Value.(int64)
 	if !ok {
-		return Service{}, errors.New("servicedsl: service.port must be int")
+		return Service{}, serviceDSLErrorf("service.port must be int")
 	}
 	dependsField, _ := form.Field("depends_on")
 	dependsOn, err := refNames(dependsField.Value, "service")
@@ -154,11 +152,11 @@ func lowerService(form compiler.HIRForm) (Service, error) {
 func requiredStringField(form compiler.HIRForm, name string) (string, error) {
 	field, ok := form.Field(name)
 	if !ok {
-		return "", fmt.Errorf("servicedsl: %s.%s is required", form.Kind, name)
+		return "", serviceDSLErrorf("%s.%s is required", form.Kind, name)
 	}
 	value, ok := field.Value.(string)
 	if !ok {
-		return "", fmt.Errorf("servicedsl: %s.%s must be string", form.Kind, name)
+		return "", serviceDSLErrorf("%s.%s must be string", form.Kind, name)
 	}
 	return value, nil
 }
@@ -166,16 +164,16 @@ func requiredStringField(form compiler.HIRForm, name string) (string, error) {
 func refNames(value any, kind string) (list.List[string], error) {
 	items, ok := value.([]any)
 	if !ok {
-		return list.List[string]{}, fmt.Errorf("servicedsl: expected list of refs, got %T", value)
+		return list.List[string]{}, serviceDSLErrorf("expected list of refs, got %T", value)
 	}
 	names := make([]string, 0, len(items))
 	for _, item := range items {
 		ref, ok := item.(schema.Ref)
 		if !ok {
-			return list.List[string]{}, fmt.Errorf("servicedsl: expected ref<%s>, got %T", kind, item)
+			return list.List[string]{}, serviceDSLErrorf("expected ref<%s>, got %T", kind, item)
 		}
 		if ref.Kind != kind {
-			return list.List[string]{}, fmt.Errorf("servicedsl: expected ref<%s>, got ref<%s>", kind, ref.Kind)
+			return list.List[string]{}, serviceDSLErrorf("expected ref<%s>, got ref<%s>", kind, ref.Kind)
 		}
 		names = append(names, ref.Name)
 	}
@@ -194,7 +192,7 @@ func stringMap(value any) (mapping.OrderedMap[string, string], error) {
 			return mapping.OrderedMap[string, string]{}, err
 		}
 	default:
-		return mapping.OrderedMap[string, string]{}, fmt.Errorf("servicedsl: expected string map, got %T", value)
+		return mapping.OrderedMap[string, string]{}, serviceDSLErrorf("expected string map, got %T", value)
 	}
 	return *out, nil
 }
@@ -228,7 +226,7 @@ func copyBuiltinStringMap(out *mapping.OrderedMap[string, string], items map[str
 func stringValue(item any) (string, error) {
 	text, ok := item.(string)
 	if !ok {
-		return "", fmt.Errorf("servicedsl: expected env string value, got %T", item)
+		return "", serviceDSLErrorf("expected env string value, got %T", item)
 	}
 	return text, nil
 }

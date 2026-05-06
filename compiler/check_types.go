@@ -1,8 +1,6 @@
 package compiler
 
 import (
-	"fmt"
-
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/schema"
 	"github.com/samber/lo"
@@ -175,7 +173,7 @@ func isStringCompatible(left, right schema.BuiltinType) bool {
 }
 
 func typeMismatchError(label string, want, actual schema.Type) error {
-	return fmt.Errorf("%s expects %s, got %s", label, normalizeType(want).String(), normalizeType(actual).String())
+	return compilerErrorf("%s expects %s, got %s", label, normalizeType(want).String(), normalizeType(actual).String())
 }
 
 func isStringType(typ schema.Type) bool {

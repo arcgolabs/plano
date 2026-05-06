@@ -1,0 +1,21 @@
+const public_services: list<string> = ["api"]
+
+stack {
+  name = "membership"
+}
+
+service api {
+  image = "ghcr.io/acme/api:stable"
+  port = "api" in public_services ? 8080 : 18080
+  env = {
+    VISIBILITY = "api" in public_services ? "public" : "private",
+  }
+}
+
+service worker {
+  image = "ghcr.io/acme/worker:stable"
+  port = "worker" in public_services ? 8081 : 18081
+  env = {
+    VISIBILITY = "worker" in public_services ? "public" : "private",
+  }
+}

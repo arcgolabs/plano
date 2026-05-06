@@ -109,6 +109,9 @@ func (c *checker) checkBinaryExpr(expr *ast.BinaryExpr, scope *checkScope) schem
 	if isLogicalOp(expr.Op) {
 		return c.checkLogicalOp(expr, left, right)
 	}
+	if isMembershipOp(expr.Op) {
+		return c.checkMembershipOp(expr, left, right)
+	}
 	if isComparisonOp(expr.Op) {
 		return c.checkComparisonOp(expr, left, right)
 	}

@@ -1,8 +1,6 @@
 package compiler
 
 import (
-	"fmt"
-
 	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/schema"
@@ -40,7 +38,7 @@ func (t ArtifactType) Type() (schema.Type, error) {
 	case "named":
 		return schema.NamedType{Name: t.Name}, nil
 	default:
-		return nil, fmt.Errorf("artifact type: unknown %q", t.Kind)
+		return nil, compilerErrorf("artifact type: unknown %q", t.Kind)
 	}
 }
 
@@ -148,7 +146,7 @@ func (v ArtifactValue) Value() (any, error) {
 	case "map":
 		return decodeArtifactAnyMap(v.Fields)
 	default:
-		return nil, fmt.Errorf("artifact value: unknown %q", v.Kind)
+		return nil, compilerErrorf("artifact value: unknown %q", v.Kind)
 	}
 }
 

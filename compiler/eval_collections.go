@@ -1,7 +1,6 @@
 package compiler
 
 import (
-	"errors"
 	"reflect"
 
 	"github.com/arcgolabs/collectionx/mapping"
@@ -17,7 +16,7 @@ func evalGet(args []any) (any, error) {
 	case map[string]any:
 		return evalGetFromBuiltinMap(current, args[1:])
 	default:
-		return nil, errors.New("get expects list or map")
+		return nil, compilerErrorf("get expects list or map")
 	}
 }
 
@@ -45,19 +44,19 @@ func evalHas(args []any) (any, error) {
 	case *mapping.OrderedMap[string, any]:
 		key, err := stringKey(args[1])
 		if err != nil {
-			return nil, errors.New("has expects string key for map")
+			return nil, compilerErrorf("has expects string key for map")
 		}
 		_, ok := current.Get(key)
 		return ok, nil
 	case map[string]any:
 		key, err := stringKey(args[1])
 		if err != nil {
-			return nil, errors.New("has expects string key for map")
+			return nil, compilerErrorf("has expects string key for map")
 		}
 		_, ok := current[key]
 		return ok, nil
 	default:
-		return nil, errors.New("has expects list or map")
+		return nil, compilerErrorf("has expects list or map")
 	}
 }
 
@@ -78,7 +77,7 @@ func evalGetFromList(items, args []any) (any, error) {
 func evalGetFromOrderedMap(items *mapping.OrderedMap[string, any], args []any) (any, error) {
 	key, err := stringKey(args[0])
 	if err != nil {
-		return nil, errors.New("get expects string key for map")
+		return nil, compilerErrorf("get expects string key for map")
 	}
 	if value, ok := items.Get(key); ok {
 		return value, nil
@@ -92,7 +91,7 @@ func evalGetFromOrderedMap(items *mapping.OrderedMap[string, any], args []any) (
 func evalGetFromBuiltinMap(items map[string]any, args []any) (any, error) {
 	key, err := stringKey(args[0])
 	if err != nil {
-		return nil, errors.New("get expects string key for map")
+		return nil, compilerErrorf("get expects string key for map")
 	}
 	if value, ok := items[key]; ok {
 		return value, nil
@@ -147,7 +146,7 @@ func evalMerge(args []any) (any, error) {
 func asList(value any, name string) ([]any, error) {
 	items, ok := value.([]any)
 	if !ok {
-		return nil, errors.New(name + " expects list arguments")
+		return nil, compilerErrorf("%s expects list arguments", name)
 	}
 	return items, nil
 }
@@ -165,7 +164,7 @@ func sliceBounds(args []any, size int) (int, int, error) {
 		}
 	}
 	if start < 0 || end < start || end > size {
-		return 0, 0, errors.New("slice bounds are out of range")
+		return 0, 0, compilerErrorf("slice bounds are out of range")
 	}
 	return start, end, nil
 }
@@ -173,7 +172,7 @@ func sliceBounds(args []any, size int) (int, int, error) {
 func sliceIndexArg(value any, name string) (int, error) {
 	index, ok := value.(int64)
 	if !ok {
-		return 0, errors.New(name + " expects int index arguments")
+		return 0, compilerErrorf("%s expects int index arguments", name)
 	}
 	return int(index), nil
 }
@@ -185,6 +184,6 @@ func asOrderedMap(value any, name string) (*mapping.OrderedMap[string, any], err
 	case map[string]any:
 		return orderedAnyMap(current), nil
 	default:
-		return nil, errors.New(name + " expects map arguments")
+		return nil, compilerErrorf("%s expects map arguments", name)
 	}
 }

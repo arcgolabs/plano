@@ -1,0 +1,23 @@
+const enabled: list<string> = ["test", "package"]
+
+pipeline {
+  name = "membership"
+}
+
+stage test {
+  image = "golang:1.26"
+  needs = []
+
+  run {
+    exec("go", "test", "./...")
+  }
+}
+
+stage package {
+  image = "golang:1.26"
+  needs = "test" in enabled ? [test] : []
+
+  run {
+    exec("go", "build", "./cmd/plano")
+  }
+}

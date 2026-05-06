@@ -3,8 +3,6 @@
 package builddsl
 
 import (
-	"errors"
-
 	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/compiler"
@@ -45,7 +43,7 @@ func Lower(hir *compiler.HIR) (*Project, error) {
 		}
 	}
 	if project.Workspace.IsAbsent() {
-		return nil, errors.New("builddsl: workspace form is required")
+		return nil, buildDSLErrorf("workspace form is required")
 	}
 	return project, nil
 }
@@ -72,7 +70,7 @@ func applyWorkspaceForm(project *Project, form compiler.HIRForm) error {
 		return err
 	}
 	if project.Workspace.IsPresent() {
-		return errors.New("builddsl: only one workspace form is allowed")
+		return buildDSLErrorf("only one workspace form is allowed")
 	}
 	project.Workspace = mo.Some(workspace)
 	return nil
@@ -108,19 +106,19 @@ func applyGoBinaryForm(project *Project, form compiler.HIRForm) error {
 func lowerWorkspace(form compiler.HIRForm) (Workspace, error) {
 	nameValue, ok := form.Field("name")
 	if !ok {
-		return Workspace{}, errors.New("builddsl: workspace.name is required")
+		return Workspace{}, buildDSLErrorf("workspace.name is required")
 	}
 	name, ok := nameValue.Value.(string)
 	if !ok {
-		return Workspace{}, errors.New("builddsl: workspace.name must be string")
+		return Workspace{}, buildDSLErrorf("workspace.name must be string")
 	}
 	defaultValue, ok := form.Field("default")
 	if !ok {
-		return Workspace{}, errors.New("builddsl: workspace.default is required")
+		return Workspace{}, buildDSLErrorf("workspace.default is required")
 	}
 	defaultTask, ok := defaultValue.Value.(schema.Ref)
 	if !ok || defaultTask.Kind != "task" {
-		return Workspace{}, errors.New("builddsl: workspace.default must be ref<task>")
+		return Workspace{}, buildDSLErrorf("workspace.default must be ref<task>")
 	}
 	return Workspace{
 		Name:        name,
@@ -130,7 +128,7 @@ func lowerWorkspace(form compiler.HIRForm) (Workspace, error) {
 
 func lowerTask(form compiler.HIRForm) (Task, error) {
 	if form.Symbol == nil {
-		return Task{}, errors.New("builddsl: task form requires symbol label")
+		return Task{}, buildDSLErrorf("task form requires symbol label")
 	}
 
 	depsValue, _ := form.Field("deps")
@@ -158,7 +156,7 @@ func lowerTask(form compiler.HIRForm) (Task, error) {
 
 func lowerGoTestTask(form compiler.HIRForm) (Task, error) {
 	if form.Symbol == nil {
-		return Task{}, errors.New("builddsl: go.test form requires symbol label")
+		return Task{}, buildDSLErrorf("go.test form requires symbol label")
 	}
 	depsValue, _ := form.Field("deps")
 	deps, err := refNames(depsValue.Value, "task")
@@ -184,7 +182,7 @@ func lowerGoTestTask(form compiler.HIRForm) (Task, error) {
 
 func lowerGoBinaryTask(form compiler.HIRForm) (Task, error) {
 	if form.Symbol == nil {
-		return Task{}, errors.New("builddsl: go.binary form requires symbol label")
+		return Task{}, buildDSLErrorf("go.binary form requires symbol label")
 	}
 	depsValue, _ := form.Field("deps")
 	deps, err := refNames(depsValue.Value, "task")
@@ -193,19 +191,19 @@ func lowerGoBinaryTask(form compiler.HIRForm) (Task, error) {
 	}
 	mainValue, ok := form.Field("main")
 	if !ok {
-		return Task{}, errors.New("builddsl: go.binary.main must be string")
+		return Task{}, buildDSLErrorf("go.binary.main must be string")
 	}
 	mainPath, ok := mainValue.Value.(string)
 	if !ok {
-		return Task{}, errors.New("builddsl: go.binary.main must be string")
+		return Task{}, buildDSLErrorf("go.binary.main must be string")
 	}
 	outValue, ok := form.Field("out")
 	if !ok {
-		return Task{}, errors.New("builddsl: go.binary.out must be string")
+		return Task{}, buildDSLErrorf("go.binary.out must be string")
 	}
 	outPath, ok := outValue.Value.(string)
 	if !ok {
-		return Task{}, errors.New("builddsl: go.binary.out must be string")
+		return Task{}, buildDSLErrorf("go.binary.out must be string")
 	}
 	return Task{
 		Name:    form.Symbol.Name,

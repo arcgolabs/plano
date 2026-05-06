@@ -1,8 +1,6 @@
 package compiler
 
 import (
-	"fmt"
-
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/schema"
 )
@@ -60,14 +58,14 @@ func (e *env) Assign(name string, value any) error {
 			continue
 		}
 		if binding.kind == LocalConst {
-			return fmt.Errorf("cannot assign to const %q", name)
+			return compilerErrorf("cannot assign to const %q", name)
 		}
 		if err := schema.CheckAssignable(binding.typ, value); err != nil {
-			return fmt.Errorf("assignment %q: %w", name, err)
+			return wrapCompilerErrorf(err, "assignment %q", name)
 		}
 		binding.value = value
 		current.values.Set(name, binding)
 		return nil
 	}
-	return fmt.Errorf("undefined local binding %q", name)
+	return compilerErrorf("undefined local binding %q", name)
 }

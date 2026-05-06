@@ -3,7 +3,6 @@ package compiler
 import (
 	"crypto/sha256"
 	"errors"
-	"fmt"
 	"go/token"
 	"os"
 	"path/filepath"
@@ -146,12 +145,12 @@ func readSourceFile(path string) ([]byte, error) {
 	closeErr := root.Close()
 	if err != nil {
 		if closeErr != nil {
-			return nil, oops.Wrapf(errors.Join(err, closeErr), "read and close import file %q", path)
+			return nil, wrapCompilerErrorf(errors.Join(err, closeErr), "read and close import file %q", path)
 		}
-		return nil, fmt.Errorf("read %q: %w", path, err)
+		return nil, wrapCompilerErrorf(err, "read %q", path)
 	}
 	if closeErr != nil {
-		return nil, fmt.Errorf("close root for %q: %w", path, closeErr)
+		return nil, wrapCompilerErrorf(closeErr, "close root for %q", path)
 	}
 	return data, nil
 }
@@ -159,11 +158,11 @@ func readSourceFile(path string) ([]byte, error) {
 func openSourceRoot(path string) (*os.Root, string, error) {
 	abs, err := filepath.Abs(path)
 	if err != nil {
-		return nil, "", fmt.Errorf("resolve %q: %w", path, err)
+		return nil, "", wrapCompilerErrorf(err, "resolve %q", path)
 	}
 	root, err := os.OpenRoot(filepath.Dir(abs))
 	if err != nil {
-		return nil, "", fmt.Errorf("open root for %q: %w", path, err)
+		return nil, "", wrapCompilerErrorf(err, "open root for %q", path)
 	}
 	return root, filepath.Base(abs), nil
 }

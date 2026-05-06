@@ -446,7 +446,7 @@ AndExpr     = EqualityExpr { "&&" EqualityExpr }
 EqualityExpr
             = CompareExpr { ( "==" | "!=" ) CompareExpr }
 
-CompareExpr = AddExpr { ( ">" | ">=" | "<" | "<=" ) AddExpr }
+CompareExpr = AddExpr { ( ">" | ">=" | "<" | "<=" | "in" ) AddExpr }
 
 AddExpr     = MulExpr { ( "+" | "-" ) MulExpr }
 
@@ -493,6 +493,11 @@ ForStmt     = "for" [ Ident "," ] Ident "in" Expr [ "where" Expr ] Block
 
 `where` 表达式在循环作用域内求值，因此可以引用当前循环变量；它必须是 `bool`，为 `false` 时跳过本轮循环。
 
+`in` 成员表达式返回 `bool`：
+
+- `item in list` 判断 list 是否包含该元素
+- `key in map` 判断 map/object 是否包含该字符串 key
+
 示例：
 
 ```plano
@@ -510,6 +515,10 @@ env("GO_VERSION", "1.26.2")
 replicas > 1 && env("CI", "false") == "true"
 
 release ? "dist/plano" : "tmp/plano"
+
+"linux" in ["linux", "darwin"]
+
+"main" in { main = "cmd/plano" }
 ```
 
 ### 7.1 Expr-lang 桥接表达式

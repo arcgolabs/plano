@@ -1,9 +1,6 @@
 package compiler
 
-import (
-	"errors"
-	"fmt"
-)
+import "errors"
 
 var (
 	errNilArtifactReceiver  = errors.New("unmarshal artifact json: nil receiver")
@@ -17,7 +14,7 @@ var (
 )
 
 func errWrapArtifactJSON(message string, err error) error {
-	return fmt.Errorf("%s: %w", message, err)
+	return wrapCompilerErrorf(err, "%s", message)
 }
 
 func validateArtifactSchemaVersion(version string) error {
@@ -25,6 +22,6 @@ func validateArtifactSchemaVersion(version string) error {
 	case "", "plano.artifact/v1", ArtifactSchemaVersion:
 		return nil
 	default:
-		return fmt.Errorf("artifact schema version %q is not supported", version)
+		return compilerErrorf("artifact schema version %q is not supported", version)
 	}
 }

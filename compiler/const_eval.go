@@ -48,7 +48,7 @@ func validateConstValue(typeExpr ast.TypeExpr, value any) error {
 		return nil
 	}
 	if err := schema.CheckAssignable(typ, value); err != nil {
-		return fmt.Errorf("type check constant: %w", err)
+		return wrapCompilerErrorf(err, "type check constant")
 	}
 	return nil
 }

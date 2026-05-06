@@ -10,6 +10,7 @@ var precedenceByKind = [...]int{
 	lexer.AndAnd:  2,
 	lexer.Eq:      3,
 	lexer.NotEq:   3,
+	lexer.KwIn:    4,
 	lexer.GT:      4,
 	lexer.GTE:     4,
 	lexer.LT:      4,

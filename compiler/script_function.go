@@ -1,9 +1,6 @@
 package compiler
 
 import (
-	"errors"
-	"fmt"
-
 	"github.com/arcgolabs/plano/ast"
 	"github.com/arcgolabs/plano/schema"
 	"github.com/samber/mo"
@@ -11,7 +8,7 @@ import (
 
 func (s *compileState) callUserFunction(name string, decl *ast.FnDecl, args []any) (any, error) {
 	if len(args) != len(decl.Params) {
-		return nil, fmt.Errorf("function %q expects %d arguments", name, len(decl.Params))
+		return nil, compilerErrorf("function %q expects %d arguments", name, len(decl.Params))
 	}
 	locals, err := s.bindFunctionParams(name, decl, args)
 	if err != nil {
@@ -19,10 +16,10 @@ func (s *compileState) callUserFunction(name string, decl *ast.FnDecl, args []an
 	}
 	result, err := s.execFunctionBlock(decl.Body, locals)
 	if err != nil {
-		return nil, fmt.Errorf("function %q: %w", name, err)
+		return nil, wrapCompilerErrorf(err, "function %q", name)
 	}
 	if err := unexpectedLoopControlError(result); err != nil {
-		return nil, fmt.Errorf("function %q: %w", name, err)
+		return nil, wrapCompilerErrorf(err, "function %q", name)
 	}
 	if err := validateFunctionResult(name, decl.Result, result.Result()); err != nil {
 		return nil, err
@@ -54,7 +51,7 @@ func validateFunctionParam(name string, param *ast.Param, value any) error {
 		return nil
 	}
 	if err := schema.CheckAssignable(typ, value); err != nil {
-		return fmt.Errorf("function %q parameter %q: %w", name, param.Name.Name, err)
+		return wrapCompilerErrorf(err, "function %q parameter %q", name, param.Name.Name)
 	}
 	return nil
 }
@@ -64,14 +61,14 @@ func validateFunctionResult(name string, typeExpr ast.TypeExpr, result mo.Option
 		return nil
 	}
 	if result.IsAbsent() {
-		return fmt.Errorf("function %q must return a value", name)
+		return compilerErrorf("function %q must return a value", name)
 	}
 	typ := convertTypeExpr(typeExpr)
 	if typ == nil {
 		return nil
 	}
 	if err := schema.CheckAssignable(typ, result.MustGet()); err != nil {
-		return fmt.Errorf("function %q return type: %w", name, err)
+		return wrapCompilerErrorf(err, "function %q return type", name)
 	}
 	return nil
 }
@@ -147,7 +144,7 @@ func (s *compileState) execFunctionIf(stmt *ast.IfStmt, locals *env) (execSignal
 	}
 	cond, ok := value.(bool)
 	if !ok {
-		return noExecSignal(), true, errors.New("if condition must be bool")
+		return noExecSignal(), true, compilerErrorf("if condition must be bool")
 	}
 	branch := stmt.Else
 	if cond {
@@ -225,7 +222,7 @@ func (s *compileState) evalFunctionLoopFilter(stmt *ast.ForStmt, locals *env) (b
 	}
 	run, ok := value.(bool)
 	if !ok {
-		return false, errors.New("for where clause must be bool")
+		return false, compilerErrorf("for where clause must be bool")
 	}
 	return run, nil
 }
@@ -233,13 +230,13 @@ func (s *compileState) evalFunctionLoopFilter(stmt *ast.ForStmt, locals *env) (b
 func unsupportedFunctionItemError(item ast.FormItem) error {
 	switch current := item.(type) {
 	case *ast.ImportDecl:
-		return errors.New("import is not allowed in function bodies")
+		return compilerErrorf("import is not allowed in function bodies")
 	case *ast.FnDecl:
-		return errors.New("nested function declarations are not implemented")
+		return compilerErrorf("nested function declarations are not implemented")
 	case *ast.Assignment, *ast.CallStmt, *ast.FormDecl:
-		return fmt.Errorf("unsupported function body item %T", current)
+		return compilerErrorf("unsupported function body item %T", current)
 	default:
-		return fmt.Errorf("unsupported function body item %T", current)
+		return compilerErrorf("unsupported function body item %T", current)
 	}
 }
 

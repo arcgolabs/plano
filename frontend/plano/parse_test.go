@@ -92,6 +92,28 @@ const target: string = enabled ? "dist/demo" : "dist/fallback"
 	}
 }
 
+func TestParseMembershipExpr(t *testing.T) {
+	src := []byte(`
+const selected: bool = "cli" in ["unit", "cli"]
+`)
+
+	file, diags := plano.ParseFile(token.NewFileSet(), "membership.plano", src)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	decl, ok := file.Statements[0].(*ast.ConstDecl)
+	if !ok {
+		t.Fatalf("stmt = %T, want *ast.ConstDecl", file.Statements[0])
+	}
+	expr, ok := decl.Value.(*ast.BinaryExpr)
+	if !ok {
+		t.Fatalf("value = %T, want *ast.BinaryExpr", decl.Value)
+	}
+	if expr.Op != "in" {
+		t.Fatalf("op = %q, want in", expr.Op)
+	}
+}
+
 func assertParsedIndexedLoop(t *testing.T, task *ast.FormDecl) {
 	t.Helper()
 	loop, ok := task.Body.Items[0].(*ast.ForStmt)

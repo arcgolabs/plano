@@ -2,7 +2,6 @@ package main
 
 import (
 	"embed"
-	"fmt"
 	"io/fs"
 	"path/filepath"
 	"strings"
@@ -50,6 +49,11 @@ func availableExamples() list.List[exampleSpec] {
 			path:        "samples/conditional.plano",
 		},
 		exampleSpec{
+			name:        "membership",
+			description: "Schema-free snippet using membership expressions",
+			path:        "samples/membership.plano",
+		},
+		exampleSpec{
 			name:        "pipeline",
 			description: "CI pipeline snippet with stages and dependencies",
 			path:        "samples/pipeline.plano",
@@ -79,11 +83,11 @@ func exampleViews() *list.List[exampleView] {
 func exampleFile(name string) (exampleFileView, error) {
 	spec, ok := exampleByName(name)
 	if !ok {
-		return exampleFileView{}, fmt.Errorf("unknown sample %q", name)
+		return exampleFileView{}, cliErrorf("unknown sample %q", name)
 	}
 	data, err := fs.ReadFile(embeddedSamples, spec.path)
 	if err != nil {
-		return exampleFileView{}, fmt.Errorf("read embedded sample %q: %w", name, err)
+		return exampleFileView{}, wrapCLIErrorf(err, "read embedded sample %q", name)
 	}
 	return exampleFileView{
 		Name:        spec.name,

@@ -4,7 +4,7 @@
 
 Current baseline:
 
-- release: `v0.6.0`
+- release: `v0.7.0`
 - public API generation: `v1`
 - artifact schema: `plano.artifact/v2`
 
@@ -19,7 +19,7 @@ This repository currently contains a first usable implementation with:
 - a public check API for static type analysis
 - a public HIR phase for typed compiler-internal lowering input
 - a compiler that produces a typed document
-- script-body execution with lexical scope, filtered loops, conditional expressions, and user-defined functions
+- script-body execution with lexical scope, filtered loops, conditional expressions, membership expressions, and user-defined functions
 - script control flow with `else if`, `break`, and `continue`
 - expr-lang backed expression evaluation with host-registered variables and functions
 - bounded parse and expr-lang program caches for repeated compile requests
@@ -243,12 +243,13 @@ The implementation is still narrower than the full language draft, but the main 
 - builtins such as `len`, `keys`, `values`, `range`, `get`, `slice`, `has`, `append`, `concat`, and `merge`
 - expr-lang backed `expr(...)` and `expr_eval(...)` calls with host-registered variables and functions
 - conditional expressions with `condition ? then : else`
+- membership expressions with `item in list` and `key in map`
 - LSP completion and hover for expr-lang host variables and functions inside `expr(...)` strings
 - static typechecking for expressions, fields, returns, and registered function/action signatures
 - validated call statements through host-registered actions
 - typed HIR output for stable lowering
 - form declarations
-- script-body execution with `let`, local reassignment, `if`, `else if`, single- and dual-variable `for`, `for ... where`, conditional expressions, `break`, and `continue`
+- script-body execution with `let`, local reassignment, `if`, `else if`, single- and dual-variable `for`, `for ... where`, conditional expressions, membership expressions, `break`, and `continue`
 - field assignments, nested forms, and call statements
 - expression evaluation with registered and user-defined functions
 - lowering from HIR to sample IRs through documentation example modules under `examples/`

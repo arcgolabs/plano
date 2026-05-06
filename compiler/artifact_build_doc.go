@@ -1,7 +1,6 @@
 package compiler
 
 import (
-	"fmt"
 	"go/token"
 
 	"github.com/arcgolabs/collectionx/list"
@@ -237,5 +236,5 @@ func encodeArtifactMapToOrdered[V any, W any](items *mapping.OrderedMap[string, 
 }
 
 func artifactUnknownValueError(value any) error {
-	return fmt.Errorf("artifact value: unsupported %T", value)
+	return compilerErrorf("artifact value: unsupported %T", value)
 }

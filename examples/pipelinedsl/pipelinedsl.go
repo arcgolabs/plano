@@ -2,9 +2,6 @@
 package pipelinedsl
 
 import (
-	"errors"
-	"fmt"
-
 	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/compiler"
@@ -31,10 +28,10 @@ type Command struct {
 
 func Register(c *compiler.Compiler) error {
 	if err := c.RegisterForms(pipelineForms()); err != nil {
-		return fmt.Errorf("register pipelinedsl forms: %w", err)
+		return wrapPipelineDSLErrorf(err, "register forms")
 	}
 	if err := c.RegisterActions(pipelineActions()); err != nil {
-		return fmt.Errorf("register pipelinedsl actions: %w", err)
+		return wrapPipelineDSLErrorf(err, "register actions")
 	}
 	return nil
 }
@@ -48,7 +45,7 @@ func Lower(hir *compiler.HIR) (*Pipeline, error) {
 		}
 	}
 	if project.Name == "" {
-		return nil, errors.New("pipelinedsl: pipeline form is required")
+		return nil, pipelineDSLErrorf("pipeline form is required")
 	}
 	return project, nil
 }
@@ -61,7 +58,7 @@ func applyRootForm(project *Pipeline, form compiler.HIRForm) error {
 			return err
 		}
 		if project.Name != "" {
-			return errors.New("pipelinedsl: only one pipeline form is allowed")
+			return pipelineDSLErrorf("only one pipeline form is allowed")
 		}
 		project.Name = name
 	case "stage":
@@ -139,7 +136,7 @@ func pipelineActions() list.List[compiler.ActionSpec] {
 
 func lowerStage(form compiler.HIRForm) (Stage, error) {
 	if form.Symbol == nil {
-		return Stage{}, errors.New("pipelinedsl: stage form requires symbol label")
+		return Stage{}, pipelineDSLErrorf("stage form requires symbol label")
 	}
 	needsField, _ := form.Field("needs")
 	needs, err := refNames(needsField.Value, "stage")
@@ -165,11 +162,11 @@ func lowerStage(form compiler.HIRForm) (Stage, error) {
 func requiredStringField(form compiler.HIRForm, name string) (string, error) {
 	field, ok := form.Field(name)
 	if !ok {
-		return "", fmt.Errorf("pipelinedsl: %s.%s is required", form.Kind, name)
+		return "", pipelineDSLErrorf("%s.%s is required", form.Kind, name)
 	}
 	value, ok := field.Value.(string)
 	if !ok {
-		return "", fmt.Errorf("pipelinedsl: %s.%s must be string", form.Kind, name)
+		return "", pipelineDSLErrorf("%s.%s must be string", form.Kind, name)
 	}
 	return value, nil
 }
@@ -213,16 +210,16 @@ func callsToCommands(calls list.List[compiler.HIRCall]) (list.List[Command], err
 func refNames(value any, kind string) (list.List[string], error) {
 	items, ok := value.([]any)
 	if !ok {
-		return list.List[string]{}, fmt.Errorf("pipelinedsl: expected list of refs, got %T", value)
+		return list.List[string]{}, pipelineDSLErrorf("expected list of refs, got %T", value)
 	}
 	names := make([]string, 0, len(items))
 	for _, item := range items {
 		ref, ok := item.(schema.Ref)
 		if !ok {
-			return list.List[string]{}, fmt.Errorf("pipelinedsl: expected ref<%s>, got %T", kind, item)
+			return list.List[string]{}, pipelineDSLErrorf("expected ref<%s>, got %T", kind, item)
 		}
 		if ref.Kind != kind {
-			return list.List[string]{}, fmt.Errorf("pipelinedsl: expected ref<%s>, got ref<%s>", kind, ref.Kind)
+			return list.List[string]{}, pipelineDSLErrorf("expected ref<%s>, got ref<%s>", kind, ref.Kind)
 		}
 		names = append(names, ref.Name)
 	}
@@ -232,13 +229,13 @@ func refNames(value any, kind string) (list.List[string], error) {
 func stringList(value any) (list.List[string], error) {
 	items, ok := value.([]any)
 	if !ok {
-		return list.List[string]{}, fmt.Errorf("pipelinedsl: expected list of strings, got %T", value)
+		return list.List[string]{}, pipelineDSLErrorf("expected list of strings, got %T", value)
 	}
 	values := make([]string, 0, len(items))
 	for _, item := range items {
 		text, ok := item.(string)
 		if !ok {
-			return list.List[string]{}, fmt.Errorf("pipelinedsl: expected string, got %T", item)
+			return list.List[string]{}, pipelineDSLErrorf("expected string, got %T", item)
 		}
 		values = append(values, text)
 	}
@@ -249,7 +246,7 @@ func validateStringArgs(name string) func(args list.List[any]) error {
 	return func(args list.List[any]) error {
 		for _, arg := range args.Values() {
 			if _, ok := arg.(string); !ok {
-				return fmt.Errorf("pipelinedsl: action %q expects string arguments, got %T", name, arg)
+				return pipelineDSLErrorf("action %q expects string arguments, got %T", name, arg)
 			}
 		}
 		return nil

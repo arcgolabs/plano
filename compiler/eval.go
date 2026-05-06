@@ -1,8 +1,6 @@
 package compiler
 
 import (
-	"errors"
-	"fmt"
 	"path/filepath"
 	"slices"
 
@@ -16,7 +14,7 @@ func (c *Compiler) registerBuiltins() {
 	c.mustRegisterFunc(builtinFunction("env", "Read an environment variable with an optional fallback string.", 1, 2, schema.Types(schema.TypeString, schema.TypeString), nil, schema.TypeString, func(args []any) (any, error) {
 		key, ok := args[0].(string)
 		if !ok {
-			return nil, errors.New("env expects string key")
+			return nil, compilerErrorf("env expects string key")
 		}
 		if value, ok := c.lookupEnv(key); ok {
 			return value, nil
@@ -25,7 +23,7 @@ func (c *Compiler) registerBuiltins() {
 			if fallback, ok := args[1].(string); ok {
 				return fallback, nil
 			}
-			return nil, errors.New("env fallback expects string")
+			return nil, compilerErrorf("env fallback expects string")
 		}
 		return "", nil
 	}))
@@ -48,7 +46,7 @@ func (c *Compiler) registerBuiltins() {
 
 func (c *Compiler) mustRegisterFunc(spec schema.FunctionSpec) {
 	if err := c.RegisterFunc(spec); err != nil {
-		panic(fmt.Errorf("register builtin function %q: %w", spec.Name, err))
+		panic(wrapCompilerErrorf(err, "register builtin function %q", spec.Name))
 	}
 }
 
@@ -81,7 +79,7 @@ func evalJoinPath(args []any) (any, error) {
 	for _, arg := range args {
 		text, ok := arg.(string)
 		if !ok {
-			return nil, errors.New("join_path expects string arguments")
+			return nil, compilerErrorf("join_path expects string arguments")
 		}
 		parts = append(parts, text)
 	}
@@ -91,7 +89,7 @@ func evalJoinPath(args []any) (any, error) {
 func evalBaseName(args []any) (any, error) {
 	path, ok := args[0].(string)
 	if !ok {
-		return nil, errors.New("basename expects string argument")
+		return nil, compilerErrorf("basename expects string argument")
 	}
 	return filepath.Base(path), nil
 }
@@ -99,7 +97,7 @@ func evalBaseName(args []any) (any, error) {
 func evalDirName(args []any) (any, error) {
 	path, ok := args[0].(string)
 	if !ok {
-		return nil, errors.New("dirname expects string argument")
+		return nil, compilerErrorf("dirname expects string argument")
 	}
 	return filepath.Dir(path), nil
 }
@@ -115,7 +113,7 @@ func evalLen(args []any) (any, error) {
 	case map[string]any:
 		return int64(len(current)), nil
 	default:
-		return nil, errors.New("len expects string, list, or map")
+		return nil, compilerErrorf("len expects string, list, or map")
 	}
 }
 
@@ -126,7 +124,7 @@ func evalKeys(args []any) (any, error) {
 	case map[string]any:
 		return stringSliceAsAny(sortedStringKeys(current)), nil
 	default:
-		return nil, errors.New("keys expects map argument")
+		return nil, compilerErrorf("keys expects map argument")
 	}
 }
 
@@ -137,7 +135,7 @@ func evalValues(args []any) (any, error) {
 	case map[string]any:
 		return slices.Clone(orderedAnyMap(current).Values()), nil
 	default:
-		return nil, errors.New("values expects map argument")
+		return nil, compilerErrorf("values expects map argument")
 	}
 }
 
@@ -147,7 +145,7 @@ func evalRange(args []any) (any, error) {
 		return nil, err
 	}
 	if step == 0 {
-		return nil, errors.New("range step must not be zero")
+		return nil, compilerErrorf("range step must not be zero")
 	}
 	return buildRange(start, end, step), nil
 }
@@ -160,7 +158,7 @@ func stringSliceAsAny(items []string) []any {
 
 func parseRangeArgs(args []any) (int64, int64, int64, error) {
 	if len(args) == 0 {
-		return 0, 0, 0, errors.New("range expects int arguments")
+		return 0, 0, 0, compilerErrorf("range expects int arguments")
 	}
 	end, err := rangeIntArg(args[0])
 	if err != nil {
@@ -190,7 +188,7 @@ func parseRangeArgs(args []any) (int64, int64, int64, error) {
 func rangeIntArg(value any) (int64, error) {
 	result, ok := value.(int64)
 	if !ok {
-		return 0, errors.New("range expects int arguments")
+		return 0, compilerErrorf("range expects int arguments")
 	}
 	return result, nil
 }
@@ -210,5 +208,5 @@ func buildRange(start, end, step int64) []any {
 }
 
 func evalExprPlaceholder([]any) (any, error) {
-	return nil, errors.New("expr evaluation requires compiler runtime context")
+	return nil, compilerErrorf("expr evaluation requires compiler runtime context")
 }

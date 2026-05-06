@@ -1,9 +1,6 @@
 package compiler
 
 import (
-	"errors"
-	"fmt"
-
 	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/collectionx/mapping"
 )
@@ -38,7 +35,7 @@ func (c *Compiler) ExprFunctionSpecs() *mapping.OrderedMap[string, ExprFunctionS
 
 func (c *Compiler) RegisterExprVar(name string, value any) error {
 	if name == "" {
-		return errors.New("expr variable name cannot be empty")
+		return compilerErrorf("expr variable name cannot be empty")
 	}
 	c.exprVars.Set(name, value)
 	c.clearExprCache()
@@ -55,10 +52,10 @@ func (c *Compiler) RegisterExprFunc(name string, fn func(params ...any) (any, er
 
 func (c *Compiler) RegisterExprFunction(spec ExprFunctionSpec) error {
 	if spec.Name == "" {
-		return errors.New("expr function name cannot be empty")
+		return compilerErrorf("expr function name cannot be empty")
 	}
 	if spec.Fn == nil {
-		return fmt.Errorf("expr function %q has nil evaluator", spec.Name)
+		return compilerErrorf("expr function %q has nil evaluator", spec.Name)
 	}
 	c.exprFuncs.Set(spec.Name, spec)
 	c.exprFuncSignature = ""

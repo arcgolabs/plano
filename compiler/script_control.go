@@ -1,7 +1,6 @@
 package compiler
 
 import (
-	"errors"
 	"go/token"
 
 	"github.com/samber/mo"
@@ -65,9 +64,9 @@ func (s execSignal) Result() mo.Option[any] {
 func unexpectedLoopControlError(signal execSignal) error {
 	switch {
 	case signal.IsBreak():
-		return errors.New("break is only allowed inside loops")
+		return compilerErrorf("break is only allowed inside loops")
 	case signal.IsContinue():
-		return errors.New("continue is only allowed inside loops")
+		return compilerErrorf("continue is only allowed inside loops")
 	default:
 		return nil
 	}

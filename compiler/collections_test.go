@@ -11,7 +11,7 @@ func TestCompileCollectionBuiltinsAndIndexedLoops(t *testing.T) {
 	src := []byte(`
 fn packages(): list<string> {
   let base = append(["./..."], "./cmd/...")
-  if has(merge({unit = "./..."}, {cli = "./cmd/..."}), "cli") {
+  if "cli" in merge({unit = "./..."}, {cli = "./cmd/..."}) {
     base = concat(base, ["./internal/..."])
   }
   return base
@@ -25,7 +25,7 @@ task build {
   outputs = values(outputs_map)
 
   for idx, pkg in packages() where idx != 1 {
-    if has(["./internal/..."], pkg) {
+    if pkg in ["./internal/..."] {
       break
     }
     run {
@@ -92,4 +92,25 @@ task build {
 		"two",
 		"three",
 	})
+}
+
+func TestCompileRejectsInvalidMembershipExpressions(t *testing.T) {
+	c := newTestCompiler(t)
+	src := []byte(`
+task build {
+  if 1 in {name = "demo"} {
+    outputs = ["wrong"]
+  }
+  if "demo" in "demo" {
+    outputs = ["wrong"]
+  }
+}
+`)
+
+	_, diags := c.CompileSource(context.Background(), "membership.plano", src)
+	if !diags.HasError() {
+		t.Fatal("expected diagnostics")
+	}
+	assertContainsDiagnostic(t, diags, "operator in map key expects string, got int")
+	assertContainsDiagnostic(t, diags, "operator in expects list or map")
 }

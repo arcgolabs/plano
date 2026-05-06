@@ -2,8 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"go/token"
 	"io"
 
@@ -68,7 +66,7 @@ func writeValue(w io.Writer, value any, format outputFormat) error {
 	case formatText:
 		return writeText(w, value)
 	default:
-		return fmt.Errorf("unsupported format %q", format)
+		return cliErrorf("unsupported format %q", format)
 	}
 }
 
@@ -76,7 +74,7 @@ func writeJSON(w io.Writer, value any) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	if err := enc.Encode(value); err != nil {
-		return fmt.Errorf("encode json: %w", err)
+		return wrapCLIErrorf(err, "encode json")
 	}
 	return nil
 }
@@ -88,7 +86,7 @@ func writeYAML(w io.Writer, value any) error {
 	}
 	data, err := yaml.Marshal(normalized)
 	if err != nil {
-		return fmt.Errorf("encode yaml: %w", err)
+		return wrapCLIErrorf(err, "encode yaml")
 	}
 	if err := writeBytes(w, data); err != nil {
 		return err
@@ -102,7 +100,7 @@ func writeYAML(w io.Writer, value any) error {
 func writeText(w io.Writer, value any) error {
 	text, ok := value.(string)
 	if !ok {
-		return fmt.Errorf("text output requires string value, got %T", value)
+		return cliErrorf("text output requires string value, got %T", value)
 	}
 	return writeString(w, text+"\n")
 }
@@ -110,11 +108,11 @@ func writeText(w io.Writer, value any) error {
 func normalizeForYAML(value any) (any, error) {
 	data, err := json.Marshal(value)
 	if err != nil {
-		return nil, fmt.Errorf("normalize yaml via json marshal: %w", err)
+		return nil, wrapCLIErrorf(err, "normalize yaml via json marshal")
 	}
 	var normalized any
 	if err := json.Unmarshal(data, &normalized); err != nil {
-		return nil, fmt.Errorf("normalize yaml via json unmarshal: %w", err)
+		return nil, wrapCLIErrorf(err, "normalize yaml via json unmarshal")
 	}
 	return normalized, nil
 }
@@ -143,7 +141,7 @@ func printDiagnostics(w io.Writer, fset *token.FileSet, diags diag.Diagnostics) 
 			return err
 		}
 	}
-	return errors.New("compilation failed")
+	return cliErrorf("compilation failed")
 }
 
 func diagnosticsToView(fset *token.FileSet, items diag.Diagnostics) *list.List[diagnosticView] {

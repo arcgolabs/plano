@@ -1,8 +1,6 @@
 package compiler
 
 import (
-	"fmt"
-
 	"github.com/arcgolabs/collectionx/mapping"
 )
 
@@ -43,6 +41,6 @@ func iterateItems(value any) ([]iterItem, error) {
 		}
 		return items, nil
 	default:
-		return nil, fmt.Errorf("for loop expects list or map, got %T", value)
+		return nil, compilerErrorf("for loop expects list or map, got %T", value)
 	}
 }

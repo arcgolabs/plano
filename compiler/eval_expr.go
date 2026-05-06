@@ -1,9 +1,6 @@
 package compiler
 
 import (
-	"errors"
-	"fmt"
-
 	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/collectionx/mapping"
 	"github.com/arcgolabs/plano/ast"
@@ -54,7 +51,7 @@ func evalScalarLiteral(expr ast.Expr) (any, bool) {
 func parseMeasuredLiteral[T any](raw string, parse func(string) (T, error), label string) (any, bool, error) {
 	value, err := parse(raw)
 	if err != nil {
-		return nil, true, fmt.Errorf("parse %s %q: %w", label, raw, err)
+		return nil, true, wrapCompilerErrorf(err, "parse %s %q", label, raw)
 	}
 	return value, true, nil
 }
@@ -101,7 +98,7 @@ func (s *compileState) evalCompoundExpr(expr ast.Expr, locals *env) (any, error)
 	case *ast.CallExpr:
 		return s.evalCallExpr(node, locals)
 	default:
-		return nil, fmt.Errorf("unsupported expression %T", expr)
+		return nil, compilerErrorf("unsupported expression %T", expr)
 	}
 }
 
@@ -148,7 +145,7 @@ func (s *compileState) evalConditionalExpr(node *ast.ConditionalExpr, locals *en
 	}
 	condition, ok := value.(bool)
 	if !ok {
-		return nil, fmt.Errorf("conditional condition must be bool, got %T", value)
+		return nil, compilerErrorf("conditional condition must be bool, got %T", value)
 	}
 	if condition {
 		return s.evalExpr(node.Then, locals)
@@ -165,17 +162,17 @@ func (s *compileState) evalSelectorExpr(node *ast.SelectorExpr, locals *env) (an
 	case *mapping.OrderedMap[string, any]:
 		value, ok := object.Get(node.Sel.Name)
 		if !ok {
-			return nil, fmt.Errorf("unknown field %q", node.Sel.Name)
+			return nil, compilerErrorf("unknown field %q", node.Sel.Name)
 		}
 		return value, nil
 	case map[string]any:
 		value, ok := object[node.Sel.Name]
 		if !ok {
-			return nil, fmt.Errorf("unknown field %q", node.Sel.Name)
+			return nil, compilerErrorf("unknown field %q", node.Sel.Name)
 		}
 		return value, nil
 	default:
-		return nil, fmt.Errorf("selector requires object, got %T", base)
+		return nil, compilerErrorf("selector requires object, got %T", base)
 	}
 }
 
@@ -194,7 +191,7 @@ func (s *compileState) evalIndexParts(node *ast.IndexExpr, locals *env) (any, an
 func (s *compileState) evalCallExpr(node *ast.CallExpr, locals *env) (any, error) {
 	name, ok := callName(node.Fun)
 	if !ok {
-		return nil, errors.New("unsupported call target")
+		return nil, compilerErrorf("unsupported call target")
 	}
 	args, err := s.evalCallArgs(node.Args, locals)
 	if err != nil {
@@ -206,7 +203,7 @@ func (s *compileState) evalCallExpr(node *ast.CallExpr, locals *env) (any, error
 	if decl, ok := s.funcDecls.Get(name); ok {
 		return s.callUserFunction(name, decl, args)
 	}
-	return nil, fmt.Errorf("unknown function %q", name)
+	return nil, compilerErrorf("unknown function %q", name)
 }
 
 func (s *compileState) evalRegisteredFunctionCall(
@@ -220,13 +217,13 @@ func (s *compileState) evalRegisteredFunctionCall(
 	}
 	if value, handled, err := s.evalExprLangCall(name, args, locals); handled {
 		if err != nil {
-			return nil, fmt.Errorf("evaluate function %q: %w", name, err)
+			return nil, wrapCompilerErrorf(err, "evaluate function %q", name)
 		}
 		return value, nil
 	}
 	value, err := spec.Eval(*list.NewList(args...))
 	if err != nil {
-		return nil, fmt.Errorf("evaluate function %q: %w", name, err)
+		return nil, wrapCompilerErrorf(err, "evaluate function %q", name)
 	}
 	return value, nil
 }
@@ -260,10 +257,10 @@ func (s *compileState) resolveName(name string, locals *env) (any, error) {
 		if ok {
 			return value, nil
 		}
-		return nil, fmt.Errorf("failed to resolve constant %q", name)
+		return nil, compilerErrorf("failed to resolve constant %q", name)
 	}
 	if symbol, ok := s.symbols.Get(name); ok {
 		return schema.Ref{Kind: symbol.Kind, Name: symbol.Name}, nil
 	}
-	return nil, fmt.Errorf("undefined symbol %q", name)
+	return nil, compilerErrorf("undefined symbol %q", name)
 }
