@@ -1,0 +1,13 @@
+const release: bool = true
+
+pipeline {
+  name = release ? "release" : "snapshot"
+}
+
+stage test {
+  image = release ? "golang:1.26" : "golang:tip"
+
+  run {
+    exec("go", "test", release ? "./..." : "./cmd/...")
+  }
+}

@@ -74,6 +74,24 @@ task build {
 	assertParsedElseIfChain(t, task)
 }
 
+func TestParseConditionalExpr(t *testing.T) {
+	src := []byte(`
+const target: string = enabled ? "dist/demo" : "dist/fallback"
+`)
+
+	file, diags := plano.ParseFile(token.NewFileSet(), "conditional.plano", src)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+	decl, ok := file.Statements[0].(*ast.ConstDecl)
+	if !ok {
+		t.Fatalf("stmt = %T, want *ast.ConstDecl", file.Statements[0])
+	}
+	if _, ok := decl.Value.(*ast.ConditionalExpr); !ok {
+		t.Fatalf("value = %T, want *ast.ConditionalExpr", decl.Value)
+	}
+}
+
 func assertParsedIndexedLoop(t *testing.T, task *ast.FormDecl) {
 	t.Helper()
 	loop, ok := task.Body.Items[0].(*ast.ForStmt)

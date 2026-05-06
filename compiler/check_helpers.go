@@ -153,6 +153,8 @@ func structuralExprKind(expr ast.Expr) (string, bool) {
 		return "unary", true
 	case *ast.BinaryExpr:
 		return "binary", true
+	case *ast.ConditionalExpr:
+		return "conditional", true
 	default:
 		return "", false
 	}

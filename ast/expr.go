@@ -72,6 +72,34 @@ func (n *BinaryExpr) End() token.Pos {
 }
 func (*BinaryExpr) exprNode() {}
 
+type ConditionalExpr struct {
+	Condition Expr
+	Question  token.Pos
+	Then      Expr
+	Colon     token.Pos
+	Else      Expr
+}
+
+func (n *ConditionalExpr) Pos() token.Pos {
+	if n.Condition != nil {
+		return n.Condition.Pos()
+	}
+	return n.Question
+}
+func (n *ConditionalExpr) End() token.Pos {
+	if n.Else != nil {
+		return n.Else.End()
+	}
+	if n.Then != nil {
+		return n.Then.End()
+	}
+	if n.Condition != nil {
+		return n.Condition.End()
+	}
+	return n.Question
+}
+func (*ConditionalExpr) exprNode() {}
+
 type SelectorExpr struct {
 	X   Expr
 	Dot token.Pos

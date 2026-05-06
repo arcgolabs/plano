@@ -63,7 +63,25 @@ func (p *Parser) parseRefType() ast.TypeExpr {
 }
 
 func (p *Parser) parseExpr() ast.Expr {
-	return p.parseBinaryExpr(1)
+	return p.parseConditionalExpr()
+}
+
+func (p *Parser) parseConditionalExpr() ast.Expr {
+	condition := p.parseBinaryExpr(1)
+	if p.cur.Kind != lexer.Question {
+		return condition
+	}
+	question := p.cur
+	p.advance()
+	thenExpr := p.parseExpr()
+	colon := p.expect(lexer.Colon, "expected :")
+	return &ast.ConditionalExpr{
+		Condition: condition,
+		Question:  question.Pos,
+		Then:      thenExpr,
+		Colon:     colon.Pos,
+		Else:      p.parseExpr(),
+	}
 }
 
 func (p *Parser) parseBinaryExpr(minPrec int) ast.Expr {
@@ -249,36 +267,4 @@ func (p *Parser) parseBadExpr() ast.Expr {
 			Finish: bad.End,
 		},
 	}
-}
-
-func (p *Parser) parseArrayExpr() ast.Expr {
-	lbrack := p.expect(lexer.LBracket, "expected [")
-	array := &ast.ArrayExpr{Lbrack: lbrack.Pos}
-	array.Elements = p.parseExprList(lexer.RBracket)
-	rbrack := p.expect(lexer.RBracket, "expected ]")
-	array.Rbrack = rbrack.End
-	return array
-}
-
-func (p *Parser) parseObjectExpr() ast.Expr {
-	lbrace := p.expect(lexer.LBrace, "expected {")
-	object := &ast.ObjectExpr{Lbrace: lbrace.Pos}
-	for p.cur.Kind != lexer.RBrace && p.cur.Kind != lexer.EOF {
-		key := p.parseIdent()
-		p.expect(lexer.Assign, "expected =")
-		object.Entries = append(object.Entries, &ast.ObjectEntry{
-			Key:   key,
-			Value: p.parseExpr(),
-		})
-		if p.cur.Kind != lexer.Comma {
-			break
-		}
-		p.advance()
-		if p.cur.Kind == lexer.RBrace {
-			break
-		}
-	}
-	rbrace := p.expect(lexer.RBrace, "expected }")
-	object.Rbrace = rbrace.End
-	return object
 }

@@ -24,6 +24,9 @@ func TestExamplesCommand(t *testing.T) {
 	if !strings.Contains(stdout.String(), `"path": "samples/build.plano"`) {
 		t.Fatalf("stdout = %s", stdout.String())
 	}
+	if !strings.Contains(stdout.String(), `"name": "conditional"`) {
+		t.Fatalf("stdout = %s", stdout.String())
+	}
 	if !strings.Contains(stdout.String(), `"name": "pipeline"`) {
 		t.Fatalf("stdout = %s", stdout.String())
 	}

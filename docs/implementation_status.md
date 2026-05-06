@@ -4,7 +4,7 @@ This document describes the current implementation in this repository relative t
 
 Compatibility baseline:
 
-- release: `v0.5.0`
+- release: `v0.6.0`
 - public API generation: `v1`
 - artifact schema: `plano.artifact/v2`
 
@@ -25,6 +25,7 @@ Compatibility baseline:
   - assignments
   - call statements
   - arrays, objects, unary/binary expressions, selectors, indexes, and function calls
+  - conditional expressions with `condition ? then : else`
 - AST model with source positions
 - Diagnostics model
 - Go workspace layout with separate core, CLI, and example modules
@@ -81,7 +82,7 @@ Compatibility baseline:
   - nested form validation
   - call-only form bodies with action registry validation
   - script-body execution with lexical scope
-  - `let`, local reassignment, `if`, `else if`, single- and dual-variable `for`, `for ... where`, `break`, and `continue` execution inside script bodies
+  - `let`, local reassignment, `if`, `else if`, single- and dual-variable `for`, `for ... where`, conditional expressions, `break`, and `continue` execution inside script bodies
   - user-defined function execution with typed parameters and returns
   - typed document output
   - serializable `compiler.Artifact` output with explicit schema versioning

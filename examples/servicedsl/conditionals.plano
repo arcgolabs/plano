@@ -1,0 +1,13 @@
+const release: bool = true
+
+stack {
+  name = release ? "prod" : "dev"
+}
+
+service api {
+  image = release ? "ghcr.io/acme/api:stable" : "ghcr.io/acme/api:dev"
+  port = release ? 8080 : 18080
+  env = {
+    LOG_LEVEL = release ? "info" : "debug",
+  }
+}

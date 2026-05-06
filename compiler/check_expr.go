@@ -139,6 +139,8 @@ func (c *checker) inferComputedExpr(expr ast.Expr, scope *checkScope) schema.Typ
 		return c.checkUnaryExpr(current, scope)
 	case *ast.BinaryExpr:
 		return c.checkBinaryExpr(current, scope)
+	case *ast.ConditionalExpr:
+		return c.checkConditionalExpr(current, scope)
 	case *ast.SelectorExpr:
 		return c.checkSelectorExpr(current, scope)
 	case *ast.IndexExpr:
@@ -148,6 +150,21 @@ func (c *checker) inferComputedExpr(expr ast.Expr, scope *checkScope) schema.Typ
 	default:
 		return schema.TypeAny
 	}
+}
+
+func (c *checker) checkConditionalExpr(expr *ast.ConditionalExpr, scope *checkScope) schema.Type {
+	condition := c.checkExpr(expr.Condition, scope)
+	if !isTypeAssignable(schema.TypeBool, condition) {
+		c.diagnostics.AddErrorCode(
+			diag.CodeTypeMismatch,
+			expr.Condition.Pos(),
+			expr.Condition.End(),
+			typeMismatchError("conditional condition", schema.TypeBool, condition).Error(),
+		)
+	}
+	thenType := c.checkExpr(expr.Then, scope)
+	elseType := c.checkExpr(expr.Else, scope)
+	return mergeTypes([]schema.Type{thenType, elseType})
 }
 
 func (c *checker) checkLogicalOp(expr *ast.BinaryExpr, left, right schema.Type) schema.Type {
@@ -270,26 +287,4 @@ func (c *checker) checkBuiltinFunctionCall(name string, argTypes []schema.Type, 
 	c.checkSignature("function", name, spec.MinArgs, spec.MaxArgs, spec.ParamTypes, spec.VariadicType, argTypes, expr.Pos(), expr.End())
 	c.checkCollectionBuiltin(name, argTypes, expr)
 	return true
-}
-
-func (c *checker) checkActionCall(call *ast.CallStmt, scope *checkScope) {
-	argTypes := make([]schema.Type, 0, len(call.Args))
-	for _, arg := range call.Args {
-		argTypes = append(argTypes, c.checkExpr(arg, scope))
-	}
-	spec, ok := c.compiler.actions.Get(call.Callee.String())
-	if !ok {
-		name := call.Callee.String()
-		c.diagnostics.AddErrorCodeSuggestions(
-			diag.CodeUnknownAction,
-			call.Pos(),
-			call.End(),
-			`unknown action "`+name+`"`,
-			c.actionSuggestions(name, call.Callee.Pos(), call.Callee.End())...,
-		)
-		c.recordCall(call.Callee.String(), scope.id, argTypes, schema.TypeAny, call.Pos(), call.End())
-		return
-	}
-	c.checkSignature("action", call.Callee.String(), spec.MinArgs, spec.MaxArgs, spec.ArgTypes, spec.VariadicType, argTypes, call.Pos(), call.End())
-	c.recordCall(call.Callee.String(), scope.id, argTypes, schema.TypeAny, call.Pos(), call.End())
 }

@@ -39,6 +39,7 @@ const (
 	Comma
 	Dot
 	Colon
+	Question
 
 	Assign
 	Eq
@@ -90,6 +91,7 @@ var kindNames = [...]string{
 	Comma:      ",",
 	Dot:        ".",
 	Colon:      ":",
+	Question:   "?",
 	Assign:     "=",
 	Eq:         "==",
 	NotEq:      "!=",

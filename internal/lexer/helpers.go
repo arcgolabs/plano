@@ -12,6 +12,7 @@ var singleRuneTokens = map[byte]Kind{
 	',': Comma,
 	'.': Dot,
 	':': Colon,
+	'?': Question,
 	'+': Plus,
 	'-': Minus,
 	'*': Star,

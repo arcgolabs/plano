@@ -45,6 +45,11 @@ func availableExamples() list.List[exampleSpec] {
 			path:        "samples/build.plano",
 		},
 		exampleSpec{
+			name:        "conditional",
+			description: "Schema-free snippet using conditional expressions",
+			path:        "samples/conditional.plano",
+		},
+		exampleSpec{
 			name:        "pipeline",
 			description: "CI pipeline snippet with stages and dependencies",
 			path:        "samples/pipeline.plano",

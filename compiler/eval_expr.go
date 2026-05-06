@@ -88,6 +88,8 @@ func (s *compileState) evalCompoundExpr(expr ast.Expr, locals *env) (any, error)
 		return evalUnary(node.Op, value)
 	case *ast.BinaryExpr:
 		return s.evalBinaryExpr(node, locals)
+	case *ast.ConditionalExpr:
+		return s.evalConditionalExpr(node, locals)
 	case *ast.SelectorExpr:
 		return s.evalSelectorExpr(node, locals)
 	case *ast.IndexExpr:
@@ -137,6 +139,21 @@ func (s *compileState) evalBinaryExpr(node *ast.BinaryExpr, locals *env) (any, e
 		return nil, err
 	}
 	return evalBinary(node.Op, left, right)
+}
+
+func (s *compileState) evalConditionalExpr(node *ast.ConditionalExpr, locals *env) (any, error) {
+	value, err := s.evalExpr(node.Condition, locals)
+	if err != nil {
+		return nil, err
+	}
+	condition, ok := value.(bool)
+	if !ok {
+		return nil, fmt.Errorf("conditional condition must be bool, got %T", value)
+	}
+	if condition {
+		return s.evalExpr(node.Then, locals)
+	}
+	return s.evalExpr(node.Else, locals)
 }
 
 func (s *compileState) evalSelectorExpr(node *ast.SelectorExpr, locals *env) (any, error) {

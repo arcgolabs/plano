@@ -1,0 +1,18 @@
+const release: bool = true
+
+fn artifact(name: string): path {
+  return release ? join_path("dist", name) : join_path("tmp", name)
+}
+
+workspace {
+  name = "conditional-build"
+  default = build
+}
+
+task build {
+  outputs = [artifact("plano")]
+
+  run {
+    exec("go", "build", release ? "./cmd/plano" : "./cmd/dev")
+  }
+}

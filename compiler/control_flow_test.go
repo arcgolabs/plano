@@ -19,11 +19,12 @@ task build {
     unit = "./...",
     integration = "./cmd/...",
   })
+  let suffix = len(names) == 2 ? "demo" : "fallback"
 
   if len(names) == 1 {
     outputs = [join_path("dist", "wrong")]
   } else if len(names) == 2 {
-    outputs = [join_path("dist", "demo")]
+    outputs = [join_path("dist", suffix)]
   } else {
     outputs = [join_path("dist", "fallback")]
   }
@@ -79,6 +80,21 @@ task build {
 		t.Fatal("expected diagnostics")
 	}
 	assertContainsDiagnostic(t, diags, "for where clause expects bool, got string")
+}
+
+func TestCompileRejectsNonBoolConditionalCondition(t *testing.T) {
+	c := newTestCompiler(t)
+	src := []byte(`
+task build {
+  outputs = [join_path("dist", "demo" ? "yes" : "no")]
+}
+`)
+
+	_, diags := c.CompileSource(context.Background(), "conditional.plano", src)
+	if !diags.HasError() {
+		t.Fatal("expected diagnostics")
+	}
+	assertContainsDiagnostic(t, diags, "conditional condition expects bool, got string")
 }
 
 func TestCompileRejectsLoopControlOutsideLoops(t *testing.T) {

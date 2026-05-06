@@ -187,24 +187,44 @@ func (b *binder) resolveCompositeExpr(expr ast.Expr, scope *scopeFrame) bool {
 	case *ast.IdentExpr:
 		b.recordIdentUse(current.Name, scope)
 	case *ast.ArrayExpr:
-		for _, item := range current.Elements {
-			b.resolveExpr(item, scope)
-		}
+		b.resolveExprs(current.Elements, scope)
 	case *ast.ObjectExpr:
-		for _, entry := range current.Entries {
-			b.resolveExpr(entry.Value, scope)
-		}
+		b.resolveObjectExpr(current, scope)
 	case *ast.ParenExpr:
 		b.resolveExpr(current.X, scope)
 	case *ast.UnaryExpr:
 		b.resolveExpr(current.X, scope)
 	case *ast.BinaryExpr:
-		b.resolveExpr(current.X, scope)
-		b.resolveExpr(current.Y, scope)
+		b.resolveBinaryExpr(current, scope)
+	case *ast.ConditionalExpr:
+		b.resolveConditionalExpr(current, scope)
 	default:
 		return false
 	}
 	return true
+}
+
+func (b *binder) resolveExprs(exprs []ast.Expr, scope *scopeFrame) {
+	for _, expr := range exprs {
+		b.resolveExpr(expr, scope)
+	}
+}
+
+func (b *binder) resolveObjectExpr(expr *ast.ObjectExpr, scope *scopeFrame) {
+	for _, entry := range expr.Entries {
+		b.resolveExpr(entry.Value, scope)
+	}
+}
+
+func (b *binder) resolveBinaryExpr(expr *ast.BinaryExpr, scope *scopeFrame) {
+	b.resolveExpr(expr.X, scope)
+	b.resolveExpr(expr.Y, scope)
+}
+
+func (b *binder) resolveConditionalExpr(expr *ast.ConditionalExpr, scope *scopeFrame) {
+	b.resolveExpr(expr.Condition, scope)
+	b.resolveExpr(expr.Then, scope)
+	b.resolveExpr(expr.Else, scope)
 }
 
 func (b *binder) resolveAccessExpr(expr ast.Expr, scope *scopeFrame) {

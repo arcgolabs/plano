@@ -434,7 +434,10 @@ ToolchainRef = ref<toolchain>
 ## 7. 表达式语法定义
 
 ```ebnf
-Expr        = OrExpr
+Expr        = ConditionalExpr
+
+ConditionalExpr
+            = OrExpr [ "?" Expr ":" Expr ]
 
 OrExpr      = AndExpr { "||" AndExpr }
 
@@ -505,6 +508,8 @@ env("GO_VERSION", "1.26.2")
 }
 
 replicas > 1 && env("CI", "false") == "true"
+
+release ? "dist/plano" : "tmp/plano"
 ```
 
 ### 7.1 Expr-lang 桥接表达式

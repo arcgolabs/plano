@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## v0.6.0
 
-Compiler diagnostic contract update.
+Compiler diagnostics, CLI boundary, and syntax iteration release.
 
 Highlights:
 
@@ -10,6 +10,8 @@ Highlights:
 - moved spelling-based quick-fix candidate generation from LSP into the compiler
 - added compiler suggestions for unknown fields and invalid nested form names
 - added `for ... where` filtered loop syntax for script-capable bodies and functions
+- added conditional expression syntax with `condition ? then : else`
+- added conditional-expression samples for the CLI and bundled example DSL modules
 - added `diagnostics[].suggestions` to compiler artifacts
 - updated `lsp.Snapshot.CodeActions` to consume diagnostic suggestions instead of parsing diagnostic messages
 - decoupled `cmd/plano` from documentation example packages and replaced example-backed lowering with embedded sample display

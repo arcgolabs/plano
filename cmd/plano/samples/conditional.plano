@@ -1,0 +1,6 @@
+const release: bool = true
+const target: string = release ? "dist/plano" : "dist/plano-dev"
+
+fn output(name: string): path {
+  return release ? "dist/" + name : "tmp/" + name
+}
