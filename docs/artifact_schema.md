@@ -1,10 +1,10 @@
 # Artifact Schema
 
-`compiler.Artifact` is the stable serialized compiler output contract for `plano` `v0.5.0`.
+`compiler.Artifact` is the stable serialized compiler output contract for `plano`.
 
 Current schema version:
 
-- `schemaVersion = "plano.artifact/v1"`
+- `schemaVersion = "plano.artifact/v2"`
 
 Top-level sections:
 
@@ -29,5 +29,15 @@ Persistence guidance:
 
 Round-trip expectations:
 
-- `Artifact -> Result` preserves typed document, binding, check, HIR, diagnostic messages, diagnostic codes, and diagnostic related-message payloads.
+- `Artifact -> Result` preserves typed document, binding, check, HIR, diagnostic messages, diagnostic codes, diagnostic related-message payloads, and diagnostic suggestion title/replacement payloads.
 - `Artifact -> Result` intentionally does not restore `token.FileSet` or token positions.
+
+## v2 additions
+
+`diagnostics[].suggestions` carries compiler-produced quick-fix metadata:
+
+- `title`: user-facing action title
+- `replacement`: replacement text for simple text edits
+- `span`: source span to replace
+
+Readers continue to accept `plano.artifact/v1` artifacts. v1 artifacts do not contain structured diagnostic suggestions.

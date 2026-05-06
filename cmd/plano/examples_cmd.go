@@ -14,15 +14,12 @@ func newExamplesCmd() *cobra.Command {
 		out:    "-",
 	}
 	cmd := &cobra.Command{
-		Use:   "examples",
-		Short: "List bundled example host DSLs and sample files",
-		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		Use:   "examples [sample]",
+		Short: "List or print embedded plano sample files",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
 			return withOutput(cmd.OutOrStdout(), opts.out, func(w io.Writer) error {
-				if outputFormat(opts.format) == formatText {
-					return writeTextExamples(w)
-				}
-				return writeValue(w, exampleViews(), outputFormat(opts.format))
+				return writeExamplesOutput(w, args, outputFormat(opts.format))
 			})
 		},
 	}
@@ -30,10 +27,31 @@ func newExamplesCmd() *cobra.Command {
 	return cmd
 }
 
+func writeExamplesOutput(w io.Writer, args []string, format outputFormat) error {
+	if len(args) == 1 {
+		return writeExampleFileOutput(w, args[0], format)
+	}
+	if format == formatText {
+		return writeTextExamples(w)
+	}
+	return writeValue(w, exampleViews(), format)
+}
+
+func writeExampleFileOutput(w io.Writer, name string, format outputFormat) error {
+	item, err := exampleFile(name)
+	if err != nil {
+		return err
+	}
+	if format == formatText {
+		return writeString(w, item.Content)
+	}
+	return writeValue(w, item, format)
+}
+
 func writeTextExamples(w io.Writer) error {
 	views := exampleViews()
 	lines := lo.Map(views.Values(), func(item exampleView, _ int) string {
-		return item.Name + ": " + item.Description + " [" + strings.Join(item.Samples.Values(), ", ") + "]"
+		return item.Name + ": " + item.Description + " [" + item.Path + "]"
 	})
 	return writeString(w, strings.Join(lines, "\n")+"\n")
 }

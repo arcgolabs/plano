@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/arcgolabs/plano/ast"
+	"github.com/arcgolabs/plano/diag"
 	"github.com/arcgolabs/plano/schema"
 )
 
@@ -22,7 +23,13 @@ func (s *compileState) execFieldAssignment(state *formExecState, current *ast.As
 	}
 	fieldSpec, ok := formFieldSpec(state.spec, current.Name.Name)
 	if !ok {
-		s.diags.AddError(current.Pos(), current.End(), fmt.Sprintf("field %q is not allowed in %s", current.Name.Name, state.spec.Name))
+		s.diags.AddErrorCodeSuggestions(
+			diag.CodeUnknownField,
+			current.Pos(),
+			current.End(),
+			fmt.Sprintf("field %q is not allowed in %s", current.Name.Name, state.spec.Name),
+			s.fieldSuggestions(state.spec, current.Name.Name, current.Name.Pos(), current.Name.End())...,
+		)
 		return
 	}
 	value, err := s.evalExpr(current.Value, locals)

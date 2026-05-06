@@ -43,7 +43,7 @@ func TestVersionCommand(t *testing.T) {
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(stdout.String(), `"artifactSchemaVersion": "plano.artifact/v1"`) {
+	if !strings.Contains(stdout.String(), `"artifactSchemaVersion": "plano.artifact/v2"`) {
 		t.Fatalf("stdout = %s", stdout.String())
 	}
 	if stderr.Len() != 0 {
@@ -83,17 +83,9 @@ const target: string = "dist/demo"
 	}
 }
 
-func TestCompileCommandWithExample(t *testing.T) {
+func TestCompileCommand(t *testing.T) {
 	file := writeTempPlano(t, `
-workspace {
-  name = "demo"
-  default = build
-}
-
-go.binary build {
-  main = "./cmd/demo"
-  out = "dist/demo"
-}
+const target: string = "dist/demo"
 `)
 
 	var stdout bytes.Buffer
@@ -102,12 +94,12 @@ go.binary build {
 	cmd := newRootCmd()
 	cmd.SetOut(&stdout)
 	cmd.SetErr(&stderr)
-	cmd.SetArgs([]string{"compile", "--example", "builddsl", file})
+	cmd.SetArgs([]string{"compile", file})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !strings.Contains(stdout.String(), `"Forms"`) {
+	if !strings.Contains(stdout.String(), `"consts"`) {
 		t.Fatalf("stdout = %s", stdout.String())
 	}
 	if stderr.Len() != 0 {
@@ -117,15 +109,7 @@ go.binary build {
 
 func TestValidateCommand(t *testing.T) {
 	file := writeTempPlano(t, `
-workspace {
-  name = "demo"
-  default = build
-}
-
-go.binary build {
-  main = "./cmd/demo"
-  out = "dist/demo"
-}
+const target: string = "dist/demo"
 `)
 
 	var stdout bytes.Buffer
@@ -134,7 +118,7 @@ go.binary build {
 	cmd := newRootCmd()
 	cmd.SetOut(&stdout)
 	cmd.SetErr(&stderr)
-	cmd.SetArgs([]string{"validate", "--example", "builddsl", file})
+	cmd.SetArgs([]string{"validate", file})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -149,10 +133,7 @@ go.binary build {
 
 func TestValidateStrictFailsOnDiagnostics(t *testing.T) {
 	file := writeTempPlano(t, `
-workspace {
-  name = "demo"
-  default = missing
-}
+const target: string = missing
 `)
 
 	var stdout bytes.Buffer
@@ -161,7 +142,7 @@ workspace {
 	cmd := newRootCmd()
 	cmd.SetOut(&stdout)
 	cmd.SetErr(&stderr)
-	cmd.SetArgs([]string{"validate", "--example", "builddsl", "--strict", file})
+	cmd.SetArgs([]string{"validate", "--strict", file})
 
 	err := cmd.Execute()
 	if err == nil {
@@ -172,44 +153,9 @@ workspace {
 	}
 }
 
-func TestLowerCommandWithExample(t *testing.T) {
-	file := writeTempPlano(t, `
-workspace {
-  name = "demo"
-  default = build
-}
-
-go.binary build {
-  main = "./cmd/demo"
-  out = "dist/demo"
-}
-`)
-
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	cmd := newRootCmd()
-	cmd.SetOut(&stdout)
-	cmd.SetErr(&stderr)
-	cmd.SetArgs([]string{"lower", "--example", "builddsl", file})
-
-	if err := cmd.Execute(); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !strings.Contains(stdout.String(), `"DefaultTask": "build"`) {
-		t.Fatalf("stdout = %s", stdout.String())
-	}
-	if stderr.Len() != 0 {
-		t.Fatalf("stderr = %s", stderr.String())
-	}
-}
-
 func TestDiagCommandJSON(t *testing.T) {
 	file := writeTempPlano(t, `
-workspace {
-  name = "demo"
-  default = missing
-}
+const target: string = missing
 `)
 
 	var stdout bytes.Buffer
@@ -218,7 +164,7 @@ workspace {
 	cmd := newRootCmd()
 	cmd.SetOut(&stdout)
 	cmd.SetErr(&stderr)
-	cmd.SetArgs([]string{"diag", "--example", "builddsl", "--format", "json", file})
+	cmd.SetArgs([]string{"diag", "--format", "json", file})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -228,65 +174,5 @@ workspace {
 	}
 	if stderr.Len() != 0 {
 		t.Fatalf("stderr = %s", stderr.String())
-	}
-}
-
-func TestLowerCommandYAMLOutputToFile(t *testing.T) {
-	file := writeTempPlano(t, `
-workspace {
-  name = "demo"
-  default = build
-}
-
-go.binary build {
-  main = "./cmd/demo"
-  out = "dist/demo"
-}
-`)
-	outFile := filepath.Join(t.TempDir(), "project.yaml")
-
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	cmd := newRootCmd()
-	cmd.SetOut(&stdout)
-	cmd.SetErr(&stderr)
-	cmd.SetArgs([]string{"lower", "--example", "builddsl", "--format", "yaml", "--out", outFile, file})
-
-	if err := cmd.Execute(); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if stdout.Len() != 0 {
-		t.Fatalf("stdout = %s", stdout.String())
-	}
-	data, err := readOutputFile(outFile)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(data), "DefaultTask: build") {
-		t.Fatalf("file = %s", string(data))
-	}
-	if stderr.Len() != 0 {
-		t.Fatalf("stderr = %s", stderr.String())
-	}
-}
-
-func TestLowerRequiresExample(t *testing.T) {
-	file := writeTempPlano(t, `workspace {}`)
-
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	cmd := newRootCmd()
-	cmd.SetOut(&stdout)
-	cmd.SetErr(&stderr)
-	cmd.SetArgs([]string{"lower", file})
-
-	err := cmd.Execute()
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	if !strings.Contains(err.Error(), "requires --example") {
-		t.Fatalf("err = %v", err)
 	}
 }

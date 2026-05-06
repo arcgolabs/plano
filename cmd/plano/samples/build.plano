@@ -1,0 +1,19 @@
+workspace {
+  name = "demo"
+  default = build
+}
+
+task build {
+  deps = [test]
+  outputs = ["dist/demo"]
+
+  run {
+    exec("go", "build", "./cmd/demo")
+  }
+}
+
+task test {
+  run {
+    exec("go", "test", "./...")
+  }
+}

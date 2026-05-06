@@ -482,6 +482,14 @@ Bool        = "true" | "false"
 Null        = "null"
 ```
 
+脚本循环支持可选过滤子句：
+
+```ebnf
+ForStmt     = "for" [ Ident "," ] Ident "in" Expr [ "where" Expr ] Block
+```
+
+`where` 表达式在循环作用域内求值，因此可以引用当前循环变量；它必须是 `bool`，为 `false` 时跳过本轮循环。
+
 示例：
 
 ```plano

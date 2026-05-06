@@ -1,0 +1,5 @@
+const target: string = "dist/demo"
+
+fn output(name: string): path {
+  return name
+}

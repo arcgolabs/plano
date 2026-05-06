@@ -6,7 +6,7 @@ Compatibility baseline:
 
 - release: `v0.5.0`
 - public API generation: `v1`
-- artifact schema: `plano.artifact/v1`
+- artifact schema: `plano.artifact/v2`
 
 ## Implemented
 
@@ -33,13 +33,13 @@ Compatibility baseline:
   - `plano parse`
   - `plano examples`
   - `plano version`
-  - `plano bind --example builddsl`
-  - `plano check --example builddsl`
-  - `plano hir --example builddsl`
-  - `plano compile --example builddsl`
-  - `plano lower --example builddsl`
-  - `plano validate --example builddsl`
-  - `plano diag --example builddsl`
+  - `plano bind`
+  - `plano check`
+  - `plano hir`
+  - `plano compile`
+  - `plano validate`
+  - `plano diag`
+  - embedded sample file listing and display via `plano examples [sample]`
   - `--format` and `--out` output controls
   - `--strict` to fail on any diagnostics
 - Taskfile shortcuts:
@@ -56,9 +56,9 @@ Compatibility baseline:
   - `task check`
   - `task hir`
   - `task compile`
-  - `task lower`
   - `task validate`
   - `task diag`
+  - `task sample`
 - Schema registration for:
   - forms
   - fields
@@ -81,10 +81,11 @@ Compatibility baseline:
   - nested form validation
   - call-only form bodies with action registry validation
   - script-body execution with lexical scope
-  - `let`, local reassignment, `if`, `else if`, single- and dual-variable `for`, `break`, and `continue` execution inside script bodies
+  - `let`, local reassignment, `if`, `else if`, single- and dual-variable `for`, `for ... where`, `break`, and `continue` execution inside script bodies
   - user-defined function execution with typed parameters and returns
   - typed document output
   - serializable `compiler.Artifact` output with explicit schema versioning
+  - structured diagnostic suggestions for spelling-based form, field, function, action, and name replacements
   - bounded parse cache for repeated compile requests
   - `expr(...)` and `expr_eval(...)` backed by `github.com/expr-lang/expr`
   - bounded expr-lang program cache for repeated expression compilation
@@ -94,7 +95,7 @@ Compatibility baseline:
   - basic `go.lsp.dev/protocol` server wiring
   - stdio server entrypoint
   - LSP-friendly diagnostics with codes and related information
-  - diagnostic-driven quick fixes through code actions
+  - diagnostic-driven quick fixes through compiler-provided suggestions
   - definition lookup
   - hover content generation
   - expr-lang host variable/function hover inside `expr(...)` strings
@@ -144,7 +145,7 @@ Compatibility baseline:
 
 - Plugin/module packaging API
 - Multi-frontend support beyond `.plano`
-- Rich error recovery and diagnostic suggestions
+- Rich error recovery beyond the current structured diagnostic suggestions
 
 ## Current Semantic Restrictions
 
@@ -256,13 +257,12 @@ CLI:
 ```bash
 go run ./cmd/plano examples
 go run ./cmd/plano parse ./build.plano
-go run ./cmd/plano bind --example builddsl ./build.plano
-go run ./cmd/plano check --example builddsl ./build.plano
-go run ./cmd/plano hir --example builddsl ./build.plano
-go run ./cmd/plano compile --example builddsl ./build.plano
-go run ./cmd/plano lower --example builddsl ./build.plano
-go run ./cmd/plano validate --example builddsl ./build.plano
-go run ./cmd/plano diag --example builddsl ./build.plano
+go run ./cmd/plano bind ./build.plano
+go run ./cmd/plano check ./build.plano
+go run ./cmd/plano hir ./build.plano
+go run ./cmd/plano compile ./build.plano
+go run ./cmd/plano validate ./build.plano
+go run ./cmd/plano diag ./build.plano
 ```
 
 ## Test Coverage

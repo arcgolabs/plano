@@ -161,34 +161,73 @@ func (s *compileState) execFunctionIf(stmt *ast.IfStmt, locals *env) (execSignal
 }
 
 func (s *compileState) execFunctionFor(stmt *ast.ForStmt, locals *env) (execSignal, bool, error) {
-	value, err := s.evalExpr(stmt.Iterable, locals)
-	if err != nil {
-		return noExecSignal(), true, err
-	}
-	items, err := iterateItems(value)
+	items, err := s.evalFunctionLoopItems(stmt, locals)
 	if err != nil {
 		return noExecSignal(), true, err
 	}
 	for _, item := range items {
-		blockEnv := s.newScopeEnv(locals, ScopeLoop, stmt.Pos(), stmt.End())
-		if stmt.Index != nil {
-			blockEnv.BindLocal(stmt.Index.Name, LocalLoop, staticTypeOfValue(item.Key), item.Key)
-		}
-		blockEnv.BindLocal(stmt.Name.Name, LocalLoop, staticTypeOfValue(item.Value), item.Value)
-		result, err := s.execFunctionBlock(stmt.Body, blockEnv)
+		result, cont, err := s.execFunctionLoopIteration(stmt, locals, item)
 		if err != nil {
 			return result, true, err
 		}
-		switch {
-		case result.IsBreak():
-			return noExecSignal(), true, nil
-		case result.IsContinue():
+		if next, done := normalizeFunctionLoopResult(result, cont); done {
+			return next, true, nil
+		}
+		if cont {
 			continue
-		case !result.IsNone():
-			return result, true, nil
 		}
 	}
 	return noExecSignal(), true, nil
+}
+
+func normalizeFunctionLoopResult(result execSignal, cont bool) (execSignal, bool) {
+	switch {
+	case result.IsBreak():
+		return noExecSignal(), true
+	case cont || result.IsContinue():
+		return noExecSignal(), false
+	case !result.IsNone():
+		return result, true
+	default:
+		return noExecSignal(), false
+	}
+}
+
+func (s *compileState) evalFunctionLoopItems(stmt *ast.ForStmt, locals *env) ([]iterItem, error) {
+	value, err := s.evalExpr(stmt.Iterable, locals)
+	if err != nil {
+		return nil, err
+	}
+	return iterateItems(value)
+}
+
+func (s *compileState) execFunctionLoopIteration(stmt *ast.ForStmt, locals *env, item iterItem) (execSignal, bool, error) {
+	blockEnv := s.newScopeEnv(locals, ScopeLoop, stmt.Pos(), stmt.End())
+	if stmt.Index != nil {
+		blockEnv.BindLocal(stmt.Index.Name, LocalLoop, staticTypeOfValue(item.Key), item.Key)
+	}
+	blockEnv.BindLocal(stmt.Name.Name, LocalLoop, staticTypeOfValue(item.Value), item.Value)
+	run, err := s.evalFunctionLoopFilter(stmt, blockEnv)
+	if err != nil || !run {
+		return noExecSignal(), !run, err
+	}
+	result, err := s.execFunctionBlock(stmt.Body, blockEnv)
+	return result, false, err
+}
+
+func (s *compileState) evalFunctionLoopFilter(stmt *ast.ForStmt, locals *env) (bool, error) {
+	if stmt.Filter == nil {
+		return true, nil
+	}
+	value, err := s.evalExpr(stmt.Filter, locals)
+	if err != nil {
+		return false, err
+	}
+	run, ok := value.(bool)
+	if !ok {
+		return false, errors.New("for where clause must be bool")
+	}
+	return run, nil
 }
 
 func unsupportedFunctionItemError(item ast.FormItem) error {

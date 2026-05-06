@@ -13,7 +13,14 @@ import (
 func (s *compileState) compileForm(node *ast.FormDecl, locals *env) (*Form, *HIRForm) {
 	spec, ok := s.compiler.forms.Get(node.Head.String())
 	if !ok {
-		s.diags.AddErrorCode(diag.CodeUnknownForm, node.Pos(), node.End(), fmt.Sprintf("unknown form %q", node.Head.String()))
+		name := node.Head.String()
+		s.diags.AddErrorCodeSuggestions(
+			diag.CodeUnknownForm,
+			node.Pos(),
+			node.End(),
+			fmt.Sprintf("unknown form %q", name),
+			s.formSuggestions(name, node.Head.Pos(), node.Head.End())...,
+		)
 		return nil, nil
 	}
 

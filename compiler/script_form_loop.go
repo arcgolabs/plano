@@ -48,6 +48,13 @@ func (s *compileState) execFormLoopIteration(state *formExecState, current *ast.
 		blockEnv.BindLocal(current.Index.Name, LocalLoop, staticTypeOfValue(item.Key), item.Key)
 	}
 	blockEnv.BindLocal(current.Name.Name, LocalLoop, staticTypeOfValue(item.Value), item.Value)
+	run, ok := s.evalLoopFilter(current, blockEnv)
+	if !ok {
+		return noExecSignal(), true
+	}
+	if !run {
+		return noExecSignal(), false
+	}
 	signal := s.execFormBlock(state, current.Body, blockEnv)
 	switch {
 	case signal.IsBreak():
@@ -59,6 +66,23 @@ func (s *compileState) execFormLoopIteration(state *formExecState, current *ast.
 	default:
 		return noExecSignal(), false
 	}
+}
+
+func (s *compileState) evalLoopFilter(current *ast.ForStmt, locals *env) (bool, bool) {
+	if current.Filter == nil {
+		return true, true
+	}
+	value, err := s.evalExpr(current.Filter, locals)
+	if err != nil {
+		s.diags.AddError(current.Filter.Pos(), current.Filter.End(), err.Error())
+		return false, false
+	}
+	run, ok := value.(bool)
+	if !ok {
+		s.diags.AddError(current.Filter.Pos(), current.Filter.End(), "for where clause must be bool")
+		return false, false
+	}
+	return run, true
 }
 
 func validateFormLoopVars(spec schema.FormSpec, stmt *ast.ForStmt) error {

@@ -1,0 +1,17 @@
+pipeline "release" {
+  default = deploy
+
+  stage test {
+    needs = []
+    run {
+      shell("go test ./...")
+    }
+  }
+
+  stage deploy {
+    needs = [test]
+    run {
+      shell("deploy dist/demo")
+    }
+  }
+}

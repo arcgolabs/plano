@@ -20,16 +20,23 @@ type artifactWire struct {
 }
 
 type artifactDiagnosticWire struct {
-	Severity diag.Severity                    `json:"severity"`
-	Code     diag.Code                        `json:"code,omitempty"`
-	Message  string                           `json:"message"`
-	Span     ArtifactSpan                     `json:"span"`
-	Related  []artifactRelatedInformationWire `json:"related"`
+	Severity    diag.Severity                      `json:"severity"`
+	Code        diag.Code                          `json:"code,omitempty"`
+	Message     string                             `json:"message"`
+	Span        ArtifactSpan                       `json:"span"`
+	Related     []artifactRelatedInformationWire   `json:"related"`
+	Suggestions []artifactDiagnosticSuggestionWire `json:"suggestions"`
 }
 
 type artifactRelatedInformationWire struct {
 	Message string       `json:"message"`
 	Span    ArtifactSpan `json:"span"`
+}
+
+type artifactDiagnosticSuggestionWire struct {
+	Title       string       `json:"title"`
+	Replacement string       `json:"replacement"`
+	Span        ArtifactSpan `json:"span"`
 }
 
 type artifactDocumentWire struct {

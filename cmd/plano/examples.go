@@ -1,162 +1,101 @@
 package main
 
 import (
-	"errors"
+	"embed"
 	"fmt"
-	"os"
+	"io/fs"
 	"path/filepath"
 	"strings"
 
 	"github.com/arcgolabs/collectionx/list"
-	"github.com/arcgolabs/collectionx/mapping"
-	"github.com/arcgolabs/collectionx/set"
-	"github.com/arcgolabs/plano/compiler"
-	examplebuilddsl "github.com/arcgolabs/plano/examples/builddsl"
-	"github.com/arcgolabs/plano/examples/pipelinedsl"
-	"github.com/arcgolabs/plano/examples/servicedsl"
 )
 
+//go:embed samples/*.plano
+var embeddedSamples embed.FS
+
 type exampleSpec struct {
-	register    func(*compiler.Compiler) error
-	lower       func(*compiler.HIR) (any, error)
+	name        string
 	description string
-	dir         string
-	sample      string
-}
-
-func buildExampleRegistry() *mapping.OrderedMap[string, exampleSpec] {
-	registry := mapping.NewOrderedMap[string, exampleSpec]()
-	registry.Set("builddsl", exampleSpec{
-		description: "Build graph with tasks, Go helpers, and run actions",
-		dir:         "examples/builddsl",
-		sample:      "examples/builddsl/sample.plano",
-		register:    examplebuilddsl.Register,
-		lower: func(hir *compiler.HIR) (any, error) {
-			return examplebuilddsl.Lower(hir)
-		},
-	})
-	registry.Set("pipelinedsl", exampleSpec{
-		description: "CI pipeline with stages, dependencies, and runner actions",
-		dir:         "examples/pipelinedsl",
-		sample:      "examples/pipelinedsl/sample.plano",
-		register:    pipelinedsl.Register,
-		lower: func(hir *compiler.HIR) (any, error) {
-			return pipelinedsl.Lower(hir)
-		},
-	})
-	registry.Set("servicedsl", exampleSpec{
-		description: "Service topology with ports, refs, and env maps",
-		dir:         "examples/servicedsl",
-		sample:      "examples/servicedsl/sample.plano",
-		register:    servicedsl.Register,
-		lower: func(hir *compiler.HIR) (any, error) {
-			return servicedsl.Lower(hir)
-		},
-	})
-	return registry
-}
-
-func availableExamples() *mapping.OrderedMap[string, exampleSpec] {
-	return buildExampleRegistry()
-}
-
-func exampleNames() string {
-	return strings.Join(availableExamples().Keys(), ", ")
+	path        string
 }
 
 type exampleView struct {
-	Name        string            `json:"name"        yaml:"name"`
-	Description string            `json:"description" yaml:"description"`
-	Sample      string            `json:"sample"      yaml:"sample"`
-	Samples     list.List[string] `json:"samples"     yaml:"samples"`
+	Name        string `json:"name"        yaml:"name"`
+	Description string `json:"description" yaml:"description"`
+	Path        string `json:"path"        yaml:"path"`
+}
+
+type exampleFileView struct {
+	Name        string `json:"name"        yaml:"name"`
+	Description string `json:"description" yaml:"description"`
+	Path        string `json:"path"        yaml:"path"`
+	Content     string `json:"content"     yaml:"content"`
+}
+
+func availableExamples() list.List[exampleSpec] {
+	return *list.NewList(
+		exampleSpec{
+			name:        "basic",
+			description: "Schema-free snippet that works with core CLI compile/check commands",
+			path:        "samples/basic.plano",
+		},
+		exampleSpec{
+			name:        "build",
+			description: "Build graph snippet with tasks and run actions",
+			path:        "samples/build.plano",
+		},
+		exampleSpec{
+			name:        "pipeline",
+			description: "CI pipeline snippet with stages and dependencies",
+			path:        "samples/pipeline.plano",
+		},
+		exampleSpec{
+			name:        "service",
+			description: "Service topology snippet with ports and env maps",
+			path:        "samples/service.plano",
+		},
+	)
 }
 
 func exampleViews() *list.List[exampleView] {
-	views := list.NewListWithCapacity[exampleView](availableExamples().Len())
-	availableExamples().Range(func(name string, spec exampleSpec) bool {
+	examples := availableExamples()
+	views := list.NewListWithCapacity[exampleView](examples.Len())
+	for index := range examples.Len() {
+		spec, _ := examples.Get(index)
 		views.Add(exampleView{
-			Name:        name,
+			Name:        spec.name,
 			Description: spec.description,
-			Sample:      spec.sample,
-			Samples:     exampleSamples(spec),
+			Path:        spec.path,
 		})
-		return true
-	})
+	}
 	return views
 }
 
-func exampleSamples(spec exampleSpec) list.List[string] {
-	seen := set.NewSet[string]()
-	samples := appendSamplePath(list.List[string]{}, seen, spec.sample)
-	entries, dir, ok := readExampleDir(spec.dir)
+func exampleFile(name string) (exampleFileView, error) {
+	spec, ok := exampleByName(name)
 	if !ok {
-		return samples
+		return exampleFileView{}, fmt.Errorf("unknown sample %q", name)
 	}
-	for _, entry := range entries {
-		if entry.IsDir() || filepath.Ext(entry.Name()) != ".plano" {
-			continue
-		}
-		samples = appendSamplePath(samples, seen, filepath.Join(dir, entry.Name()))
-	}
-	return samples
-}
-
-func readExampleDir(dir string) ([]os.DirEntry, string, bool) {
-	for _, candidate := range exampleDirCandidates(dir) {
-		entries, err := os.ReadDir(candidate)
-		if err == nil {
-			return entries, dir, true
-		}
-	}
-	return nil, "", false
-}
-
-func exampleDirCandidates(dir string) []string {
-	if dir == "" {
-		return nil
-	}
-	return []string{dir, filepath.Join("..", "..", dir)}
-}
-
-func appendSamplePath(samples list.List[string], seen *set.Set[string], path string) list.List[string] {
-	if path == "" {
-		return samples
-	}
-	path = filepath.ToSlash(path)
-	if seen.Contains(path) {
-		return samples
-	}
-	seen.Add(path)
-	samples.Add(path)
-	return samples
-}
-
-func newCompilerForExample(name string) (*compiler.Compiler, error) {
-	c := compiler.New(compiler.Options{})
-	if name == "" {
-		return c, nil
-	}
-	spec, ok := availableExamples().Get(name)
-	if !ok {
-		return nil, fmt.Errorf("unsupported example %q", name)
-	}
-	if err := spec.register(c); err != nil {
-		return nil, fmt.Errorf("register example %q: %w", name, err)
-	}
-	return c, nil
-}
-
-func lowerDocument(hir *compiler.HIR, name string) (any, error) {
-	if name == "" {
-		return nil, errors.New("lower requires --example")
-	}
-	spec, ok := availableExamples().Get(name)
-	if !ok {
-		return nil, fmt.Errorf("unsupported example %q", name)
-	}
-	lowered, err := spec.lower(hir)
+	data, err := fs.ReadFile(embeddedSamples, spec.path)
 	if err != nil {
-		return nil, fmt.Errorf("lower with %q example: %w", name, err)
+		return exampleFileView{}, fmt.Errorf("read embedded sample %q: %w", name, err)
 	}
-	return lowered, nil
+	return exampleFileView{
+		Name:        spec.name,
+		Description: spec.description,
+		Path:        spec.path,
+		Content:     string(data),
+	}, nil
+}
+
+func exampleByName(name string) (exampleSpec, bool) {
+	name = strings.TrimSuffix(name, filepath.Ext(name))
+	examples := availableExamples()
+	for index := range examples.Len() {
+		spec, _ := examples.Get(index)
+		if spec.name == name || filepath.Base(spec.path) == name {
+			return spec, true
+		}
+	}
+	return exampleSpec{}, false
 }

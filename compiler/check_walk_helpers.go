@@ -74,6 +74,17 @@ func (c *checker) checkFormStatementItem(item ast.FormItem, scope *checkScope, s
 			c.diagnostics.AddError(current.Pos(), current.End(), spec.Name+" does not allow nested forms in "+spec.BodyMode.String()+" body")
 			return true
 		}
+		if !allowsNestedFormName(spec, current.Head.String()) {
+			name := current.Head.String()
+			c.diagnostics.AddErrorCodeSuggestions(
+				diag.CodeUnknownNestedForm,
+				current.Pos(),
+				current.End(),
+				`nested form "`+name+`" is not allowed in `+spec.Name,
+				c.nestedFormSuggestions(spec, name, current.Head.Pos(), current.Head.End())...,
+			)
+			return true
+		}
 		c.checkForm(current, scope)
 	case *ast.CallStmt:
 		if !allowsCall(spec.BodyMode) {

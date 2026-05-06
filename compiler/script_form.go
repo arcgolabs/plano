@@ -6,6 +6,7 @@ import (
 
 	"github.com/arcgolabs/collectionx/set"
 	"github.com/arcgolabs/plano/ast"
+	"github.com/arcgolabs/plano/diag"
 	"github.com/arcgolabs/plano/schema"
 )
 
@@ -91,7 +92,14 @@ func (s *compileState) execNestedForm(state *formExecState, current *ast.FormDec
 		return
 	}
 	if !allowsNestedFormName(state.spec, current.Head.String()) {
-		s.diags.AddError(current.Pos(), current.End(), fmt.Sprintf("%s cannot contain nested form %q", state.spec.Name, current.Head.String()))
+		name := current.Head.String()
+		s.diags.AddErrorCodeSuggestions(
+			diag.CodeUnknownNestedForm,
+			current.Pos(),
+			current.End(),
+			fmt.Sprintf("%s cannot contain nested form %q", state.spec.Name, name),
+			s.nestedFormSuggestions(state.spec, name, current.Head.Pos(), current.Head.End())...,
+		)
 		return
 	}
 	nested, hirNested := s.compileForm(current, locals)

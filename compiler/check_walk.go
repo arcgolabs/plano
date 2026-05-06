@@ -112,7 +112,14 @@ func (c *checker) checkFunctionItem(item ast.FormItem, scope *checkScope, expect
 func (c *checker) checkForm(form *ast.FormDecl, parent *checkScope) {
 	spec, ok := c.compiler.forms.Get(form.Head.String())
 	if !ok {
-		c.diagnostics.AddErrorCode(diag.CodeUnknownForm, form.Pos(), form.End(), `unknown form "`+form.Head.String()+`"`)
+		name := form.Head.String()
+		c.diagnostics.AddErrorCodeSuggestions(
+			diag.CodeUnknownForm,
+			form.Pos(),
+			form.End(),
+			`unknown form "`+name+`"`,
+			c.formSuggestions(name, form.Head.Pos(), form.Head.End())...,
+		)
 		return
 	}
 	scope := c.newScope(ScopeForm, parent, form.Pos(), form.End())
@@ -160,6 +167,12 @@ func (c *checker) checkFor(stmt *ast.ForStmt, scope *checkScope, expectedReturn 
 		c.bindLocal(loopScope, LocalLoop, stmt.Index, inferIterationKeyType(iterable))
 	}
 	c.bindLocal(loopScope, LocalLoop, stmt.Name, inferIterationType(iterable))
+	if stmt.Filter != nil {
+		filter := c.checkExpr(stmt.Filter, loopScope)
+		if !isTypeAssignable(schema.TypeBool, filter) {
+			c.diagnostics.AddErrorCode(diag.CodeTypeMismatch, stmt.Filter.Pos(), stmt.Filter.End(), typeMismatchError("for where clause", schema.TypeBool, filter).Error())
+		}
+	}
 	c.checkBlock(stmt.Body, loopScope, expectedReturn, formSpec)
 }
 

@@ -21,8 +21,10 @@ func errWrapArtifactJSON(message string, err error) error {
 }
 
 func validateArtifactSchemaVersion(version string) error {
-	if version == "" || version == ArtifactSchemaVersion {
+	switch version {
+	case "", "plano.artifact/v1", ArtifactSchemaVersion:
 		return nil
+	default:
+		return fmt.Errorf("artifact schema version %q is not supported", version)
 	}
-	return fmt.Errorf("artifact schema version %q is not supported", version)
 }

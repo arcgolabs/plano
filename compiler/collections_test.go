@@ -24,10 +24,7 @@ task build {
   )
   outputs = values(outputs_map)
 
-  for idx, pkg in packages() {
-    if idx == 1 {
-      continue
-    }
+  for idx, pkg in packages() where idx != 1 {
     if has(["./internal/..."], pkg) {
       break
     }

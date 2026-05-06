@@ -6,16 +6,10 @@ import (
 	"testing"
 )
 
-func TestCheckCommandWithExample(t *testing.T) {
+func TestCheckCommand(t *testing.T) {
 	file := writeTempPlano(t, `
-workspace {
-  name = "demo"
-  default = build
-}
-
-go.binary build {
-  main = "./cmd/demo"
-  out = "dist/demo"
+fn output(name: string): path {
+  return name
 }
 `)
 
@@ -25,7 +19,7 @@ go.binary build {
 	cmd := newRootCmd()
 	cmd.SetOut(&stdout)
 	cmd.SetErr(&stderr)
-	cmd.SetArgs([]string{"check", "--example", "builddsl", file})
+	cmd.SetArgs([]string{"check", file})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("unexpected error: %v", err)

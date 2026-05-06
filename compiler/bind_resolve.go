@@ -117,6 +117,7 @@ func (b *binder) resolveFor(stmt *ast.ForStmt, scope *scopeFrame) {
 		b.bindLocal(loopScope, LocalLoop, stmt.Index, nil)
 	}
 	b.bindLocal(loopScope, LocalLoop, stmt.Name, nil)
+	b.resolveExpr(stmt.Filter, loopScope)
 	b.resolveBlock(stmt.Body, loopScope)
 }
 

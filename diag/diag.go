@@ -22,6 +22,8 @@ const (
 	CodeImportCycle         Code = "import-cycle"
 	CodeDuplicateDefinition Code = "duplicate-definition"
 	CodeUnknownForm         Code = "unknown-form"
+	CodeUnknownField        Code = "unknown-field"
+	CodeUnknownNestedForm   Code = "unknown-nested-form"
 	CodeUnknownFunction     Code = "unknown-function"
 	CodeUnknownAction       Code = "unknown-action"
 	CodeUndefinedName       Code = "undefined-name"
@@ -34,24 +36,36 @@ type RelatedInformation struct {
 	End     token.Pos
 }
 
+type Suggestion struct {
+	Title       string
+	Replacement string
+	Pos         token.Pos
+	End         token.Pos
+}
+
 type Diagnostic struct {
-	Severity Severity
-	Code     Code
-	Message  string
-	Pos      token.Pos
-	End      token.Pos
-	Related  list.List[RelatedInformation]
+	Severity    Severity
+	Code        Code
+	Message     string
+	Pos         token.Pos
+	End         token.Pos
+	Related     list.List[RelatedInformation]
+	Suggestions list.List[Suggestion]
 }
 
 func (d Diagnostic) Format(fset *token.FileSet) string {
 	head := d.formatHead(fset)
-	if d.Related.Len() == 0 {
+	if d.Related.Len() == 0 && d.Suggestions.Len() == 0 {
 		return head
 	}
 	lines := []string{head}
 	for index := range d.Related.Len() {
 		item, _ := d.Related.Get(index)
 		lines = append(lines, "  note: "+formatRelated(fset, item))
+	}
+	for index := range d.Suggestions.Len() {
+		item, _ := d.Suggestions.Get(index)
+		lines = append(lines, "  fix: "+item.Title)
 	}
 	return strings.Join(lines, "\n")
 }
@@ -63,13 +77,28 @@ func (d *Diagnostics) Add(severity Severity, pos, end token.Pos, message string)
 }
 
 func (d *Diagnostics) AddCode(severity Severity, code Code, pos, end token.Pos, message string) {
-	*d = append(*d, Diagnostic{
+	d.AddCodeSuggestions(severity, code, pos, end, message)
+}
+
+func (d *Diagnostics) AddCodeSuggestions(
+	severity Severity,
+	code Code,
+	pos token.Pos,
+	end token.Pos,
+	message string,
+	suggestions ...Suggestion,
+) {
+	item := Diagnostic{
 		Severity: severity,
 		Code:     code,
 		Message:  message,
 		Pos:      pos,
 		End:      end,
-	})
+	}
+	if len(suggestions) > 0 {
+		item.Suggestions = *list.NewList(suggestions...)
+	}
+	*d = append(*d, item)
 }
 
 func (d *Diagnostics) AddError(pos, end token.Pos, message string) {
@@ -80,6 +109,10 @@ func (d *Diagnostics) AddErrorCode(code Code, pos, end token.Pos, message string
 	d.AddCode(SeverityError, code, pos, end, message)
 }
 
+func (d *Diagnostics) AddErrorCodeSuggestions(code Code, pos, end token.Pos, message string, suggestions ...Suggestion) {
+	d.AddCodeSuggestions(SeverityError, code, pos, end, message, suggestions...)
+}
+
 func (d *Diagnostics) AddRelated(
 	severity Severity,
 	code Code,
@@ -87,6 +120,18 @@ func (d *Diagnostics) AddRelated(
 	end token.Pos,
 	message string,
 	related ...RelatedInformation,
+) {
+	d.AddRelatedSuggestions(severity, code, pos, end, message, related, nil)
+}
+
+func (d *Diagnostics) AddRelatedSuggestions(
+	severity Severity,
+	code Code,
+	pos token.Pos,
+	end token.Pos,
+	message string,
+	related []RelatedInformation,
+	suggestions []Suggestion,
 ) {
 	item := Diagnostic{
 		Severity: severity,
@@ -97,6 +142,9 @@ func (d *Diagnostics) AddRelated(
 	}
 	if len(related) > 0 {
 		item.Related = *list.NewList(related...)
+	}
+	if len(suggestions) > 0 {
+		item.Suggestions = *list.NewList(suggestions...)
 	}
 	*d = append(*d, item)
 }

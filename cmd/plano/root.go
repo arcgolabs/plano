@@ -17,7 +17,6 @@ func newRootCmd() *cobra.Command {
 		newCheckCmd(),
 		newHIRCmd(),
 		newCompileCmd(),
-		newLowerCmd(),
 		newValidateCmd(),
 		newDiagCmd(),
 	)

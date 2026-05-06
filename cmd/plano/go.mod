@@ -4,8 +4,6 @@ go 1.26.2
 
 require (
 	github.com/arcgolabs/collectionx/list v0.7.0
-	github.com/arcgolabs/collectionx/mapping v0.7.0
-	github.com/arcgolabs/collectionx/set v0.7.0
 	github.com/samber/lo v1.53.0
 	github.com/spf13/cobra v1.10.2
 	gopkg.in/yaml.v3 v3.0.1

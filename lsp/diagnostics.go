@@ -21,20 +21,23 @@ func diagnosticsFromResult(result compiler.Result, sources *mapping.Map[string, 
 func diagnosticFromCompiler(result compiler.Result, sources *mapping.Map[string, []byte], item diag.Diagnostic) Diagnostic {
 	rng, ok := diagnosticRange(result, sources, item)
 	related := diagnosticRelated(result, sources, item.Related)
+	suggestions := diagnosticSuggestions(result, sources, item.Suggestions)
 	if !ok {
 		return Diagnostic{
-			Severity: string(item.Severity),
-			Code:     string(item.Code),
-			Message:  item.Message,
-			Related:  related,
+			Severity:    string(item.Severity),
+			Code:        string(item.Code),
+			Message:     item.Message,
+			Related:     related,
+			Suggestions: suggestions,
 		}
 	}
 	return Diagnostic{
-		Severity: string(item.Severity),
-		Code:     string(item.Code),
-		Message:  item.Message,
-		Range:    rng,
-		Related:  related,
+		Severity:    string(item.Severity),
+		Code:        string(item.Code),
+		Message:     item.Message,
+		Range:       rng,
+		Related:     related,
+		Suggestions: suggestions,
 	}
 }
 
@@ -102,4 +105,25 @@ func diagnosticRelatedLocation(
 		URI:   FileURI(path),
 		Range: rng,
 	}, true
+}
+
+func diagnosticSuggestions(
+	result compiler.Result,
+	sources *mapping.Map[string, []byte],
+	items list.List[diag.Suggestion],
+) list.List[DiagnosticSuggestion] {
+	out := list.NewListWithCapacity[DiagnosticSuggestion](items.Len())
+	for index := range items.Len() {
+		item, _ := items.Get(index)
+		rng, ok := diagnosticRange(result, sources, diag.Diagnostic{Pos: item.Pos, End: item.End})
+		if !ok {
+			continue
+		}
+		out.Add(DiagnosticSuggestion{
+			Title:       item.Title,
+			Replacement: item.Replacement,
+			Range:       rng,
+		})
+	}
+	return *out
 }

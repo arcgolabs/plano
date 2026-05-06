@@ -72,11 +72,12 @@ func artifactDiagnosticsToWire(items list.List[ArtifactDiagnostic]) []artifactDi
 	for index := range items.Len() {
 		item, _ := items.Get(index)
 		out = append(out, artifactDiagnosticWire{
-			Severity: item.Severity,
-			Code:     item.Code,
-			Message:  item.Message,
-			Span:     item.Span,
-			Related:  artifactRelatedToWire(item.Related),
+			Severity:    item.Severity,
+			Code:        item.Code,
+			Message:     item.Message,
+			Span:        item.Span,
+			Related:     artifactRelatedToWire(item.Related),
+			Suggestions: artifactSuggestionsToWire(item.Suggestions),
 		})
 	}
 	return out
@@ -91,17 +92,27 @@ func artifactRelatedToWire(items list.List[ArtifactRelatedInformation]) []artifa
 	return out
 }
 
+func artifactSuggestionsToWire(items list.List[ArtifactDiagnosticSuggestion]) []artifactDiagnosticSuggestionWire {
+	out := make([]artifactDiagnosticSuggestionWire, 0, items.Len())
+	for index := range items.Len() {
+		item, _ := items.Get(index)
+		out = append(out, artifactDiagnosticSuggestionWire(item))
+	}
+	return out
+}
+
 func artifactDiagnosticsFromWire(items []artifactDiagnosticWire) list.List[ArtifactDiagnostic] {
 	out := list.NewListWithCapacity[ArtifactDiagnostic](len(items))
 	for index := range items {
 		item := items[index]
 		related := artifactRelatedFromWire(item.Related)
 		out.Add(ArtifactDiagnostic{
-			Severity: item.Severity,
-			Code:     item.Code,
-			Message:  item.Message,
-			Span:     item.Span,
-			Related:  related,
+			Severity:    item.Severity,
+			Code:        item.Code,
+			Message:     item.Message,
+			Span:        item.Span,
+			Related:     related,
+			Suggestions: artifactSuggestionsFromWire(item.Suggestions),
 		})
 	}
 	return *out
@@ -111,6 +122,14 @@ func artifactRelatedFromWire(items []artifactRelatedInformationWire) list.List[A
 	out := list.NewListWithCapacity[ArtifactRelatedInformation](len(items))
 	for _, item := range items {
 		out.Add(ArtifactRelatedInformation(item))
+	}
+	return *out
+}
+
+func artifactSuggestionsFromWire(items []artifactDiagnosticSuggestionWire) list.List[ArtifactDiagnosticSuggestion] {
+	out := list.NewListWithCapacity[ArtifactDiagnosticSuggestion](len(items))
+	for _, item := range items {
+		out.Add(ArtifactDiagnosticSuggestion(item))
 	}
 	return *out
 }

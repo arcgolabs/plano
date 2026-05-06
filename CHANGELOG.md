@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+Compiler diagnostic contract update.
+
+Highlights:
+
+- added structured diagnostic suggestions to `diag.Diagnostic`
+- moved spelling-based quick-fix candidate generation from LSP into the compiler
+- added compiler suggestions for unknown fields and invalid nested form names
+- added `for ... where` filtered loop syntax for script-capable bodies and functions
+- added `diagnostics[].suggestions` to compiler artifacts
+- updated `lsp.Snapshot.CodeActions` to consume diagnostic suggestions instead of parsing diagnostic messages
+- decoupled `cmd/plano` from documentation example packages and replaced example-backed lowering with embedded sample display
+- bumped artifact schema generation to `plano.artifact/v2` while keeping v1 artifacts readable
+- kept public API generation at `v1`
+
 ## v0.5.0
 
 LSP tooling and dependency refresh release.

@@ -149,6 +149,8 @@ type ForStmt struct {
 	Name     *Ident
 	In       token.Pos
 	Iterable Expr
+	Where    token.Pos
+	Filter   Expr
 	Body     *Block
 }
 
@@ -156,6 +158,9 @@ func (n *ForStmt) Pos() token.Pos { return n.For }
 func (n *ForStmt) End() token.Pos {
 	if n.Body != nil {
 		return n.Body.End()
+	}
+	if n.Filter != nil {
+		return n.Filter.End()
 	}
 	if n.Iterable != nil {
 		return n.Iterable.End()

@@ -147,6 +147,34 @@ task build {
 	assertContainsDiagnostic(t, result.Diagnostics, "has key expects string, got int")
 }
 
+func TestCheckSourceDetailedAddsDiagnosticSuggestions(t *testing.T) {
+	c := newTestCompiler(t)
+	src := []byte(`
+workspace {
+  name = "demo"
+  default = buld
+}
+
+task build {
+  outputz = []
+  outputs = [join_pat("dist", "demo")]
+  rn {
+    exec("echo")
+  }
+  run {
+    exce("go", "test")
+  }
+}
+`)
+
+	result := c.CheckSourceDetailed(context.Background(), "suggestions.plano", src)
+	assertDiagnosticSuggestion(t, result.Diagnostics, diag.CodeUndefinedName, "build")
+	assertDiagnosticSuggestion(t, result.Diagnostics, diag.CodeUnknownField, "outputs")
+	assertDiagnosticSuggestion(t, result.Diagnostics, diag.CodeUnknownNestedForm, "run")
+	assertDiagnosticSuggestion(t, result.Diagnostics, diag.CodeUnknownFunction, "join_path")
+	assertDiagnosticSuggestion(t, result.Diagnostics, diag.CodeUnknownAction, "exec")
+}
+
 func assertContainsDiagnostic(t *testing.T, diags diag.Diagnostics, want string) {
 	t.Helper()
 	for index := range diags {
@@ -156,4 +184,22 @@ func assertContainsDiagnostic(t *testing.T, diags diag.Diagnostics, want string)
 		}
 	}
 	t.Fatalf("missing diagnostic containing %q", want)
+}
+
+func assertDiagnosticSuggestion(t *testing.T, diags diag.Diagnostics, code diag.Code, replacement string) {
+	t.Helper()
+	for index := range diags {
+		item := diags[index]
+		if item.Code != code {
+			continue
+		}
+		for suggestionIndex := range item.Suggestions.Len() {
+			suggestion, _ := item.Suggestions.Get(suggestionIndex)
+			if suggestion.Replacement == replacement {
+				return
+			}
+		}
+		t.Fatalf("diagnostic %q suggestions = %#v, missing %q", code, item.Suggestions, replacement)
+	}
+	t.Fatalf("missing diagnostic code %q", code)
 }

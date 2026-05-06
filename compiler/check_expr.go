@@ -2,9 +2,7 @@ package compiler
 
 import (
 	"go/token"
-	"strconv"
 
-	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/plano/ast"
 	"github.com/arcgolabs/plano/diag"
 	"github.com/arcgolabs/plano/schema"
@@ -48,7 +46,13 @@ func (c *checker) inferIdent(name *ast.Ident, scope *checkScope) schema.Type {
 	if symbol, ok := c.binding.Symbols.Get(name.Name); ok {
 		return schema.RefType{Kind: symbol.Kind}
 	}
-	c.diagnostics.AddErrorCode(diag.CodeUndefinedName, name.Pos(), name.End(), `undefined symbol "`+name.Name+`"`)
+	c.diagnostics.AddErrorCodeSuggestions(
+		diag.CodeUndefinedName,
+		name.Pos(),
+		name.End(),
+		`undefined symbol "`+name.Name+`"`,
+		c.nameSuggestions(name.Name, scope, name.Pos(), name.End())...,
+	)
 	return schema.TypeAny
 }
 
@@ -217,7 +221,13 @@ func (c *checker) checkCallExpr(expr *ast.CallExpr, scope *checkScope) schema.Ty
 			result = builtinResultType(name, argTypes, spec.Result)
 		}
 	default:
-		c.diagnostics.AddErrorCode(diag.CodeUnknownFunction, expr.Pos(), expr.End(), `unknown function "`+name+`"`)
+		c.diagnostics.AddErrorCodeSuggestions(
+			diag.CodeUnknownFunction,
+			expr.Pos(),
+			expr.End(),
+			`unknown function "`+name+`"`,
+			c.functionSuggestions(name, expr.Fun.Pos(), expr.Fun.End())...,
+		)
 	}
 
 	c.recordCall(name, scope.id, argTypes, result, expr.Pos(), expr.End())
@@ -269,26 +279,17 @@ func (c *checker) checkActionCall(call *ast.CallStmt, scope *checkScope) {
 	}
 	spec, ok := c.compiler.actions.Get(call.Callee.String())
 	if !ok {
-		c.diagnostics.AddErrorCode(diag.CodeUnknownAction, call.Pos(), call.End(), `unknown action "`+call.Callee.String()+`"`)
+		name := call.Callee.String()
+		c.diagnostics.AddErrorCodeSuggestions(
+			diag.CodeUnknownAction,
+			call.Pos(),
+			call.End(),
+			`unknown action "`+name+`"`,
+			c.actionSuggestions(name, call.Callee.Pos(), call.Callee.End())...,
+		)
 		c.recordCall(call.Callee.String(), scope.id, argTypes, schema.TypeAny, call.Pos(), call.End())
 		return
 	}
 	c.checkSignature("action", call.Callee.String(), spec.MinArgs, spec.MaxArgs, spec.ArgTypes, spec.VariadicType, argTypes, call.Pos(), call.End())
 	c.recordCall(call.Callee.String(), scope.id, argTypes, schema.TypeAny, call.Pos(), call.End())
-}
-
-func (c *checker) checkSignature(kind, name string, minArgs, maxArgs int, paramTypes list.List[schema.Type], variadicType schema.Type, argTypes []schema.Type, pos, end token.Pos) {
-	if err := validateArity(kind, name, minArgs, maxArgs, len(argTypes)); err != nil {
-		c.diagnostics.AddError(pos, end, err.Error())
-		return
-	}
-	for idx, argType := range argTypes {
-		want := signatureArgType(idx, paramTypes, variadicType)
-		if want == nil {
-			continue
-		}
-		if !isTypeAssignable(want, argType) {
-			c.diagnostics.AddErrorCode(diag.CodeTypeMismatch, pos, end, typeMismatchError(kind+" argument "+strconv.Itoa(idx+1), want, argType).Error())
-		}
-	}
 }

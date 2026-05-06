@@ -1,0 +1,14 @@
+stack "demo" {
+  service api {
+    image = "ghcr.io/acme/api:latest"
+    ports = [8080]
+    env = {
+      LOG_LEVEL = "info"
+    }
+  }
+
+  service worker {
+    image = "ghcr.io/acme/worker:latest"
+    depends_on = [api]
+  }
+}

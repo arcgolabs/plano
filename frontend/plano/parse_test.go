@@ -47,7 +47,7 @@ func TestParseInvalidSource(t *testing.T) {
 func TestParseElseIfAndLoopControl(t *testing.T) {
 	src := []byte(`
 task build {
-  for idx, item in range(0, 3) {
+  for idx, item in range(0, 3) where idx != 2 {
     if idx == 1 {
       continue
     }
@@ -82,6 +82,9 @@ func assertParsedIndexedLoop(t *testing.T, task *ast.FormDecl) {
 	}
 	if loop.Index == nil || loop.Index.Name != "idx" || loop.Name == nil || loop.Name.Name != "item" {
 		t.Fatalf("loop vars = %#v / %#v", loop.Index, loop.Name)
+	}
+	if loop.Filter == nil {
+		t.Fatal("expected loop filter")
 	}
 }
 

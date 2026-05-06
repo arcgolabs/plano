@@ -6,18 +6,12 @@ import (
 	"testing"
 )
 
-func TestBindCommandWithExample(t *testing.T) {
+func TestBindCommand(t *testing.T) {
 	file := writeTempPlano(t, `
 const target: string = "dist/demo"
 
-workspace {
-  name = "demo"
-  default = build
-}
-
-go.binary build {
-  main = "./cmd/demo"
-  out = "dist/demo"
+fn output(name: string): path {
+  return name
 }
 `)
 
@@ -27,7 +21,7 @@ go.binary build {
 	cmd := newRootCmd()
 	cmd.SetOut(&stdout)
 	cmd.SetErr(&stderr)
-	cmd.SetArgs([]string{"bind", "--example", "builddsl", file})
+	cmd.SetArgs([]string{"bind", file})
 
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -35,7 +29,7 @@ go.binary build {
 	if !strings.Contains(stdout.String(), `"Functions"`) {
 		t.Fatalf("stdout = %s", stdout.String())
 	}
-	if !strings.Contains(stdout.String(), `"build"`) {
+	if !strings.Contains(stdout.String(), `"output"`) {
 		t.Fatalf("stdout = %s", stdout.String())
 	}
 	if stderr.Len() != 0 {

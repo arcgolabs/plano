@@ -6,20 +6,20 @@ Current baseline:
 
 - release: `v0.5.0`
 - public API generation: `v1`
-- artifact schema: `plano.artifact/v1`
+- artifact schema: `plano.artifact/v2`
 
 This repository currently contains a first usable implementation with:
 
 - hand-written lexer and parser
-- AST and diagnostics
+- AST and diagnostics with compiler-provided quick-fix suggestions
 - a Go workspace (`go.work`) with separate core, CLI, and example modules
 - schema registration for forms and functions
-- a Cobra-based CLI under `cmd/plano`
+- a Cobra-based CLI under `cmd/plano` for core parsing, analysis, and embedded sample display
 - a public bind API for declaration and symbol collection
 - a public check API for static type analysis
 - a public HIR phase for typed compiler-internal lowering input
 - a compiler that produces a typed document
-- script-body execution with lexical scope and user-defined functions
+- script-body execution with lexical scope, filtered loops, and user-defined functions
 - script control flow with `else if`, `break`, and `continue`
 - expr-lang backed expression evaluation with host-registered variables and functions
 - bounded parse and expr-lang program caches for repeated compile requests
@@ -31,7 +31,7 @@ This repository currently contains a first usable implementation with:
 
 ## Packages
 
-- `cmd/plano`: CLI for parsing, compiling, and lowering `.plano` files
+- `cmd/plano`: CLI for parsing, checking, compiling, and displaying embedded `.plano` sample files
 - `frontend/plano`: `ParseFile` API for `.plano` source to AST
 - `compiler`: structured compile API from source bytes, strings, or files to typed documents
 - `lsp`: workspace analysis plus a basic `go.lsp.dev/protocol` LSP server with hover, definition, diagnostics, folding ranges, code actions, and expr-lang host binding hints
@@ -45,7 +45,7 @@ Examples:
 - `examples/pipelinedsl`: CI pipeline lowering
 - `examples/servicedsl`: service topology lowering
 
-Each bundled example now ships with multiple `.plano` scripts so the repository exercises not only the host registration/lowering code, but also representative language features such as control flow, collection builtins, and derived field expressions.
+The example modules are documentation and host-integration examples. The CLI intentionally does not import them; it embeds a few sample `.plano` files for quick inspection.
 
 The implementation also uses:
 
@@ -144,7 +144,7 @@ _ = lsp.ServeStdio(context.Background(), lsp.ServerOptions{
 })
 ```
 
-The LSP module also exposes folding ranges through `Snapshot.FoldingRanges(...)` and diagnostic-driven quick fixes through `Snapshot.CodeActions(...)`, with matching protocol handlers.
+The LSP module also exposes folding ranges through `Snapshot.FoldingRanges(...)` and compiler-suggested quick fixes through `Snapshot.CodeActions(...)`, with matching protocol handlers.
 
 ## Docs
 
@@ -160,16 +160,16 @@ Build and run:
 
 ```bash
 go run ./cmd/plano examples
+go run ./cmd/plano examples build
 go run ./cmd/plano version
-go run ./cmd/plano parse ./build.plano
-go run ./cmd/plano bind --example builddsl ./build.plano
-go run ./cmd/plano check --example builddsl ./build.plano
-go run ./cmd/plano hir --example builddsl ./build.plano
-go run ./cmd/plano compile --example builddsl ./build.plano
-go run ./cmd/plano lower --example builddsl ./build.plano
-go run ./cmd/plano validate --example builddsl ./build.plano
-go run ./cmd/plano diag --example builddsl ./build.plano
-go run ./cmd/plano lower --example builddsl --format yaml --out ./project.yaml ./build.plano
+go run ./cmd/plano parse ./cmd/plano/samples/basic.plano
+go run ./cmd/plano bind ./cmd/plano/samples/basic.plano
+go run ./cmd/plano check ./cmd/plano/samples/basic.plano
+go run ./cmd/plano hir ./cmd/plano/samples/basic.plano
+go run ./cmd/plano compile ./cmd/plano/samples/basic.plano
+go run ./cmd/plano validate ./cmd/plano/samples/basic.plano
+go run ./cmd/plano diag ./cmd/plano/samples/basic.plano
+go run ./cmd/plano compile --format yaml --out ./document.yaml ./cmd/plano/samples/basic.plano
 ```
 
 `parse` prints AST JSON.
@@ -177,18 +177,17 @@ go run ./cmd/plano lower --example builddsl --format yaml --out ./project.yaml .
 `check` prints the binding plus static typecheck result JSON.
 `hir` prints the typed HIR JSON.
 `compile` prints the typed document JSON.
-`lower` compiles with a registered example host DSL and prints the lowered IR JSON.
 `validate` checks whether the file compiles successfully.
 `diag` prints diagnostics without failing the command on warnings.
-`examples` lists each bundled DSL together with every checked-in sample script for that example.
+`examples` lists embedded sample files, or prints one sample when passed a name.
 `version` prints the release version, public API generation, and artifact schema generation.
 
 Output controls:
 
-- `--format json|yaml` for `parse`, `compile`, and `lower`
+- `--format json|yaml` for `parse`, `bind`, `check`, `hir`, and `compile`
 - `--format text|json|yaml` for `validate` and `diag`
 - `--out <path>` to write command output to a file instead of stdout
-- `--strict` on `compile`, `lower`, and `validate` to fail on any diagnostics, not only errors
+- `--strict` on compiler-backed commands to fail on any diagnostics, not only errors
 
 ## Taskfile
 
@@ -203,14 +202,12 @@ task bench:compiler
 task bench:lsp
 task work:sync
 task examples
-task parse FILE=./build.plano FORMAT=yaml
-task bind FILE=./build.plano EXAMPLE=builddsl FORMAT=yaml
-task check FILE=./build.plano EXAMPLE=builddsl FORMAT=yaml
-task hir FILE=./build.plano EXAMPLE=builddsl FORMAT=yaml
-task lower FILE=./build.plano EXAMPLE=builddsl FORMAT=yaml OUT=./project.yaml
-task example:builddsl FORMAT=yaml
-task example:pipelinedsl FORMAT=yaml
-task example:servicedsl FORMAT=yaml
+task sample SAMPLE=build
+task parse FILE=./cmd/plano/samples/basic.plano FORMAT=yaml
+task bind FILE=./cmd/plano/samples/basic.plano FORMAT=yaml
+task check FILE=./cmd/plano/samples/basic.plano FORMAT=yaml
+task hir FILE=./cmd/plano/samples/basic.plano FORMAT=yaml
+task compile FILE=./cmd/plano/samples/basic.plano FORMAT=yaml OUT=./document.yaml
 ```
 
 ## Repo Shape
@@ -250,10 +247,10 @@ The implementation is still narrower than the full language draft, but the main 
 - validated call statements through host-registered actions
 - typed HIR output for stable lowering
 - form declarations
-- script-body execution with `let`, local reassignment, `if`, `else if`, single- and dual-variable `for`, `break`, and `continue`
+- script-body execution with `let`, local reassignment, `if`, `else if`, single- and dual-variable `for`, `for ... where`, `break`, and `continue`
 - field assignments, nested forms, and call statements
 - expression evaluation with registered and user-defined functions
-- lowering from HIR to sample IRs through `examples/builddsl`, `examples/pipelinedsl`, and `examples/servicedsl`
+- lowering from HIR to sample IRs through documentation example modules under `examples/`
 
 Plugin packaging and richer module/runtime integration are still pending.
 

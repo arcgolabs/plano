@@ -25,6 +25,7 @@ const (
 	KwElse
 	KwFor
 	KwIn
+	KwWhere
 	KwTrue
 	KwFalse
 	KwNull
@@ -76,6 +77,7 @@ var kindNames = [...]string{
 	KwElse:     "else",
 	KwFor:      "for",
 	KwIn:       "in",
+	KwWhere:    "where",
 	KwTrue:     "true",
 	KwFalse:    "false",
 	KwNull:     "null",
@@ -131,6 +133,7 @@ var keywords = map[string]Kind{
 	"else":     KwElse,
 	"for":      KwFor,
 	"in":       KwIn,
+	"where":    KwWhere,
 	"true":     KwTrue,
 	"false":    KwFalse,
 	"null":     KwNull,

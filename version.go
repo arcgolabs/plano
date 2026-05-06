@@ -4,5 +4,5 @@ package plano
 const (
 	Version               = "0.5.0"
 	PublicAPIVersion      = "v1"
-	ArtifactSchemaVersion = "plano.artifact/v1"
+	ArtifactSchemaVersion = "plano.artifact/v2"
 )

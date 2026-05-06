@@ -28,10 +28,7 @@ task build {
     outputs = [join_path("dist", "fallback")]
   }
 
-  for pkg in packages {
-    if pkg == "./..." {
-      continue
-    }
+  for pkg in packages where pkg != "./..." {
     if pkg == "./internal/..." {
       break
     }
@@ -63,6 +60,25 @@ task build {
 	}
 	assertCallArgs(t, firstCall(t, nestedFormAt(t, build, 0)).Args, "./cmd/...")
 	assertCallArgs(t, firstCall(t, nestedFormAt(t, build, 1)).Args, "./...")
+}
+
+func TestCompileRejectsNonBoolLoopWhere(t *testing.T) {
+	c := newTestCompiler(t)
+	src := []byte(`
+task build {
+  for pkg in ["./..."] where pkg {
+    run {
+      exec("go", "test", pkg)
+    }
+  }
+}
+`)
+
+	_, diags := c.CompileSource(context.Background(), "flow.plano", src)
+	if !diags.HasError() {
+		t.Fatal("expected diagnostics")
+	}
+	assertContainsDiagnostic(t, diags, "for where clause expects bool, got string")
 }
 
 func TestCompileRejectsLoopControlOutsideLoops(t *testing.T) {

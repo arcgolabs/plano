@@ -25,16 +25,23 @@ type Location struct {
 }
 
 type Diagnostic struct {
-	Severity string                                  `json:"severity"       yaml:"severity"`
-	Code     string                                  `json:"code,omitempty" yaml:"code,omitempty"`
-	Message  string                                  `json:"message"        yaml:"message"`
-	Range    Range                                   `json:"range"          yaml:"range"`
-	Related  list.List[DiagnosticRelatedInformation] `json:"related"        yaml:"related"`
+	Severity    string                                  `json:"severity"       yaml:"severity"`
+	Code        string                                  `json:"code,omitempty" yaml:"code,omitempty"`
+	Message     string                                  `json:"message"        yaml:"message"`
+	Range       Range                                   `json:"range"          yaml:"range"`
+	Related     list.List[DiagnosticRelatedInformation] `json:"related"        yaml:"related"`
+	Suggestions list.List[DiagnosticSuggestion]         `json:"suggestions"    yaml:"suggestions"`
 }
 
 type DiagnosticRelatedInformation struct {
 	Message  string   `json:"message"  yaml:"message"`
 	Location Location `json:"location" yaml:"location"`
+}
+
+type DiagnosticSuggestion struct {
+	Title       string `json:"title"       yaml:"title"`
+	Replacement string `json:"replacement" yaml:"replacement"`
+	Range       Range  `json:"range"       yaml:"range"`
 }
 
 type Hover struct {

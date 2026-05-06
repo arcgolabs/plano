@@ -57,16 +57,23 @@ type ArtifactSpan struct {
 }
 
 type ArtifactDiagnostic struct {
-	Severity diag.Severity                         `json:"severity"`
-	Code     diag.Code                             `json:"code,omitempty"`
-	Message  string                                `json:"message"`
-	Span     ArtifactSpan                          `json:"span"`
-	Related  list.List[ArtifactRelatedInformation] `json:"related"`
+	Severity    diag.Severity                           `json:"severity"`
+	Code        diag.Code                               `json:"code,omitempty"`
+	Message     string                                  `json:"message"`
+	Span        ArtifactSpan                            `json:"span"`
+	Related     list.List[ArtifactRelatedInformation]   `json:"related"`
+	Suggestions list.List[ArtifactDiagnosticSuggestion] `json:"suggestions"`
 }
 
 type ArtifactRelatedInformation struct {
 	Message string       `json:"message"`
 	Span    ArtifactSpan `json:"span"`
+}
+
+type ArtifactDiagnosticSuggestion struct {
+	Title       string       `json:"title"`
+	Replacement string       `json:"replacement"`
+	Span        ArtifactSpan `json:"span"`
 }
 
 type ArtifactSymbol struct {

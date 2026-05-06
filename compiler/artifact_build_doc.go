@@ -42,11 +42,12 @@ func (b artifactBuilder) diagnostics(items diag.Diagnostics) list.List[ArtifactD
 	for index := range items {
 		item := items[index]
 		out.Add(ArtifactDiagnostic{
-			Severity: item.Severity,
-			Code:     item.Code,
-			Message:  item.Message,
-			Span:     b.span(item.Pos, item.End),
-			Related:  b.relatedDiagnostics(item.Related),
+			Severity:    item.Severity,
+			Code:        item.Code,
+			Message:     item.Message,
+			Span:        b.span(item.Pos, item.End),
+			Related:     b.relatedDiagnostics(item.Related),
+			Suggestions: b.diagnosticSuggestions(item.Suggestions),
 		})
 	}
 	return *out
@@ -59,6 +60,19 @@ func (b artifactBuilder) relatedDiagnostics(items list.List[diag.RelatedInformat
 		out.Add(ArtifactRelatedInformation{
 			Message: item.Message,
 			Span:    b.span(item.Pos, item.End),
+		})
+	}
+	return *out
+}
+
+func (b artifactBuilder) diagnosticSuggestions(items list.List[diag.Suggestion]) list.List[ArtifactDiagnosticSuggestion] {
+	out := list.NewListWithCapacity[ArtifactDiagnosticSuggestion](items.Len())
+	for index := range items.Len() {
+		item, _ := items.Get(index)
+		out.Add(ArtifactDiagnosticSuggestion{
+			Title:       item.Title,
+			Replacement: item.Replacement,
+			Span:        b.span(item.Pos, item.End),
 		})
 	}
 	return *out

@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"go/token"
+
 	"github.com/arcgolabs/plano/ast"
 	"github.com/arcgolabs/plano/internal/lexer"
 )
@@ -109,12 +111,22 @@ func (p *Parser) parseForStmt() *ast.ForStmt {
 		name = p.parseIdent()
 	}
 	inTok := p.expect(lexer.KwIn, "expected in")
+	iterable := p.parseExpr()
+	where := token.NoPos
+	var filter ast.Expr
+	if p.cur.Kind == lexer.KwWhere {
+		where = p.cur.Pos
+		p.advance()
+		filter = p.parseExpr()
+	}
 	return &ast.ForStmt{
 		For:      start.Pos,
 		Index:    index,
 		Name:     name,
 		In:       inTok.Pos,
-		Iterable: p.parseExpr(),
+		Iterable: iterable,
+		Where:    where,
+		Filter:   filter,
 		Body:     p.parseBlock(),
 	}
 }

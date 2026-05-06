@@ -1,13 +1,10 @@
 version: "3"
 
 vars:
-  FILE: '{{default "./build.plano" .FILE}}'
-  EXAMPLE: '{{default "builddsl" .EXAMPLE}}'
+  FILE: '{{default "./cmd/plano/samples/basic.plano" .FILE}}'
   FORMAT: '{{default "json" .FORMAT}}'
   OUT: '{{default "-" .OUT}}'
-  BUILDDSL_SAMPLE: ./examples/builddsl/sample.plano
-  PIPELINEDSL_SAMPLE: ./examples/pipelinedsl/sample.plano
-  SERVICEDSL_SAMPLE: ./examples/servicedsl/sample.plano
+  SAMPLE: '{{default "basic" .SAMPLE}}'
 
 tasks:
   test:
@@ -59,49 +56,49 @@ tasks:
   bind:
     desc: Bind declarations in a plano file
     cmds:
-      - go run ./cmd/plano bind --example {{.EXAMPLE}} --format {{.FORMAT}} {{if ne .OUT "-"}}--out {{.OUT}} {{end}}{{.FILE}}
+      - go run ./cmd/plano bind --format {{.FORMAT}} {{if ne .OUT "-"}}--out {{.OUT}} {{end}}{{.FILE}}
 
   check:
     desc: Typecheck a plano file
     cmds:
-      - go run ./cmd/plano check --example {{.EXAMPLE}} --format {{.FORMAT}} {{if ne .OUT "-"}}--out {{.OUT}} {{end}}{{.FILE}}
+      - go run ./cmd/plano check --format {{.FORMAT}} {{if ne .OUT "-"}}--out {{.OUT}} {{end}}{{.FILE}}
 
   hir:
     desc: Compile a plano file and print typed HIR
     cmds:
-      - go run ./cmd/plano hir --example {{.EXAMPLE}} --format {{.FORMAT}} {{if ne .OUT "-"}}--out {{.OUT}} {{end}}{{.FILE}}
+      - go run ./cmd/plano hir --format {{.FORMAT}} {{if ne .OUT "-"}}--out {{.OUT}} {{end}}{{.FILE}}
 
   compile:
     desc: Compile a plano file and print the typed document
     cmds:
-      - go run ./cmd/plano compile --example {{.EXAMPLE}} --format {{.FORMAT}} {{if ne .OUT "-"}}--out {{.OUT}} {{end}}{{.FILE}}
-
-  lower:
-    desc: Lower a plano file with the example DSL
-    cmds:
-      - go run ./cmd/plano lower --example {{.EXAMPLE}} --format {{.FORMAT}} {{if ne .OUT "-"}}--out {{.OUT}} {{end}}{{.FILE}}
+      - go run ./cmd/plano compile --format {{.FORMAT}} {{if ne .OUT "-"}}--out {{.OUT}} {{end}}{{.FILE}}
 
   validate:
     desc: Validate a plano file
     cmds:
-      - go run ./cmd/plano validate --example {{.EXAMPLE}} {{.FILE}}
+      - go run ./cmd/plano validate {{.FILE}}
 
   diag:
     desc: Print diagnostics for a plano file
     cmds:
-      - go run ./cmd/plano diag --example {{.EXAMPLE}} --format {{default "text" .FORMAT}} {{.FILE}}
+      - go run ./cmd/plano diag --format {{default "text" .FORMAT}} {{.FILE}}
 
-  example:builddsl:
-    desc: Lower the bundled builddsl sample
+  sample:
+    desc: Print an embedded plano sample
     cmds:
-      - go run ./cmd/plano lower --example builddsl --format {{.FORMAT}} {{.BUILDDSL_SAMPLE}}
+      - go run ./cmd/plano examples {{.SAMPLE}}
 
-  example:pipelinedsl:
-    desc: Lower the bundled pipelinedsl sample
+  sample:build:
+    desc: Print the embedded build sample
     cmds:
-      - go run ./cmd/plano lower --example pipelinedsl --format {{.FORMAT}} {{.PIPELINEDSL_SAMPLE}}
+      - go run ./cmd/plano examples build
 
-  example:servicedsl:
-    desc: Lower the bundled servicedsl sample
+  sample:pipeline:
+    desc: Print the embedded pipeline sample
     cmds:
-      - go run ./cmd/plano lower --example servicedsl --format {{.FORMAT}} {{.SERVICEDSL_SAMPLE}}
+      - go run ./cmd/plano examples pipeline
+
+  sample:service:
+    desc: Print the embedded service sample
+    cmds:
+      - go run ./cmd/plano examples service

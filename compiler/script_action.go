@@ -18,7 +18,13 @@ func (s *compileState) buildActionCall(current *ast.CallStmt, locals *env) (Call
 	call.Args = *list.NewList(args...)
 	spec, ok := s.compiler.actions.Get(call.Name)
 	if !ok {
-		s.diags.AddErrorCode(diag.CodeUnknownAction, current.Pos(), current.End(), fmt.Sprintf("unknown action %q", call.Name))
+		s.diags.AddErrorCodeSuggestions(
+			diag.CodeUnknownAction,
+			current.Pos(),
+			current.End(),
+			fmt.Sprintf("unknown action %q", call.Name),
+			s.actionSuggestions(call.Name, current.Callee.Pos(), current.Callee.End())...,
+		)
 		return Call{}, ActionSpec{}, false
 	}
 	if err := validateArity("action", call.Name, spec.MinArgs, spec.MaxArgs, call.Args.Len()); err != nil {

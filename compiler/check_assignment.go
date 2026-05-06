@@ -17,7 +17,13 @@ func (c *checker) checkAssignment(assign *ast.Assignment, scope *checkScope, spe
 	}
 	fieldSpec, ok := formFieldSpec(spec, assign.Name.Name)
 	if !ok {
-		c.diagnostics.AddError(assign.Pos(), assign.End(), `field "`+assign.Name.Name+`" is not allowed in `+spec.Name)
+		c.diagnostics.AddErrorCodeSuggestions(
+			diag.CodeUnknownField,
+			assign.Pos(),
+			assign.End(),
+			`field "`+assign.Name.Name+`" is not allowed in `+spec.Name,
+			c.fieldSuggestions(spec, assign.Name.Name, assign.Name.Pos(), assign.Name.End())...,
+		)
 		return
 	}
 	actual := c.checkExpr(assign.Value, scope)
