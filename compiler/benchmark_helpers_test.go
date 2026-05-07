@@ -200,46 +200,6 @@ task build_%02d {
 	return builder.String()
 }
 
-func benchmarkLargeBuilddslSource(taskCount int) string {
-	var builder strings.Builder
-	mustWriteString(&builder, `
-workspace {
-  name = "bench"
-  default = prepare_00
-}
-`)
-	for index := range taskCount {
-		prevPrepare := ""
-		prevBinary := ""
-		if index > 0 {
-			prevPrepare = fmt.Sprintf(", prepare_%02d", index-1)
-			prevBinary = fmt.Sprintf(", build_%02d", index-1)
-		}
-		mustFprintf(&builder, `
-task prepare_%02d {
-  deps = [%s%s]
-  outputs = [join_path("dist", "prepare_%02d")]
-
-  run {
-    exec("echo", "prepare_%02d")
-  }
-}
-
-go.test unit_%02d {
-  deps = [prepare_%02d]
-  packages = ["./...", "./cmd/..."]
-}
-
-go.binary build_%02d {
-  deps = [unit_%02d%s]
-  main = "./cmd/plano"
-  out = join_path("bin", "plano_%02d")
-}
-`, index, strings.TrimPrefix(prevPrepare, ", "), prevBinary, index, index, index, index, index, index, prevBinary, index)
-	}
-	return builder.String()
-}
-
 func taskFileName(index int) string {
 	return "task_" + leftPad2(index) + ".plano"
 }

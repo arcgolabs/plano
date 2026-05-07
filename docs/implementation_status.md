@@ -4,7 +4,7 @@ This document describes the current implementation in this repository relative t
 
 Compatibility baseline:
 
-- release: `v0.7.0`
+- release: `v0.7.1`
 - public API generation: `v1`
 - artifact schema: `plano.artifact/v2`
 

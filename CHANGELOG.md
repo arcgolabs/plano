@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.7.1
+
+Dependency boundary patch release.
+
+Highlights:
+
+- moved builddsl lowering benchmarks out of `compiler` and into the `examples/builddsl` module
+- removed the remaining `compiler` test dependency on bundled example modules
+- made artifact round-trip tests portable across operating-system path separators
+- made the lint task use `golangci-lint` from `PATH`
+- kept public API generation at `v1`
+- kept artifact schema at `plano.artifact/v2`
+
 ## v0.7.0
 
 Membership expressions and oops error wrapping release.

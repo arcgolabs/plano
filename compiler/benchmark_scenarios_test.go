@@ -3,9 +3,6 @@ package compiler_test
 import (
 	"context"
 	"testing"
-
-	compilerpkg "github.com/arcgolabs/plano/compiler"
-	"github.com/arcgolabs/plano/examples/builddsl"
 )
 
 func BenchmarkCompileStringDetailedControlFlow(b *testing.B) {
@@ -54,33 +51,6 @@ func BenchmarkCompileFileDetailedDeepImportGraphColdCache(b *testing.B) {
 		result := compiler.CompileFileDetailed(ctx, root)
 		if result.Diagnostics.HasError() {
 			b.Fatalf("unexpected diagnostics: %v", result.Diagnostics)
-		}
-	}
-}
-
-func BenchmarkBuilddslLowerLargeProject(b *testing.B) {
-	compiler := compilerpkg.New(compilerpkg.Options{})
-	if err := builddsl.Register(compiler); err != nil {
-		b.Fatal(err)
-	}
-	result := compiler.CompileStringDetailed(
-		context.Background(),
-		"large_build.plano",
-		benchmarkLargeBuilddslSource(24),
-	)
-	if result.Diagnostics.HasError() {
-		b.Fatalf("unexpected diagnostics: %v", result.Diagnostics)
-	}
-
-	b.ReportAllocs()
-	b.ResetTimer()
-	for range b.N {
-		project, err := builddsl.Lower(result.HIR)
-		if err != nil {
-			b.Fatal(err)
-		}
-		if project == nil || project.Tasks.Len() == 0 {
-			b.Fatal("expected lowered project")
 		}
 	}
 }

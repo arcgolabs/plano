@@ -2,6 +2,7 @@ package compiler_test
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"github.com/arcgolabs/collectionx/list"
@@ -169,7 +170,7 @@ func assertRoundTripResult(t *testing.T, result compiler.Result) {
 	}
 	assertFormCount(t, result.Document, 3)
 	assertWorkspaceDefault(t, formAt(t, result.Document.Forms, 0), "build")
-	assertTaskOutputs(t, formAt(t, result.Document.Forms, 1), []string{"dist/app"})
+	assertTaskOutputs(t, formAt(t, result.Document.Forms, 1), []string{filepath.Join("dist", "app")})
 	if got := result.Binding.Functions.Len(); got != 1 {
 		t.Fatalf("round-tripped functions = %d, want 1", got)
 	}

@@ -1,6 +1,6 @@
 # Public API
 
-As of `plano` `v0.7.0`, the repository treats the following packages as the supported public surface:
+As of `plano` `v0.7.1`, the repository treats the following packages as the supported public surface:
 
 - `github.com/arcgolabs/plano`
   - module and compatibility metadata
@@ -17,7 +17,7 @@ As of `plano` `v0.7.0`, the repository treats the following packages as the supp
 
 Compatibility baseline:
 
-- Module release: `v0.7.0`
+- Module release: `v0.7.1`
 - Public API generation: `v1`
 - Artifact schema generation: `plano.artifact/v2`
 

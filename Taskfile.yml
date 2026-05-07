@@ -15,7 +15,7 @@ tasks:
   lint:
     desc: Run golangci-lint across all workspace modules
     cmds:
-      - /Users/daiyuang/.go/bin/golangci-lint run ./... ./cmd/plano/... ./examples/builddsl/... ./examples/pipelinedsl/... ./examples/servicedsl/... ./lsp/...
+      - golangci-lint run ./... ./cmd/plano/... ./examples/builddsl/... ./examples/pipelinedsl/... ./examples/servicedsl/... ./lsp/...
 
   bench:
     desc: Run compiler and LSP benchmarks
