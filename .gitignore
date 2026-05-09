@@ -77,4 +77,5 @@ Temporary Items
 .cache
 *.db
 *.prof
+dist/
 .aider*

@@ -24,12 +24,20 @@ type phaseResult struct {
 
 type phaseLoader func(filename string) phaseResult
 
-func newCompileCmd() *cobra.Command {
+type compilerRunner struct {
+	newCompiler compilerFactory
+}
+
+func newCompilerRunner(factory compilerFactory) *compilerRunner {
+	return &compilerRunner{newCompiler: factory}
+}
+
+func newCompileCmd(runner *compilerRunner) *cobra.Command {
 	return newPhaseOutputCmd(
 		"compile <file>",
 		"Compile a .plano file and print the typed document",
 		func(filename string) phaseResult {
-			result := compileDetailed(filename)
+			result := runner.compileDetailed(filename)
 			return phaseResult{
 				value:       result.Document,
 				fileSet:     result.FileSet,
@@ -39,12 +47,12 @@ func newCompileCmd() *cobra.Command {
 	)
 }
 
-func newBindCmd() *cobra.Command {
+func newBindCmd(runner *compilerRunner) *cobra.Command {
 	return newPhaseOutputCmd(
 		"bind <file>",
 		"Bind declarations in a .plano file",
 		func(filename string) phaseResult {
-			result := bindDetailed(filename)
+			result := runner.bindDetailed(filename)
 			return phaseResult{
 				value:       result.Binding,
 				fileSet:     result.FileSet,
@@ -54,12 +62,12 @@ func newBindCmd() *cobra.Command {
 	)
 }
 
-func newCheckCmd() *cobra.Command {
+func newCheckCmd(runner *compilerRunner) *cobra.Command {
 	return newPhaseOutputCmd(
 		"check <file>",
 		"Typecheck a .plano file",
 		func(filename string) phaseResult {
-			result := checkDetailed(filename)
+			result := runner.checkDetailed(filename)
 			return phaseResult{
 				value: struct {
 					Binding *compiler.Binding   `json:"binding" yaml:"binding"`
@@ -75,12 +83,12 @@ func newCheckCmd() *cobra.Command {
 	)
 }
 
-func newHIRCmd() *cobra.Command {
+func newHIRCmd(runner *compilerRunner) *cobra.Command {
 	return newPhaseOutputCmd(
 		"hir <file>",
 		"Compile a .plano file and print the typed HIR",
 		func(filename string) phaseResult {
-			result := compileDetailed(filename)
+			result := runner.compileDetailed(filename)
 			return phaseResult{
 				value:       result.HIR,
 				fileSet:     result.FileSet,
@@ -115,7 +123,7 @@ func newPhaseOutputCmd(use, short string, load phaseLoader) *cobra.Command {
 	return cmd
 }
 
-func newValidateCmd() *cobra.Command {
+func newValidateCmd(runner *compilerRunner) *cobra.Command {
 	opts := compileOptions{
 		output: outputOptions{
 			format: string(formatText),
@@ -127,7 +135,7 @@ func newValidateCmd() *cobra.Command {
 		Short: "Validate a .plano file by compiling it",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			result := compileDetailed(args[0])
+			result := runner.compileDetailed(args[0])
 			if shouldFail(result.Diagnostics, opts.strict) {
 				return printDiagnostics(cmd.ErrOrStderr(), result.FileSet, result.Diagnostics)
 			}
@@ -140,7 +148,7 @@ func newValidateCmd() *cobra.Command {
 	return cmd
 }
 
-func newDiagCmd() *cobra.Command {
+func newDiagCmd(runner *compilerRunner) *cobra.Command {
 	opts := compileOptions{
 		output: outputOptions{
 			format: string(formatText),
@@ -152,7 +160,7 @@ func newDiagCmd() *cobra.Command {
 		Short: "Print diagnostics for a .plano file",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			result := compileDetailed(args[0])
+			result := runner.compileDetailed(args[0])
 			return withOutput(cmd.OutOrStdout(), opts.output.out, func(w io.Writer) error {
 				return writeDiagnosticsValue(w, result.FileSet, result.Diagnostics, outputFormat(opts.output.format))
 			})
@@ -162,18 +170,18 @@ func newDiagCmd() *cobra.Command {
 	return cmd
 }
 
-func compileDetailed(filename string) compiler.Result {
-	c := compiler.New(compiler.Options{})
+func (r *compilerRunner) compileDetailed(filename string) compiler.Result {
+	c := r.newCompiler()
 	return c.CompileFileDetailed(context.Background(), filename)
 }
 
-func bindDetailed(filename string) compiler.BindResult {
-	c := compiler.New(compiler.Options{})
+func (r *compilerRunner) bindDetailed(filename string) compiler.BindResult {
+	c := r.newCompiler()
 	return c.BindFileDetailed(context.Background(), filename)
 }
 
-func checkDetailed(filename string) compiler.CheckResult {
-	c := compiler.New(compiler.Options{})
+func (r *compilerRunner) checkDetailed(filename string) compiler.CheckResult {
+	c := r.newCompiler()
 	return c.CheckFileDetailed(context.Background(), filename)
 }
 

@@ -189,6 +189,12 @@ Output controls:
 - `--out <path>` to write command output to a file instead of stdout
 - `--strict` on compiler-backed commands to fail on any diagnostics, not only errors
 
+CLI releases:
+
+- pushing a tag like `cmd/plano/v0.8.1` runs the `cli-release` GitHub Actions workflow
+- the workflow builds cross-platform `plano` archives with GoReleaser and publishes them to a GitHub Release for that tag
+- workspace-local modules are resolved through `go.work`; child `go.mod` files should not declare local `github.com/arcgolabs/plano` dependencies
+
 ## Taskfile
 
 The repository also ships a small `Taskfile.yml` for common local workflows:

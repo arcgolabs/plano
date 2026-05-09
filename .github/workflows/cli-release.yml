@@ -1,0 +1,60 @@
+name: cli-release
+
+on:
+  push:
+    tags:
+      - "cmd/plano/v*"
+
+permissions:
+  contents: write
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Test CLI
+        run: go test ./cmd/plano/...
+
+      - name: Prepare release tag
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#cmd/plano/}"
+          echo "PLANO_CLI_VERSION=${version}" >> "$GITHUB_ENV"
+          echo "GORELEASER_CURRENT_TAG=${version}" >> "$GITHUB_ENV"
+
+      - name: Build release artifacts
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean --skip=validate,publish
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          shopt -s nullglob
+          artifacts=(dist/*.tar.gz dist/*.zip dist/*checksums.txt)
+          if [ "${#artifacts[@]}" -eq 0 ]; then
+            echo "no release artifacts found in dist/" >&2
+            exit 1
+          fi
+
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "${artifacts[@]}" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "${artifacts[@]}" \
+              --title "plano ${PLANO_CLI_VERSION}" \
+              --generate-notes
+          fi
