@@ -4,7 +4,6 @@ import (
 	"math"
 
 	"github.com/arcgolabs/collectionx/list"
-	"github.com/samber/lo"
 	"go.lsp.dev/protocol"
 )
 
@@ -44,7 +43,7 @@ func toProtocolLocation(location Location) protocol.Location {
 }
 
 func toProtocolLocations(items list.List[Location]) []protocol.Location {
-	return lo.Map(items.Values(), func(item Location, _ int) protocol.Location {
+	return mapList(items, func(item Location) protocol.Location {
 		return toProtocolLocation(item)
 	})
 }
@@ -72,7 +71,7 @@ func toProtocolWorkspaceEdit(edit WorkspaceEdit) *protocol.WorkspaceEdit {
 }
 
 func toProtocolCodeActions(items list.List[CodeAction]) []protocol.CodeAction {
-	return lo.Map(items.Values(), func(item CodeAction, _ int) protocol.CodeAction {
+	return mapList(items, func(item CodeAction) protocol.CodeAction {
 		return protocol.CodeAction{
 			Title:       item.Title,
 			Kind:        protocol.CodeActionKind(item.Kind),
@@ -84,7 +83,7 @@ func toProtocolCodeActions(items list.List[CodeAction]) []protocol.CodeAction {
 }
 
 func toProtocolFoldingRanges(items list.List[FoldingRange]) []protocol.FoldingRange {
-	return lo.Map(items.Values(), func(item FoldingRange, _ int) protocol.FoldingRange {
+	return mapList(items, func(item FoldingRange) protocol.FoldingRange {
 		return protocol.FoldingRange{
 			StartLine:      clampUint32(item.Range.Start.Line),
 			StartCharacter: clampUint32(item.Range.Start.Character),
@@ -96,7 +95,7 @@ func toProtocolFoldingRanges(items list.List[FoldingRange]) []protocol.FoldingRa
 }
 
 func toProtocolTextEdits(items list.List[TextEdit]) []protocol.TextEdit {
-	return lo.Map(items.Values(), func(item TextEdit, _ int) protocol.TextEdit {
+	return mapList(items, func(item TextEdit) protocol.TextEdit {
 		return protocol.TextEdit{
 			Range:   toProtocolRange(item.Range),
 			NewText: item.NewText,
@@ -113,7 +112,7 @@ func toProtocolCompletionList(items CompletionList) *protocol.CompletionList {
 
 func toProtocolCompletionItems(items CompletionList) []protocol.CompletionItem {
 	rng := toProtocolRange(items.Range)
-	return lo.Map(items.Items.Values(), func(item CompletionItem, _ int) protocol.CompletionItem {
+	return mapList(items.Items, func(item CompletionItem) protocol.CompletionItem {
 		completion := protocol.CompletionItem{
 			Label:      item.Label,
 			Kind:       protocolCompletionKind(item.Kind),
@@ -145,7 +144,7 @@ func toProtocolDocumentSymbolInterfaces(items list.List[DocumentSymbol]) []any {
 }
 
 func toProtocolDocumentSymbols(items list.List[DocumentSymbol]) []protocol.DocumentSymbol {
-	return lo.Map(items.Values(), func(item DocumentSymbol, _ int) protocol.DocumentSymbol {
+	return mapList(items, func(item DocumentSymbol) protocol.DocumentSymbol {
 		return protocol.DocumentSymbol{
 			Name:           item.Name,
 			Detail:         item.Detail,
@@ -158,7 +157,7 @@ func toProtocolDocumentSymbols(items list.List[DocumentSymbol]) []protocol.Docum
 }
 
 func toProtocolDiagnostics(items list.List[Diagnostic]) []protocol.Diagnostic {
-	return lo.Map(items.Values(), func(item Diagnostic, _ int) protocol.Diagnostic {
+	return mapList(items, func(item Diagnostic) protocol.Diagnostic {
 		diagnostic := protocol.Diagnostic{
 			Range:    toProtocolRange(item.Range),
 			Severity: protocolSeverity(item.Severity),
@@ -176,7 +175,7 @@ func toProtocolDiagnostics(items list.List[Diagnostic]) []protocol.Diagnostic {
 }
 
 func toProtocolDiagnosticRelated(items list.List[DiagnosticRelatedInformation]) []protocol.DiagnosticRelatedInformation {
-	return lo.Map(items.Values(), func(item DiagnosticRelatedInformation, _ int) protocol.DiagnosticRelatedInformation {
+	return mapList(items, func(item DiagnosticRelatedInformation) protocol.DiagnosticRelatedInformation {
 		return protocol.DiagnosticRelatedInformation{
 			Location: protocol.Location{
 				URI:   protocol.DocumentURI(item.Location.URI),
@@ -185,6 +184,17 @@ func toProtocolDiagnosticRelated(items list.List[DiagnosticRelatedInformation]) 
 			Message: item.Message,
 		}
 	})
+}
+
+func mapList[T any, R any](items list.List[T], mapper func(T) R) []R {
+	var out []R
+	items.ViewValues(func(values []T) {
+		out = make([]R, len(values))
+		for index, item := range values {
+			out[index] = mapper(item)
+		}
+	})
+	return out
 }
 
 func protocolSeverity(severity string) protocol.DiagnosticSeverity {

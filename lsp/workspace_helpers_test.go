@@ -8,15 +8,16 @@ import (
 	"unicode/utf16"
 	"unicode/utf8"
 
+	"github.com/arcgolabs/collectionx/list"
 	"github.com/arcgolabs/plano/compiler"
-	"github.com/arcgolabs/plano/examples/builddsl"
 	"github.com/arcgolabs/plano/lsp"
+	"github.com/arcgolabs/plano/schema"
 )
 
 func testWorkspace(tb testing.TB) *lsp.Workspace {
 	tb.Helper()
 	base := compiler.New(compiler.Options{})
-	if err := builddsl.Register(base); err != nil {
+	if err := registerTestBuildDSL(base); err != nil {
 		tb.Fatal(err)
 	}
 	return lsp.NewWorkspace(lsp.Options{Compiler: base})
@@ -25,7 +26,7 @@ func testWorkspace(tb testing.TB) *lsp.Workspace {
 func testExprWorkspace(tb testing.TB) *lsp.Workspace {
 	tb.Helper()
 	base := compiler.New(compiler.Options{})
-	if err := builddsl.Register(base); err != nil {
+	if err := registerTestBuildDSL(base); err != nil {
 		tb.Fatal(err)
 	}
 	if err := base.RegisterExprVar("branch", "main"); err != nil {
@@ -35,6 +36,108 @@ func testExprWorkspace(tb testing.TB) *lsp.Workspace {
 		tb.Fatal(err)
 	}
 	return lsp.NewWorkspace(lsp.Options{Compiler: base})
+}
+
+func registerTestBuildDSL(c *compiler.Compiler) error {
+	if err := c.RegisterForms(schema.FormSpecs(
+		schema.FormSpec{
+			Name:      "workspace",
+			LabelKind: schema.LabelNone,
+			BodyMode:  schema.BodyFieldOnly,
+			Fields: schema.Fields(
+				schema.FieldSpec{Name: "name", Type: schema.TypeString, Required: true},
+				schema.FieldSpec{Name: "default", Type: schema.RefType{Kind: "task"}, Required: true},
+			),
+		},
+		schema.FormSpec{
+			Name:         "task",
+			LabelKind:    schema.LabelSymbol,
+			LabelRefKind: "task",
+			BodyMode:     schema.BodyScript,
+			Declares:     "task",
+			Fields: schema.Fields(
+				schema.FieldSpec{
+					Name:       "deps",
+					Type:       schema.ListType{Elem: schema.RefType{Kind: "task"}},
+					Default:    []any{},
+					HasDefault: true,
+				},
+				schema.FieldSpec{
+					Name:       "outputs",
+					Type:       schema.ListType{Elem: schema.TypePath},
+					Default:    []any{},
+					HasDefault: true,
+				},
+			),
+			NestedForms: schema.NestedForms("run"),
+		},
+		schema.FormSpec{
+			Name:         "go.test",
+			LabelKind:    schema.LabelSymbol,
+			LabelRefKind: "task",
+			BodyMode:     schema.BodyFieldOnly,
+			Declares:     "task",
+			Fields: schema.Fields(
+				schema.FieldSpec{
+					Name:       "deps",
+					Type:       schema.ListType{Elem: schema.RefType{Kind: "task"}},
+					Default:    []any{},
+					HasDefault: true,
+				},
+				schema.FieldSpec{Name: "packages", Type: schema.ListType{Elem: schema.TypePath}, Required: true},
+			),
+		},
+		schema.FormSpec{
+			Name:         "go.binary",
+			LabelKind:    schema.LabelSymbol,
+			LabelRefKind: "task",
+			BodyMode:     schema.BodyFieldOnly,
+			Declares:     "task",
+			Fields: schema.Fields(
+				schema.FieldSpec{
+					Name:       "deps",
+					Type:       schema.ListType{Elem: schema.RefType{Kind: "task"}},
+					Default:    []any{},
+					HasDefault: true,
+				},
+				schema.FieldSpec{Name: "main", Type: schema.TypePath, Required: true},
+				schema.FieldSpec{Name: "out", Type: schema.TypePath, Required: true},
+			),
+		},
+		schema.FormSpec{
+			Name:      "run",
+			LabelKind: schema.LabelNone,
+			BodyMode:  schema.BodyCallOnly,
+		},
+	)); err != nil {
+		return err
+	}
+	return c.RegisterActions(compiler.ActionSpecs(
+		compiler.ActionSpec{
+			Name:         "exec",
+			MinArgs:      1,
+			MaxArgs:      -1,
+			ArgTypes:     schema.Types(schema.TypeString),
+			VariadicType: schema.TypeString,
+			Validate:     validateTestStringArgs,
+		},
+		compiler.ActionSpec{
+			Name:     "shell",
+			MinArgs:  1,
+			MaxArgs:  1,
+			ArgTypes: schema.Types(schema.TypeString),
+			Validate: validateTestStringArgs,
+		},
+	))
+}
+
+func validateTestStringArgs(args list.List[any]) error {
+	for _, arg := range args.Values() {
+		if _, ok := arg.(string); !ok {
+			return errors.New("test build action expects string arguments")
+		}
+	}
+	return nil
 }
 
 func testSlug(params ...any) (any, error) {

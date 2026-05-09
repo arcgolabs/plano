@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/arcgolabs/plano/compiler"
-	"github.com/arcgolabs/plano/examples/builddsl"
 	"github.com/arcgolabs/plano/lsp"
 )
 
@@ -134,7 +133,7 @@ func testWorkspaceWithReadCounter(t *testing.T) (*lsp.Workspace, *readCounter) {
 			return root.ReadFile(name)
 		},
 	})
-	if err := builddsl.Register(base); err != nil {
+	if err := registerTestBuildDSL(base); err != nil {
 		t.Fatal(err)
 	}
 	return lsp.NewWorkspace(lsp.Options{Compiler: base}), reads
