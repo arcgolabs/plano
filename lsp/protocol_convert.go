@@ -5,6 +5,7 @@ import (
 
 	"github.com/arcgolabs/collectionx/list"
 	"go.lsp.dev/protocol"
+	"go.lsp.dev/uri"
 )
 
 func fromProtocolPosition(pos protocol.Position) Position {
@@ -37,7 +38,7 @@ func toProtocolRange(rng Range) protocol.Range {
 
 func toProtocolLocation(location Location) protocol.Location {
 	return protocol.Location{
-		URI:   protocol.DocumentURI(location.URI),
+		URI:   uri.URI(location.URI),
 		Range: toProtocolRange(location.Range),
 	}
 }
@@ -51,19 +52,16 @@ func toProtocolLocations(items list.List[Location]) []protocol.Location {
 func toProtocolHover(hover Hover) *protocol.Hover {
 	rng := toProtocolRange(hover.Range)
 	return &protocol.Hover{
-		Range: &rng,
-		Contents: protocol.MarkupContent{
-			Kind:  protocol.Markdown,
-			Value: hover.Contents,
-		},
+		Range:    &rng,
+		Contents: markupContent(hover.Contents),
 	}
 }
 
 func toProtocolWorkspaceEdit(edit WorkspaceEdit) *protocol.WorkspaceEdit {
-	changes := make(map[protocol.DocumentURI][]protocol.TextEdit)
+	changes := make(map[uri.URI][]protocol.TextEdit)
 	if edit.Changes != nil {
-		edit.Changes.Range(func(uri string, items list.List[TextEdit]) bool {
-			changes[protocol.DocumentURI(uri)] = toProtocolTextEdits(items)
+		edit.Changes.Range(func(documentURI string, items list.List[TextEdit]) bool {
+			changes[uri.URI(documentURI)] = toProtocolTextEdits(items)
 			return true
 		})
 	}
@@ -72,23 +70,26 @@ func toProtocolWorkspaceEdit(edit WorkspaceEdit) *protocol.WorkspaceEdit {
 
 func toProtocolCodeActions(items list.List[CodeAction]) []protocol.CodeAction {
 	return mapList(items, func(item CodeAction) protocol.CodeAction {
+		kind := protocol.CodeActionKind(item.Kind)
 		return protocol.CodeAction{
 			Title:       item.Title,
-			Kind:        protocol.CodeActionKind(item.Kind),
+			Kind:        &kind,
 			Diagnostics: toProtocolDiagnostics(item.Diagnostics),
 			Edit:        toProtocolWorkspaceEdit(item.Edit),
-			IsPreferred: item.IsPreferred,
+			IsPreferred: ptr(item.IsPreferred),
 		}
 	})
 }
 
 func toProtocolFoldingRanges(items list.List[FoldingRange]) []protocol.FoldingRange {
 	return mapList(items, func(item FoldingRange) protocol.FoldingRange {
+		startCharacter := clampUint32(item.Range.Start.Character)
+		endCharacter := clampUint32(item.Range.End.Character)
 		return protocol.FoldingRange{
 			StartLine:      clampUint32(item.Range.Start.Line),
-			StartCharacter: clampUint32(item.Range.Start.Character),
+			StartCharacter: &startCharacter,
 			EndLine:        clampUint32(item.Range.End.Line),
-			EndCharacter:   clampUint32(item.Range.End.Character),
+			EndCharacter:   &endCharacter,
 			Kind:           protocol.FoldingRangeKind(item.Kind),
 		}
 	})
@@ -116,19 +117,16 @@ func toProtocolCompletionItems(items CompletionList) []protocol.CompletionItem {
 		completion := protocol.CompletionItem{
 			Label:      item.Label,
 			Kind:       protocolCompletionKind(item.Kind),
-			Detail:     item.Detail,
-			SortText:   item.Label,
-			FilterText: item.Label,
+			Detail:     optional(item.Detail),
+			SortText:   optional(item.Label),
+			FilterText: optional(item.Label),
 			TextEdit: &protocol.TextEdit{
 				Range:   rng,
 				NewText: item.Label,
 			},
 		}
 		if item.Documentation != "" {
-			completion.Documentation = protocol.MarkupContent{
-				Kind:  protocol.Markdown,
-				Value: item.Documentation,
-			}
+			completion.Documentation = markupContent(item.Documentation)
 		}
 		return completion
 	})
@@ -147,7 +145,7 @@ func toProtocolDocumentSymbols(items list.List[DocumentSymbol]) []protocol.Docum
 	return mapList(items, func(item DocumentSymbol) protocol.DocumentSymbol {
 		return protocol.DocumentSymbol{
 			Name:           item.Name,
-			Detail:         item.Detail,
+			Detail:         ptr(item.Detail),
 			Kind:           protocolSymbolKind(item.Kind),
 			Range:          toProtocolRange(item.Range),
 			SelectionRange: toProtocolRange(item.SelectionRange),
@@ -161,11 +159,11 @@ func toProtocolDiagnostics(items list.List[Diagnostic]) []protocol.Diagnostic {
 		diagnostic := protocol.Diagnostic{
 			Range:    toProtocolRange(item.Range),
 			Severity: protocolSeverity(item.Severity),
-			Source:   "plano",
-			Message:  item.Message,
+			Source:   optional("plano"),
+			Message:  protocol.String(item.Message),
 		}
 		if item.Code != "" {
-			diagnostic.Code = item.Code
+			diagnostic.Code = protocol.String(item.Code)
 		}
 		if item.Related.Len() > 0 {
 			diagnostic.RelatedInformation = toProtocolDiagnosticRelated(item.Related)
@@ -178,12 +176,27 @@ func toProtocolDiagnosticRelated(items list.List[DiagnosticRelatedInformation]) 
 	return mapList(items, func(item DiagnosticRelatedInformation) protocol.DiagnosticRelatedInformation {
 		return protocol.DiagnosticRelatedInformation{
 			Location: protocol.Location{
-				URI:   protocol.DocumentURI(item.Location.URI),
+				URI:   uri.URI(item.Location.URI),
 				Range: toProtocolRange(item.Location.Range),
 			},
 			Message: item.Message,
 		}
 	})
+}
+
+func optional[T any](value T) protocol.Optional[T] {
+	return protocol.NewOptional(value)
+}
+
+func ptr[T any](value T) *T {
+	return &value
+}
+
+func markupContent(value string) *protocol.MarkupContent {
+	return &protocol.MarkupContent{
+		Kind:  protocol.MarkupKindMarkdown,
+		Value: value,
+	}
 }
 
 func mapList[T any, R any](items list.List[T], mapper func(T) R) []R {

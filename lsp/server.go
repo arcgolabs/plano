@@ -10,7 +10,6 @@ import (
 	"github.com/arcgolabs/plano/compiler"
 	"go.lsp.dev/jsonrpc2"
 	"go.lsp.dev/protocol"
-	"go.uber.org/zap"
 )
 
 type ServerOptions struct {
@@ -53,27 +52,28 @@ func (s *Server) SetClient(client protocol.Client) {
 }
 
 func (s *Server) Initialize(_ context.Context, _ *protocol.InitializeParams) (*protocol.InitializeResult, error) {
+	fullSync := protocol.TextDocumentSyncKindFull
 	return &protocol.InitializeResult{
 		Capabilities: protocol.ServerCapabilities{
 			TextDocumentSync: &protocol.TextDocumentSyncOptions{
-				OpenClose: true,
-				Change:    protocol.TextDocumentSyncKindFull,
+				OpenClose: ptr(true),
+				Change:    &fullSync,
 				Save:      &protocol.SaveOptions{},
 			},
-			HoverProvider:          true,
-			DefinitionProvider:     true,
-			ReferencesProvider:     true,
-			DocumentSymbolProvider: true,
+			HoverProvider:          protocol.Boolean(true),
+			DefinitionProvider:     protocol.Boolean(true),
+			ReferencesProvider:     protocol.Boolean(true),
+			DocumentSymbolProvider: protocol.Boolean(true),
 			CodeActionProvider: &protocol.CodeActionOptions{
-				CodeActionKinds: []protocol.CodeActionKind{protocol.QuickFix},
+				CodeActionKinds: []protocol.CodeActionKind{protocol.CodeActionKindQuickFix},
 			},
 			CompletionProvider:   &protocol.CompletionOptions{},
 			FoldingRangeProvider: &protocol.FoldingRangeOptions{},
-			RenameProvider:       true,
+			RenameProvider:       protocol.Boolean(true),
 		},
-		ServerInfo: &protocol.ServerInfo{
+		ServerInfo: protocol.ServerInfo{
 			Name:    "plano",
-			Version: planomodule.Version,
+			Version: protocol.NewOptional(planomodule.Version),
 		},
 	}, nil
 }
@@ -138,59 +138,66 @@ func (s *Server) Handler() jsonrpc2.Handler {
 	return protocol.Handlers(s.handleRPC)
 }
 
-func (s *Server) handleRPC(ctx context.Context, reply jsonrpc2.Replier, req jsonrpc2.Request) error {
-	if handled, err := s.handleLifecycle(ctx, reply, req); handled {
-		return err
+func (s *Server) handleRPC(ctx context.Context, req *jsonrpc2.Request) (any, error) {
+	if result, handled, err := s.handleLifecycle(ctx, req); handled {
+		return result, err
 	}
-	if handled, err := s.handleTextDocument(ctx, reply, req); handled {
-		return err
+	if result, handled, err := s.handleTextDocument(ctx, req); handled {
+		return result, err
 	}
-	if err := jsonrpc2.MethodNotFoundHandler(ctx, reply, req); err != nil {
-		return fmt.Errorf("handle %q: %w", req.Method(), err)
+	result, err := jsonrpc2.MethodNotFoundHandler(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("handle %q: %w", req.Method(), err)
 	}
-	return nil
+	return result, nil
 }
 
-func (s *Server) handleLifecycle(ctx context.Context, reply jsonrpc2.Replier, req jsonrpc2.Request) (bool, error) {
+func (s *Server) handleLifecycle(ctx context.Context, req *jsonrpc2.Request) (any, bool, error) {
 	switch req.Method() {
 	case protocol.MethodInitialize:
 		var params protocol.InitializeParams
-		return true, replyCall(ctx, reply, req, &params, s.Initialize)
+		result, err := replyCall(ctx, req, &params, s.Initialize)
+		return result, true, err
 	case protocol.MethodInitialized:
 		var params protocol.InitializedParams
-		return true, replyNotify(ctx, reply, req, &params, s.Initialized)
+		result, err := replyNotify(ctx, req, &params, s.Initialized)
+		return result, true, err
 	case protocol.MethodShutdown:
-		return true, reply(ctx, nil, s.Shutdown(ctx))
+		return nil, true, s.Shutdown(ctx)
 	case protocol.MethodExit:
-		return true, reply(ctx, nil, s.Exit(ctx))
+		return nil, true, s.Exit(ctx)
 	default:
-		return false, nil
+		return nil, false, nil
 	}
 }
 
-func (s *Server) handleTextDocument(ctx context.Context, reply jsonrpc2.Replier, req jsonrpc2.Request) (bool, error) {
-	if handled, err := s.handleTextDocumentSync(ctx, reply, req); handled {
-		return true, err
+func (s *Server) handleTextDocument(ctx context.Context, req *jsonrpc2.Request) (any, bool, error) {
+	if result, handled, err := s.handleTextDocumentSync(ctx, req); handled {
+		return result, true, err
 	}
-	return s.handleTextDocumentQuery(ctx, reply, req)
+	return s.handleTextDocumentQuery(ctx, req)
 }
 
-func (s *Server) handleTextDocumentSync(ctx context.Context, reply jsonrpc2.Replier, req jsonrpc2.Request) (bool, error) {
+func (s *Server) handleTextDocumentSync(ctx context.Context, req *jsonrpc2.Request) (any, bool, error) {
 	switch req.Method() {
 	case protocol.MethodTextDocumentDidOpen:
 		var params protocol.DidOpenTextDocumentParams
-		return true, replyNotify(ctx, reply, req, &params, s.DidOpen)
+		result, err := replyNotify(ctx, req, &params, s.DidOpen)
+		return result, true, err
 	case protocol.MethodTextDocumentDidChange:
 		var params protocol.DidChangeTextDocumentParams
-		return true, replyNotify(ctx, reply, req, &params, s.DidChange)
+		result, err := replyNotify(ctx, req, &params, s.DidChange)
+		return result, true, err
 	case protocol.MethodTextDocumentDidClose:
 		var params protocol.DidCloseTextDocumentParams
-		return true, replyNotify(ctx, reply, req, &params, s.DidClose)
+		result, err := replyNotify(ctx, req, &params, s.DidClose)
+		return result, true, err
 	case protocol.MethodTextDocumentDidSave:
 		var params protocol.DidSaveTextDocumentParams
-		return true, replyNotify(ctx, reply, req, &params, s.DidSave)
+		result, err := replyNotify(ctx, req, &params, s.DidSave)
+		return result, true, err
 	default:
-		return false, nil
+		return nil, false, nil
 	}
 }
 
@@ -200,7 +207,7 @@ func (s *Server) ServeStream(ctx context.Context, conn jsonrpc2.Conn) error {
 	}
 	s.mu.Lock()
 	if s.client == nil {
-		s.client = protocol.ClientDispatcher(conn, zap.NewNop())
+		s.client = protocol.ClientDispatcher(conn)
 	}
 	s.mu.Unlock()
 	conn.Go(ctx, s.Handler())

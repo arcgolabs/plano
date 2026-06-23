@@ -7,6 +7,7 @@ import (
 
 	"github.com/arcgolabs/plano/lsp"
 	"go.lsp.dev/protocol"
+	"go.lsp.dev/uri"
 )
 
 func TestServerPublishesDiagnosticRelatedInformation(t *testing.T) {
@@ -17,7 +18,7 @@ func TestServerPublishesDiagnosticRelatedInformation(t *testing.T) {
 		Client:    client,
 	})
 
-	uri := protocol.DocumentURI(lsp.FileURI(filepath.Join(t.TempDir(), "dup.plano")))
+	uri := uri.URI(lsp.FileURI(filepath.Join(t.TempDir(), "dup.plano")))
 	src := `
 const target: string = "dist"
 const target: string = "release"
@@ -36,7 +37,7 @@ const target: string = "release"
 		t.Fatalf("published diagnostics = %#v", client.diagnostics)
 	}
 	item := client.diagnostics[0].Diagnostics[0]
-	if item.Code != "duplicate-definition" {
+	if item.Code != protocol.String("duplicate-definition") {
 		t.Fatalf("diagnostic code = %#v", item.Code)
 	}
 	if len(item.RelatedInformation) != 1 {

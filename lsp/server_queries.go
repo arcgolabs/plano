@@ -136,59 +136,66 @@ func (s *Server) FoldingRanges(ctx context.Context, params *protocol.FoldingRang
 	return toProtocolFoldingRanges(snapshot.FoldingRanges()), nil
 }
 
-func (s *Server) handleTextDocumentQuery(ctx context.Context, reply jsonrpc2.Replier, req jsonrpc2.Request) (bool, error) {
-	if handled, err := s.handleTextDocumentNavigationQuery(ctx, reply, req); handled {
-		return true, err
+func (s *Server) handleTextDocumentQuery(ctx context.Context, req *jsonrpc2.Request) (any, bool, error) {
+	if result, handled, err := s.handleTextDocumentNavigationQuery(ctx, req); handled {
+		return result, true, err
 	}
-	return s.handleTextDocumentUtilityQuery(ctx, reply, req)
+	return s.handleTextDocumentUtilityQuery(ctx, req)
 }
 
 func (s *Server) handleTextDocumentNavigationQuery(
 	ctx context.Context,
-	reply jsonrpc2.Replier,
-	req jsonrpc2.Request,
-) (bool, error) {
+	req *jsonrpc2.Request,
+) (any, bool, error) {
 	switch req.Method() {
 	case protocol.MethodTextDocumentHover:
 		var params protocol.HoverParams
-		return true, replyCall(ctx, reply, req, &params, s.Hover)
+		result, err := replyCall(ctx, req, &params, s.Hover)
+		return result, true, err
 	case protocol.MethodTextDocumentDefinition:
 		var params protocol.DefinitionParams
-		return true, replyCall(ctx, reply, req, &params, s.Definition)
+		result, err := replyCall(ctx, req, &params, s.Definition)
+		return result, true, err
 	case protocol.MethodTextDocumentCompletion:
 		var params protocol.CompletionParams
-		return true, replyCall(ctx, reply, req, &params, s.Completion)
+		result, err := replyCall(ctx, req, &params, s.Completion)
+		return result, true, err
 	case protocol.MethodTextDocumentReferences:
 		var params protocol.ReferenceParams
-		return true, replyCall(ctx, reply, req, &params, s.References)
+		result, err := replyCall(ctx, req, &params, s.References)
+		return result, true, err
 	case protocol.MethodTextDocumentPrepareRename:
 		var params protocol.PrepareRenameParams
-		return true, replyCall(ctx, reply, req, &params, s.PrepareRename)
+		result, err := replyCall(ctx, req, &params, s.PrepareRename)
+		return result, true, err
 	case protocol.MethodTextDocumentRename:
 		var params protocol.RenameParams
-		return true, replyCall(ctx, reply, req, &params, s.Rename)
+		result, err := replyCall(ctx, req, &params, s.Rename)
+		return result, true, err
 	default:
-		return false, nil
+		return nil, false, nil
 	}
 }
 
 func (s *Server) handleTextDocumentUtilityQuery(
 	ctx context.Context,
-	reply jsonrpc2.Replier,
-	req jsonrpc2.Request,
-) (bool, error) {
+	req *jsonrpc2.Request,
+) (any, bool, error) {
 	switch req.Method() {
 	case protocol.MethodTextDocumentDocumentSymbol:
 		var params protocol.DocumentSymbolParams
-		return true, replyCall(ctx, reply, req, &params, s.DocumentSymbols)
+		result, err := replyCall(ctx, req, &params, s.DocumentSymbols)
+		return result, true, err
 	case protocol.MethodTextDocumentCodeAction:
 		var params protocol.CodeActionParams
-		return true, replyCall(ctx, reply, req, &params, s.CodeAction)
+		result, err := replyCall(ctx, req, &params, s.CodeAction)
+		return result, true, err
 	case protocol.MethodTextDocumentFoldingRange:
 		var params protocol.FoldingRangeParams
-		return true, replyCall(ctx, reply, req, &params, s.FoldingRanges)
+		result, err := replyCall(ctx, req, &params, s.FoldingRanges)
+		return result, true, err
 	default:
-		return false, nil
+		return nil, false, nil
 	}
 }
 
@@ -196,5 +203,5 @@ func allowsQuickFix(only []protocol.CodeActionKind) bool {
 	if len(only) == 0 {
 		return true
 	}
-	return slices.Contains(only, protocol.QuickFix)
+	return slices.Contains(only, protocol.CodeActionKindQuickFix)
 }

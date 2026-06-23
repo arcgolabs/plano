@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"go.lsp.dev/protocol"
+	"go.lsp.dev/uri"
 
 	"github.com/arcgolabs/plano/lsp"
 )
@@ -21,7 +22,7 @@ func TestServerInitializeAdvertisesCodeActions(t *testing.T) {
 	if !ok {
 		t.Fatalf("codeActionProvider = %#v", result.Capabilities.CodeActionProvider)
 	}
-	if len(options.CodeActionKinds) != 1 || options.CodeActionKinds[0] != protocol.QuickFix {
+	if len(options.CodeActionKinds) != 1 || options.CodeActionKinds[0] != protocol.CodeActionKindQuickFix {
 		t.Fatalf("code action kinds = %#v", options.CodeActionKinds)
 	}
 }
@@ -31,7 +32,7 @@ func TestServerCodeActionUsesWorkspaceState(t *testing.T) {
 	server := lsp.NewServer(lsp.ServerOptions{Workspace: ws})
 
 	path := filepath.Join(t.TempDir(), "build.plano")
-	uri := protocol.DocumentURI(lsp.FileURI(path))
+	uri := uri.URI(lsp.FileURI(path))
 	src := `
 workspace {
   name = "demo"
@@ -62,7 +63,7 @@ task build {
 			)),
 		},
 		Context: protocol.CodeActionContext{
-			Only: []protocol.CodeActionKind{protocol.QuickFix},
+			Only: []protocol.CodeActionKind{protocol.CodeActionKindQuickFix},
 		},
 	})
 	if err != nil {

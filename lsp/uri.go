@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	lspuri "go.lsp.dev/uri"
 )
@@ -13,11 +12,14 @@ func PathFromURI(uri string) (string, error) {
 	if uri == "" {
 		return "", errors.New("empty document uri")
 	}
-	parsed := lspuri.New(uri)
-	if !strings.HasPrefix(string(parsed), lspuri.FileScheme+"://") {
+	parsed, err := lspuri.Parse(uri)
+	if err != nil {
+		return "", fmt.Errorf("parse uri %q: %w", uri, err)
+	}
+	if parsed.Scheme() != "file" {
 		return "", fmt.Errorf("unsupported uri %q", uri)
 	}
-	return filepath.Clean(parsed.Filename()), nil
+	return filepath.Clean(parsed.FsPath()), nil
 }
 
 func FileURI(path string) string {

@@ -9,6 +9,7 @@ import (
 
 	"go.lsp.dev/jsonrpc2"
 	"go.lsp.dev/protocol"
+	"go.lsp.dev/uri"
 )
 
 func ServeStdio(ctx context.Context, opts ServerOptions) error {
@@ -19,25 +20,29 @@ func ServeStdio(ctx context.Context, opts ServerOptions) error {
 	return NewServer(opts).ServeStream(ctx, conn)
 }
 
-func (s *Server) publishSnapshotDiagnostics(ctx context.Context, uri protocol.DocumentURI) error {
-	snapshot, err := s.workspace.Analyze(ctx, string(uri))
+func (s *Server) publishSnapshotDiagnostics(ctx context.Context, documentURI uri.URI) error {
+	snapshot, err := s.workspace.Analyze(ctx, string(documentURI))
 	if err != nil {
 		return err
 	}
-	return s.publishDiagnostics(ctx, uri, uint32(max(snapshot.Version, 0)), toProtocolDiagnostics(snapshot.Diagnostics))
+	return s.publishDiagnostics(ctx, documentURI, uint32(max(snapshot.Version, 0)), toProtocolDiagnostics(snapshot.Diagnostics))
 }
 
-func (s *Server) publishDiagnostics(ctx context.Context, uri protocol.DocumentURI, version uint32, diagnostics []protocol.Diagnostic) error {
+func (s *Server) publishDiagnostics(ctx context.Context, documentURI uri.URI, version uint32, diagnostics []protocol.Diagnostic) error {
 	client := s.currentClient()
 	if client == nil {
 		return nil
 	}
+	const maxProtocolVersion = uint32(1<<31 - 1)
+	if version > maxProtocolVersion {
+		version = maxProtocolVersion
+	}
 	if err := client.PublishDiagnostics(ctx, &protocol.PublishDiagnosticsParams{
-		URI:         uri,
-		Version:     version,
+		URI:         documentURI,
+		Version:     protocol.NewOptional(int32(version)),
 		Diagnostics: diagnostics,
 	}); err != nil {
-		return fmt.Errorf("publish diagnostics for %q: %w", uri, err)
+		return fmt.Errorf("publish diagnostics for %q: %w", documentURI, err)
 	}
 	return nil
 }
@@ -52,11 +57,14 @@ func fullTextFromChanges(changes []protocol.TextDocumentContentChangeEvent) (str
 	if len(changes) == 0 {
 		return "", false, nil
 	}
-	change := changes[len(changes)-1]
-	if change.Range != (protocol.Range{}) || change.RangeLength != 0 {
+	switch change := changes[len(changes)-1].(type) {
+	case *protocol.TextDocumentContentChangeWholeDocument:
+		return change.Text, true, nil
+	case *protocol.TextDocumentContentChangePartial:
 		return "", false, errors.New("incremental text document changes are not supported")
+	default:
+		return "", false, errors.New("unsupported text document change event")
 	}
-	return change.Text, true, nil
 }
 
 type stdioReadWriteCloser struct {

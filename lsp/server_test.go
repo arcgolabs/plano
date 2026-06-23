@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"go.lsp.dev/protocol"
+	"go.lsp.dev/uri"
 
 	"github.com/arcgolabs/plano/lsp"
 )
@@ -20,7 +21,7 @@ func TestServerDidOpenPublishesDiagnostics(t *testing.T) {
 		Client:    client,
 	})
 
-	uri := protocol.DocumentURI(lsp.FileURI(filepath.Join(t.TempDir(), "build.plano")))
+	uri := uri.URI(lsp.FileURI(filepath.Join(t.TempDir(), "build.plano")))
 	src := `workspace { name = 1 }`
 	err := server.DidOpen(context.Background(), &protocol.DidOpenTextDocumentParams{
 		TextDocument: protocol.TextDocumentItem{
@@ -47,7 +48,7 @@ func TestServerHoverAndDefinitionUseWorkspaceState(t *testing.T) {
 	server := lsp.NewServer(lsp.ServerOptions{Workspace: ws})
 
 	path := filepath.Join(t.TempDir(), "build.plano")
-	uri := protocol.DocumentURI(lsp.FileURI(path))
+	uri := uri.URI(lsp.FileURI(path))
 	src := `
 workspace {
   name = "demo"
@@ -78,7 +79,7 @@ task build {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if hover == nil || !strings.Contains(hover.Contents.Value, "fn join_path") {
+	if hover == nil || !strings.Contains(hoverContentsText(hover.Contents), "fn join_path") {
 		t.Fatalf("hover = %#v", hover)
 	}
 
@@ -104,7 +105,7 @@ func TestServerCompletionUsesWorkspaceState(t *testing.T) {
 	server := lsp.NewServer(lsp.ServerOptions{Workspace: ws})
 
 	path := filepath.Join(t.TempDir(), "build.plano")
-	uri := protocol.DocumentURI(lsp.FileURI(path))
+	uri := uri.URI(lsp.FileURI(path))
 	src := `
 workspace {
   name = "demo"
@@ -148,7 +149,7 @@ func TestServerReferencesAndDocumentSymbolsUseWorkspaceState(t *testing.T) {
 	server := lsp.NewServer(lsp.ServerOptions{Workspace: ws})
 
 	path := filepath.Join(t.TempDir(), "build.plano")
-	uri := protocol.DocumentURI(lsp.FileURI(path))
+	uri := uri.URI(lsp.FileURI(path))
 	src := `
 const project_name: string = "demo"
 
@@ -199,6 +200,8 @@ task build {
 }
 
 type recordingClient struct {
+	protocol.UnimplementedClient
+
 	diagnostics []protocol.PublishDiagnosticsParams
 }
 
@@ -229,7 +232,7 @@ func (c *recordingClient) ShowMessageRequest(context.Context, *protocol.ShowMess
 	return &protocol.MessageActionItem{}, nil
 }
 
-func (c *recordingClient) Telemetry(context.Context, any) error {
+func (c *recordingClient) Telemetry(context.Context, protocol.LSPAny) error {
 	return nil
 }
 
@@ -241,16 +244,28 @@ func (c *recordingClient) UnregisterCapability(context.Context, *protocol.Unregi
 	return nil
 }
 
-func (c *recordingClient) ApplyEdit(context.Context, *protocol.ApplyWorkspaceEditParams) (bool, error) {
-	return false, nil
+func (c *recordingClient) ApplyEdit(context.Context, *protocol.ApplyWorkspaceEditParams) (*protocol.ApplyWorkspaceEditResult, error) {
+	return &protocol.ApplyWorkspaceEditResult{}, nil
 }
 
-func (c *recordingClient) Configuration(context.Context, *protocol.ConfigurationParams) ([]any, error) {
+func (c *recordingClient) Configuration(context.Context, *protocol.ConfigurationParams) ([]protocol.LSPAny, error) {
 	return nil, nil
 }
 
 func (c *recordingClient) WorkspaceFolders(context.Context) ([]protocol.WorkspaceFolder, error) {
 	return nil, nil
+}
+
+func hoverContentsText(contents protocol.HoverContents) string {
+	switch value := contents.(type) {
+	case protocol.String:
+		return string(value)
+	case *protocol.MarkupContent:
+		if value != nil {
+			return value.Value
+		}
+	}
+	return ""
 }
 
 func toProtocolPosition(pos lsp.Position) protocol.Position {

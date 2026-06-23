@@ -7,6 +7,7 @@ import (
 
 	"github.com/arcgolabs/plano/lsp"
 	"go.lsp.dev/protocol"
+	"go.lsp.dev/uri"
 )
 
 func TestServerPrepareRenameAndRenameUseWorkspaceState(t *testing.T) {
@@ -14,7 +15,7 @@ func TestServerPrepareRenameAndRenameUseWorkspaceState(t *testing.T) {
 	server := lsp.NewServer(lsp.ServerOptions{Workspace: ws})
 
 	path := filepath.Join(t.TempDir(), "build.plano")
-	uri := protocol.DocumentURI(lsp.FileURI(path))
+	uri := uri.URI(lsp.FileURI(path))
 	src := `
 const project_name: string = "demo"
 

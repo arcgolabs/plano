@@ -18,17 +18,16 @@ func decodeParams(params []byte, target any) error {
 	return nil
 }
 
-func replyCall[T any, R any](ctx context.Context, reply jsonrpc2.Replier, req jsonrpc2.Request, params *T, fn func(context.Context, *T) (R, error)) error {
+func replyCall[T any, R any](ctx context.Context, req *jsonrpc2.Request, params *T, fn func(context.Context, *T) (R, error)) (any, error) {
 	if err := decodeParams(req.Params(), params); err != nil {
-		return reply(ctx, nil, err)
+		return nil, err
 	}
-	result, err := fn(ctx, params)
-	return reply(ctx, result, err)
+	return fn(ctx, params)
 }
 
-func replyNotify[T any](ctx context.Context, reply jsonrpc2.Replier, req jsonrpc2.Request, params *T, fn func(context.Context, *T) error) error {
+func replyNotify[T any](ctx context.Context, req *jsonrpc2.Request, params *T, fn func(context.Context, *T) error) (any, error) {
 	if err := decodeParams(req.Params(), params); err != nil {
-		return reply(ctx, nil, err)
+		return nil, err
 	}
-	return reply(ctx, nil, fn(ctx, params))
+	return nil, fn(ctx, params)
 }

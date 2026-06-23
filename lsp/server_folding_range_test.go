@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"go.lsp.dev/protocol"
+	"go.lsp.dev/uri"
 
 	"github.com/arcgolabs/plano/lsp"
 )
@@ -26,7 +27,7 @@ func TestServerFoldingRangesUseWorkspaceState(t *testing.T) {
 	server := lsp.NewServer(lsp.ServerOptions{Workspace: ws})
 
 	path := filepath.Join(t.TempDir(), "build.plano")
-	uri := protocol.DocumentURI(lsp.FileURI(path))
+	uri := uri.URI(lsp.FileURI(path))
 	src := `
 workspace {
   name = "demo"
@@ -48,9 +49,7 @@ task build {
 	}
 
 	ranges, err := server.FoldingRanges(context.Background(), &protocol.FoldingRangeParams{
-		TextDocumentPositionParams: protocol.TextDocumentPositionParams{
-			TextDocument: protocol.TextDocumentIdentifier{URI: uri},
-		},
+		TextDocument: protocol.TextDocumentIdentifier{URI: uri},
 	})
 	if err != nil {
 		t.Fatal(err)
